@@ -1,0 +1,39 @@
+name: Documentation validation
+
+'on':
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate documentation
+        shell: pwsh
+        run: ./scripts/validate-docs.ps1
+
+      - name: Detect solution
+        id: solution
+        shell: pwsh
+        run: |
+          $found = @(Get-ChildItem -Path . -Filter *.sln -File -Recurse).Count -gt 0
+          "found=$($found.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Restore and test .NET solution
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          $solutions = Get-ChildItem -Path . -Filter *.sln -File -Recurse
+          foreach ($solution in $solutions) {
+            dotnet restore $solution.FullName
+            dotnet build $solution.FullName --no-restore --configuration Release
+            dotnet test $solution.FullName --no-build --configuration Release
+          }
