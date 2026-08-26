@@ -1,6 +1,6 @@
 # Audit A-J 汇总结论
 
-> 审计对象：初始 `docs/DEVELOPMENT_PLAN.md`，基线提交 `d2411d9`  
+> 审计对象：初始 `docs/DEVELOPMENT_PLAN.md`，基线提交 `d2411d9`
 > 汇总状态：2026-08-26 已转化为规范基线
 
 ## 总体结论
