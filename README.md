@@ -11,6 +11,7 @@ The repository is currently in **Phase 0: Specification & Feasibility**. There i
 - [Interaction specification](docs/INTERACTION_SPEC.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Diagnostic contract](docs/DIAGNOSTICS.md)
+- [Phase 0 status](docs/PHASE_0_STATUS.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Audit A-J consolidation](docs/AUDIT_CONSOLIDATION.md)
 - [Contributing](CONTRIBUTING.md)

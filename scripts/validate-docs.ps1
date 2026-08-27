@@ -13,6 +13,7 @@ $required = @(
     'docs/PERFORMANCE_BUDGET.md',
     'docs/RELIABILITY_TEST_PLAN.md',
     'docs/DIAGNOSTICS.md',
+    'docs/PHASE_0_STATUS.md',
     'docs/ROADMAP.md',
     'docs/AUDIT_CONSOLIDATION.md',
     'docs/ADR/README.md',

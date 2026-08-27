@@ -1,0 +1,26 @@
+{
+  "SchemaVersion": 1,
+  "TimestampUtc": "2026-08-27T09:32:38.6196526+00:00",
+  "OsVersion": "Microsoft Windows NT 10.0.26100.0",
+  "ProcessArchitecture": "X64",
+  "MonitorCount": 1,
+  "ForegroundWasAvailable": true,
+  "ForegroundPreservedAfterShow": true,
+  "HostNeverBecameForeground": true,
+  "NoActivateStylePresent": true,
+  "ToolWindowStylePresent": true,
+  "TopMostStyleAbsent": true,
+  "MouseActivationReturnsNoActivate": true,
+  "BottomPlacementSucceeded": true,
+  "MonitorMappingSucceeded": true,
+  "WindowWasInsideMonitorWorkArea": true,
+  "WindowWasDestroyed": true,
+  "HostMode": "FallbackDesktopHost.Win32TopLevelNoActivate",
+  "Limitations": [
+    "This public Win32 fallback does not guarantee placement between wallpaper and desktop icons.",
+    "This probe validates one host window; per-monitor lifetime orchestration is a later spike.",
+    "Keyboard interaction mode is intentionally not implemented in this probe."
+  ],
+  "FailedChecks": [],
+  "Passed": true
+}
