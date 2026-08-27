@@ -24,12 +24,25 @@ The first disposable public-Win32 fallback probe passed 20/20 runs on Windows 11
 - bottom placement and monitor work-area mapping succeeded;
 - cleanup destroyed the host.
 
-This does not close P0-01 or P0-02. Still required:
+### Explicit focus and input transition — partial pass
 
-- physical click and explicit keyboard-mode end-to-end test;
+A separate interactive probe passed 5/5 runs on Windows 11 build 26100, x64, one monitor:
+
+- a physical click on the visual NoActivate surface preserved external foreground;
+- merely showing the keyboard surface did not activate it;
+- an explicit physical click acquired foreground and text-box focus;
+- guarded Unicode input reached the probe only after both focus checks passed;
+- Escape closed keyboard mode;
+- the original foreground window and pointer position were restored;
+- no probe windows remained.
+
+This validates the basic separation of Visual Focus and Keyboard Focus. It does not validate WinUI integration, IME, accessibility, elevated-window UIPI boundaries or multi-monitor behavior.
+
+P0-01 and P0-02 remain open. Still required:
+
 - per-monitor mixed-DPI orchestration;
 - Explorer restart and repeated host recovery;
 - Enhanced WorkerW comparison and automatic fallback;
 - fallback visual usability assessment.
 
-See [ADR-0001](ADR/0001-desktop-host-strategy.md) and [the Spike](../spikes/DesktopHosting/README.md).
+See [ADR-0001](ADR/0001-desktop-host-strategy.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md) and [the Focus and Input Spike](../spikes/FocusAndInput/README.md).

@@ -15,6 +15,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DesktopHosting", "DesktopHo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.DesktopHosting", "spikes\DesktopHosting\Zhuomian.Spike.DesktopHosting\Zhuomian.Spike.DesktopHosting.csproj", "{0C38ABBD-2095-4EEC-8700-FD104D45FD3E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FocusAndInput", "FocusAndInput", "{3C916D61-55A6-FD2A-2F39-57A3CC54AB33}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.FocusAndInput", "spikes\FocusAndInput\Zhuomian.Spike.FocusAndInput\Zhuomian.Spike.FocusAndInput.csproj", "{BE97BB12-476C-4122-99D7-0C851493D93B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +65,18 @@ Global
 		{0C38ABBD-2095-4EEC-8700-FD104D45FD3E}.Release|x64.Build.0 = Release|Any CPU
 		{0C38ABBD-2095-4EEC-8700-FD104D45FD3E}.Release|x86.ActiveCfg = Release|Any CPU
 		{0C38ABBD-2095-4EEC-8700-FD104D45FD3E}.Release|x86.Build.0 = Release|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Debug|x64.Build.0 = Debug|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Debug|x86.Build.0 = Debug|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Release|x64.ActiveCfg = Release|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Release|x64.Build.0 = Release|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Release|x86.ActiveCfg = Release|Any CPU
+		{BE97BB12-476C-4122-99D7-0C851493D93B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -70,5 +86,7 @@ Global
 		{74B2A4B9-232A-40DB-AD48-98991F97A069} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{1B57D26D-6909-C96C-7B53-29390F89E666} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
 		{0C38ABBD-2095-4EEC-8700-FD104D45FD3E} = {1B57D26D-6909-C96C-7B53-29390F89E666}
+		{3C916D61-55A6-FD2A-2F39-57A3CC54AB33} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
+		{BE97BB12-476C-4122-99D7-0C851493D93B} = {3C916D61-55A6-FD2A-2F39-57A3CC54AB33}
 	EndGlobalSection
 EndGlobal
