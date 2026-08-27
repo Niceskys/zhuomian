@@ -23,8 +23,9 @@ Zhuomian 的产品方向成立，但 Desktop Hosting、前台窗口感知、键�
 4. [SECURITY.md](../SECURITY.md)：安全与隐私底线。
 5. [PERFORMANCE_BUDGET.md](PERFORMANCE_BUDGET.md)：资源与测量契约。
 6. [RELIABILITY_TEST_PLAN.md](RELIABILITY_TEST_PLAN.md)：测试证据和质量门槛。
-7. [ROADMAP.md](ROADMAP.md)：阶段顺序和退出条件。
-8. [ADR/](ADR/README.md)：已接受的架构决策。
+7. [DIAGNOSTICS.md](DIAGNOSTICS.md)：诊断字段与隐私约束。
+8. [ROADMAP.md](ROADMAP.md)：阶段顺序和退出条件。
+9. [ADR/](ADR/README.md)：已接受的架构决策。
 
 本文件只负责总体方向和执行顺序，不重复专项规则。
 
