@@ -1,0 +1,29 @@
+{
+  "SchemaVersion": 1,
+  "TimestampUtc": "2026-08-27T09:48:37.4550287+00:00",
+  "OsVersion": "Microsoft Windows NT 10.0.26100.0",
+  "ProcessArchitecture": "X64",
+  "ExternalForegroundWasAvailable": true,
+  "VisualSurfaceShownWithoutActivation": true,
+  "VisualSurfacePhysicalClickPreservedForeground": true,
+  "KeyboardSurfaceInitiallyDidNotActivate": true,
+  "ExplicitKeyboardClickAcquiredForeground": true,
+  "KeyboardSurfaceReceivedFocus": true,
+  "GuardedUnicodeInputWasDelivered": true,
+  "ProbeTokenWasReceived": true,
+  "EscapeWasHandled": true,
+  "KeyboardSurfaceWasClosed": true,
+  "OriginalForegroundWasRestored": true,
+  "PointerWasRestored": true,
+  "VisualSurfaceRemainedNoActivate": true,
+  "NoProbeWindowsRemained": true,
+  "InputToken": "ZHUOMIAN42",
+  "SafetyAborts": [],
+  "Limitations": [
+    "SendInput is subject to UIPI and was tested only at the current integrity level.",
+    "The probe uses a separate WinForms keyboard surface, not the final WinUI implementation.",
+    "IME, Narrator, touch, high contrast, and multiple monitors are not covered by this probe."
+  ],
+  "FailedChecks": [],
+  "Passed": true
+}

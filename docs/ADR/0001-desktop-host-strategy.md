@@ -26,6 +26,8 @@ A borderless, non-topmost `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW` top-level window
 
 Current evidence: the fallback probe passes 20/20 one-monitor show/focus/style/work-area/cleanup runs on Windows 11 build 26100. It does not guarantee the desired wallpaper/icon band.
 
+A separate focus/input probe passes 5/5 one-monitor runs: a physical click on the visual NoActivate surface preserves external foreground, while an explicit click on a distinct focusable surface acquires foreground and text-box focus before guarded text injection. Escape closes keyboard mode, and cleanup restores the original foreground and pointer.
+
 ### Enhanced WorkerW host
 
 Potentially achieves the intended desktop band, but depends on undocumented Shell topology. Not yet tested and may only be accepted as an optional adapter.
@@ -48,15 +50,15 @@ Continue Phase 0B with two adapters behind `IDesktopHost`:
 
 - Zhuomian can retain a supported fallback even if enhanced hosting fails.
 - The fallback may not visually satisfy “between wallpaper and icons”; product presentation must be honest about this limitation.
-- Focus/input and Explorer lifecycle require separate evidence before this ADR can become Accepted.
+- Basic focus/input separation now has disposable Win32 evidence. WinUI/IME/accessibility integration and Explorer lifecycle still require evidence before this ADR can become Accepted.
 
 ## Validation and rollback
 
-Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHosting/README.md), including the [20-run summary](../../spikes/DesktopHosting/evidence/windows-11-26100-fallback-host-summary.json). Acceptance requires:
+Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHosting/README.md), including the [20-run summary](../../spikes/DesktopHosting/evidence/windows-11-26100-fallback-host-summary.json), and in [the Focus and Input Spike](../../spikes/FocusAndInput/README.md), including its [5-run summary](../../spikes/FocusAndInput/evidence/windows-11-26100-focus-input-summary.json). Acceptance requires:
 
 - repeated NoActivate evidence;
 - per-monitor/mixed-DPI evidence;
-- foreground and explicit keyboard-mode evidence;
+- WinUI keyboard-mode, IME and accessibility evidence beyond the validated Win32 transition;
 - Explorer restart recovery;
 - enhanced host comparison and failure fallback;
 - no TopMost dependency.

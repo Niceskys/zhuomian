@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "timestampUtc": "2026-08-27T09:50:56.5097202+00:00",
+  "osVersion": "Microsoft Windows NT 10.0.26100.0",
+  "processArchitecture": "X64",
+  "requestedRuns": 5,
+  "passedRuns": 5,
+  "failedRuns": 0,
+  "passed": true,
+  "validatedBehavior": {
+    "visualSurfacePhysicalClickPreservedForeground": true,
+    "explicitKeyboardClickAcquiredForeground": true,
+    "probeTokenWasReceived": true,
+    "escapeWasHandled": true,
+    "originalForegroundWasRestored": true,
+    "pointerWasRestored": true,
+    "noProbeWindowsRemained": true
+  },
+  "runs": [
+    {
+      "run": 1,
+      "exitCode": 0,
+      "passed": true,
+      "safetyAborts": [],
+      "failedChecks": []
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "passed": true,
+      "safetyAborts": [],
+      "failedChecks": []
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "passed": true,
+      "safetyAborts": [],
+      "failedChecks": []
+    },
+    {
+      "run": 4,
+      "exitCode": 0,
+      "passed": true,
+      "safetyAborts": [],
+      "failedChecks": []
+    },
+    {
+      "run": 5,
+      "exitCode": 0,
+      "passed": true,
+      "safetyAborts": [],
+      "failedChecks": []
+    }
+  ],
+  "limitations": [
+    "SendInput is subject to UIPI and was tested only at the current integrity level.",
+    "The probe uses a separate WinForms keyboard surface, not the final WinUI implementation.",
+    "IME, Narrator, touch, high contrast, and multiple monitors are not covered by this probe."
+  ]
+}
