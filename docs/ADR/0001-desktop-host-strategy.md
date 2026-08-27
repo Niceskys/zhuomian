@@ -28,6 +28,8 @@ Current evidence: the fallback probe passes 20/20 one-monitor show/focus/style/w
 
 A separate focus/input probe passes 5/5 one-monitor runs: a physical click on the visual NoActivate surface preserves external foreground, while an explicit click on a distinct focusable surface acquires foreground and text-box focus before guarded text injection. Escape closes keyboard mode, and cleanup restores the original foreground and pointer.
 
+The per-monitor/DPI probe passes 10/10 runs on one 2560×1600 display at 150% scaling. It creates one independent Per-Monitor V2 host for every enumerated monitor, proves the host has no OS frame or non-client border, matches the monitor work area, and passes deterministic 96/144-DPI topology mapping. Hardware coverage remains incomplete because a real mixed-DPI pair and hot-plug were unavailable.
+
 ### Enhanced WorkerW host
 
 Potentially achieves the intended desktop band, but depends on undocumented Shell topology. Not yet tested and may only be accepted as an optional adapter.
@@ -54,10 +56,10 @@ Continue Phase 0B with two adapters behind `IDesktopHost`:
 
 ## Validation and rollback
 
-Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHosting/README.md), including the [20-run summary](../../spikes/DesktopHosting/evidence/windows-11-26100-fallback-host-summary.json), and in [the Focus and Input Spike](../../spikes/FocusAndInput/README.md), including its [5-run summary](../../spikes/FocusAndInput/evidence/windows-11-26100-focus-input-summary.json). Acceptance requires:
+Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../../spikes/FocusAndInput/README.md), and [the Multi-monitor/DPI Spike](../../spikes/MultiMonitorDpi/README.md). Acceptance requires:
 
 - repeated NoActivate evidence;
-- per-monitor/mixed-DPI evidence;
+- real dual-monitor mixed-DPI and hot-plug evidence beyond the validated one-monitor host and deterministic mapping;
 - WinUI keyboard-mode, IME and accessibility evidence beyond the validated Win32 transition;
 - Explorer restart recovery;
 - enhanced host comparison and failure fallback;
