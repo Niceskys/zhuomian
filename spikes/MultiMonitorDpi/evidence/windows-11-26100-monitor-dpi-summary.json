@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "timestampUtc": "2026-08-27T10:35:50.7802486+00:00",
+  "osVersion": "Microsoft Windows NT 10.0.26100.0",
+  "processArchitecture": "X64",
+  "requestedRuns": 10,
+  "passedRuns": 10,
+  "failedRuns": 0,
+  "passed": true,
+  "coverageComplete": false,
+  "monitorCount": 1,
+  "distinctDpiCount": 1,
+  "processPerMonitorV2": true,
+  "actualPerMonitorHostsPassed": true,
+  "syntheticMixedDpiMappingPassed": true,
+  "monitors": [
+    {
+      "Index": 0,
+      "IsPrimary": true,
+      "StableKeyHash": "4EB777E807C8555B",
+      "MonitorWidthPx": 2560,
+      "MonitorHeightPx": 1600,
+      "WorkAreaWidthPx": 2560,
+      "WorkAreaHeightPx": 1528,
+      "Dpi": 144,
+      "ScalePercent": 150,
+      "PerMonitorAware": true,
+      "HostMappedToExpectedMonitor": true,
+      "HostMatchedWorkArea": true,
+      "HostWasBorderless": true,
+      "ClientAreaMatchedWindow": true,
+      "HostWasDestroyed": true
+    }
+  ],
+  "syntheticChecks": [
+    {
+      "Name": "logical-size-scales-from-96-to-144-dpi",
+      "Passed": true
+    },
+    {
+      "Name": "negative-origin-monitor-remains-visible",
+      "Passed": true
+    },
+    {
+      "Name": "missing-monitor-migrates-to-primary",
+      "Passed": true
+    },
+    {
+      "Name": "oversized-placement-is-clamped",
+      "Passed": true
+    }
+  ],
+  "runs": [
+    {
+      "run": 1,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    },
+    {
+      "run": 4,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    },
+    {
+      "run": 5,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    },
+    {
+      "run": 6,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    },
+    {
+      "run": 7,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    },
+    {
+      "run": 8,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    },
+    {
+      "run": 9,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    },
+    {
+      "run": 10,
+      "exitCode": 0,
+      "passed": true,
+      "coverageComplete": false,
+      "failedChecks": []
+    }
+  ],
+  "coverageGaps": [
+    "No multi-monitor hardware was attached during this run.",
+    "No real mixed-DPI monitor pair was available during this run."
+  ],
+  "limitations": [
+    "Hot-plug and WM_DISPLAYCHANGE were not exercised because no monitor was attached or removed.",
+    "Stable keys are derived from display device identity but only a SHA-256 prefix is written to evidence.",
+    "The host is a disposable Win32 probe, not the final WinUI composition surface."
+  ]
+}

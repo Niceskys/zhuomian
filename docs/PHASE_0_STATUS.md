@@ -38,11 +38,25 @@ A separate interactive probe passed 5/5 runs on Windows 11 build 26100, x64, one
 
 This validates the basic separation of Visual Focus and Keyboard Focus. It does not validate WinUI integration, IME, accessibility, elevated-window UIPI boundaries or multi-monitor behavior.
 
+### Per-monitor host and DPI mapping — partial pass
+
+The disposable monitor/DPI probe passed 10/10 runs on Windows 11 build 26100, x64, with one 2560×1600 display at 150% scaling:
+
+- the process and host were Per-Monitor V2 aware;
+- one independently owned host was created for every attached monitor;
+- the host exactly matched the 2560×1528 work area;
+- the host had no caption, frame, system menu or border, and its client area equalled its full window area;
+- stable monitor identity was hashed before evidence was written;
+- deterministic 96/144-DPI, negative-origin, missing-monitor migration and visibility-clamp cases passed;
+- cleanup destroyed every host.
+
+The probe reports `Passed: true` but `CoverageComplete: false`. A second physical display, a real mixed-DPI pair and hot-plug cycles were not available, so this evidence must not be treated as completion of the multi-monitor exit criterion.
+
 P0-01 and P0-02 remain open. Still required:
 
-- per-monitor mixed-DPI orchestration;
+- real dual-monitor mixed-DPI and hot-plug evidence;
 - Explorer restart and repeated host recovery;
 - Enhanced WorkerW comparison and automatic fallback;
 - fallback visual usability assessment.
 
-See [ADR-0001](ADR/0001-desktop-host-strategy.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md) and [the Focus and Input Spike](../spikes/FocusAndInput/README.md).
+See [ADR-0001](ADR/0001-desktop-host-strategy.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md) and [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md).

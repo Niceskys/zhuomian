@@ -19,6 +19,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FocusAndInput", "FocusAndIn
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.FocusAndInput", "spikes\FocusAndInput\Zhuomian.Spike.FocusAndInput\Zhuomian.Spike.FocusAndInput.csproj", "{BE97BB12-476C-4122-99D7-0C851493D93B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MultiMonitorDpi", "MultiMonitorDpi", "{97DFD586-D32B-1761-1650-1BCFFE06A8F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.MultiMonitorDpi", "spikes\MultiMonitorDpi\Zhuomian.Spike.MultiMonitorDpi\Zhuomian.Spike.MultiMonitorDpi.csproj", "{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -77,6 +81,18 @@ Global
 		{BE97BB12-476C-4122-99D7-0C851493D93B}.Release|x64.Build.0 = Release|Any CPU
 		{BE97BB12-476C-4122-99D7-0C851493D93B}.Release|x86.ActiveCfg = Release|Any CPU
 		{BE97BB12-476C-4122-99D7-0C851493D93B}.Release|x86.Build.0 = Release|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Debug|x64.Build.0 = Debug|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Debug|x86.Build.0 = Debug|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Release|x64.ActiveCfg = Release|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Release|x64.Build.0 = Release|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Release|x86.ActiveCfg = Release|Any CPU
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -88,5 +104,7 @@ Global
 		{0C38ABBD-2095-4EEC-8700-FD104D45FD3E} = {1B57D26D-6909-C96C-7B53-29390F89E666}
 		{3C916D61-55A6-FD2A-2F39-57A3CC54AB33} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
 		{BE97BB12-476C-4122-99D7-0C851493D93B} = {3C916D61-55A6-FD2A-2F39-57A3CC54AB33}
+		{97DFD586-D32B-1761-1650-1BCFFE06A8F0} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
+		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A} = {97DFD586-D32B-1761-1650-1BCFFE06A8F0}
 	EndGlobalSection
 EndGlobal
