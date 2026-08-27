@@ -10,3 +10,7 @@ Create an ADR for changes to Desktop Hosting, UI framework, rendering/backdrop, 
 - **Superseded**: replaced by a newer ADR; never rewrite history.
 
 Use four-digit sequential names such as `0001-desktop-host-strategy.md` and start from [TEMPLATE.md](TEMPLATE.md).
+
+## Records
+
+- [ADR-0001: Desktop host strategy](0001-desktop-host-strategy.md) — Proposed
