@@ -1,0 +1,12 @@
+# Keep repository text deterministic across Windows development and CI.
+* text=auto eol=lf
+
+# Treat common binary assets as binary if they are added later.
+*.gif binary
+*.ico binary
+*.jpeg binary
+*.jpg binary
+*.png binary
+*.webp binary
+*.mp4 binary
+*.webm binary
