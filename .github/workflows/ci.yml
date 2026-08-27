@@ -16,6 +16,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
       - name: Validate documentation
         shell: pwsh
         run: ./scripts/validate-docs.ps1
@@ -35,5 +40,16 @@ jobs:
           foreach ($solution in $solutions) {
             dotnet restore $solution.FullName
             dotnet build $solution.FullName --no-restore --configuration Release
-            dotnet test $solution.FullName --no-build --configuration Release
+            dotnet format $solution.FullName --no-restore --verify-no-changes
+            dotnet test $solution.FullName --no-build --configuration Release `
+              --logger "trx;LogFilePrefix=test-results" `
+              --results-directory "$env:RUNNER_TEMP\test-results"
           }
+
+      - name: Upload test results
+        if: always() && steps.solution.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '${{ runner.temp }}/test-results/*.trx'
+          if-no-files-found: error

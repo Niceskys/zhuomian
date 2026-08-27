@@ -1,0 +1,19 @@
+# Build output
+**/bin/
+**/obj/
+.artifacts/
+
+# IDE and user state
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Test and coverage output
+TestResults/
+coverage/
+*.trx
+
+# Local diagnostic output
+logs/
+diagnostics/
