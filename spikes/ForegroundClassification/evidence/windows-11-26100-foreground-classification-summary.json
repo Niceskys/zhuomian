@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "timestampUtc": "2026-08-28T01:54:39.3120056+00:00",
+  "osVersion": "Microsoft Windows NT 10.0.26100.0",
+  "processArchitecture": "X64",
+  "requestedRuns": 5,
+  "passedRuns": 5,
+  "failedRuns": 0,
+  "passed": true,
+  "totalRealExternalSamples": 500,
+  "totalRealExternalBlockedSamples": 500,
+  "totalExternalDisarmedExpansions": 0,
+  "truthTableCases": 24,
+  "truthTablePassedCases": 24,
+  "syntheticChecks": [
+    {
+      "Name": "no-foreground-suspends",
+      "Passed": true
+    },
+    {
+      "Name": "unavailable-session-suspends",
+      "Passed": true
+    },
+    {
+      "Name": "own-window-is-desktop-available",
+      "Passed": true
+    },
+    {
+      "Name": "exact-shell-is-desktop-available",
+      "Passed": true
+    },
+    {
+      "Name": "borderless-monitor-covering-window-suspends",
+      "Passed": true
+    },
+    {
+      "Name": "standard-maximized-window-remains-external",
+      "Passed": true
+    },
+    {
+      "Name": "cloaked-covering-window-is-not-fullscreen",
+      "Passed": true
+    },
+    {
+      "Name": "inaccessible-process-fails-safe-external",
+      "Passed": true
+    },
+    {
+      "Name": "non-shell-explorer-window-remains-external",
+      "Passed": true
+    }
+  ],
+  "validatedBehavior": {
+    "liveShellClassifiedAsDesktopAvailable": true,
+    "ownForegroundClassifiedAsDesktopAvailable": true,
+    "originalForegroundRestored": true,
+    "pointerRestored": true,
+    "hoverGateHasNoKeyboardCapturePath": true
+  },
+  "runs": [
+    {
+      "run": 1,
+      "exitCode": 0,
+      "passed": true,
+      "realExternalSamples": 100,
+      "realExternalBlockedSamples": 100,
+      "externalDisarmedExpansions": 0,
+      "failedChecks": [],
+      "safetyAborts": []
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "passed": true,
+      "realExternalSamples": 100,
+      "realExternalBlockedSamples": 100,
+      "externalDisarmedExpansions": 0,
+      "failedChecks": [],
+      "safetyAborts": []
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "passed": true,
+      "realExternalSamples": 100,
+      "realExternalBlockedSamples": 100,
+      "externalDisarmedExpansions": 0,
+      "failedChecks": [],
+      "safetyAborts": []
+    },
+    {
+      "run": 4,
+      "exitCode": 0,
+      "passed": true,
+      "realExternalSamples": 100,
+      "realExternalBlockedSamples": 100,
+      "externalDisarmedExpansions": 0,
+      "failedChecks": [],
+      "safetyAborts": []
+    },
+    {
+      "run": 5,
+      "exitCode": 0,
+      "passed": true,
+      "realExternalSamples": 100,
+      "realExternalBlockedSamples": 100,
+      "externalDisarmedExpansions": 0,
+      "failedChecks": [],
+      "safetyAborts": []
+    }
+  ],
+  "limitations": [
+    "Lock screen, UAC secure desktop, and a real borderless full-screen game were not activated during this probe.",
+    "Full-screen, cloaked, missing-foreground, and inaccessible-process paths are deterministic signal tests.",
+    "Exact Shell HWND identity is accepted; other Explorer windows fail safe as external foreground.",
+    "The classifier is disposable Win32 evidence, not production code."
+  ]
+}
