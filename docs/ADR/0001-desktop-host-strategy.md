@@ -32,6 +32,8 @@ The per-monitor/DPI probe passes 10/10 runs on one 2560×1600 display at 150% sc
 
 The corrected fallback recovery probe passes 20/20 forced Explorer restart cycles with recovery between about 0.80 and 1.25 seconds. A prior design that blocked on `TaskbarCreated` failed 10/20 cycles despite the Shell returning. Therefore, Shell window validity plus a different owning process generation is the authoritative recovery condition; `TaskbarCreated` is advisory telemetry only.
 
+The fallback visual-usability probe passes 5/5 one-monitor runs. A transparent NoActivate canvas was visibly present on the exposed real desktop; its transparent pixels passed through; one physical Preview Item click executed once without changing Shell foreground; and a normal non-TopMost window covered the overlapped Space region. The evidence is privacy-safe and contains only controlled surface crops. This validates conditional usability, not a documented relationship with desktop icons.
+
 ### Enhanced WorkerW host
 
 Potentially achieves the intended desktop band, but depends on undocumented Shell topology. On Windows 11 build 26100, 15 WorkerW windows were observed but none was visible or work-area-sized. The private `0x052C` request was delivered without producing a viable candidate. The probe rejected Enhanced and selected the public fallback 20/20 times without attempting cross-process `SetParent`.
@@ -56,6 +58,7 @@ Continue Phase 0B with two adapters behind `IDesktopHost`:
 
 - Zhuomian can retain a supported fallback even if enhanced hosting fails.
 - The fallback may not visually satisfy “between wallpaper and icons”; product presentation must be honest about this limitation.
+- Opaque fallback Space rectangles can cover desktop icons when they overlap. Production placement must avoid or explicitly communicate conflicts; the fallback may not claim invisible coexistence with icons.
 - Basic focus/input separation now has disposable Win32 evidence. WinUI/IME/accessibility integration still requires evidence before this ADR can become Accepted.
 - Abrupt Explorer recovery for the public fallback path has repeated evidence. Enhanced WorkerW invalidation and the remaining platform lifecycle matrix still require evidence before this ADR can become Accepted.
 - Current-build WorkerW discovery and private activation produced no viable host; automatic fallback passed 20/20 runs. WorkerW remains optional and non-blocking.
@@ -68,7 +71,7 @@ Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHos
 - real dual-monitor mixed-DPI and hot-plug evidence beyond the validated one-monitor host and deterministic mapping;
 - WinUI keyboard-mode, IME and accessibility evidence beyond the validated Win32 transition;
 - enhanced-host Explorer recovery and remaining lifecycle-matrix evidence beyond the validated abrupt fallback recovery;
-- fallback visual-usability evidence and, if WorkerW is ever enabled, valid cross-build attachment/DPI evidence;
+- production Z-order maintenance and icon-overlap handling beyond the validated fallback visual-usability candidate, and, if WorkerW is ever enabled, valid cross-build attachment/DPI evidence;
 - no TopMost dependency.
 
 The Spike is disposable and can be removed without affecting production code.
@@ -79,3 +82,4 @@ The Spike is disposable and can be removed without affecting production code.
 - [Interaction specification](../INTERACTION_SPEC.md)
 - [Microsoft extended window styles](https://learn.microsoft.com/windows/win32/winmsg/extended-window-styles)
 - [Microsoft CreateWindowExW](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-createwindowexw)
+- [Fallback visual-usability Spike](../../spikes/FallbackVisualUsability/README.md)

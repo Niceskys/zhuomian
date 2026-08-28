@@ -35,6 +35,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EnhancedHosting", "Enhanced
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.EnhancedHosting", "spikes\EnhancedHosting\Zhuomian.Spike.EnhancedHosting\Zhuomian.Spike.EnhancedHosting.csproj", "{2E653E3E-17EE-4ED8-B643-F93EB0122293}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FallbackVisualUsability", "FallbackVisualUsability", "{731BD72B-0982-4E88-BB50-C63CF14538F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.FallbackVisualUsability", "spikes\FallbackVisualUsability\Zhuomian.Spike.FallbackVisualUsability\Zhuomian.Spike.FallbackVisualUsability.csproj", "{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -141,6 +145,18 @@ Global
 		{2E653E3E-17EE-4ED8-B643-F93EB0122293}.Release|x64.Build.0 = Release|Any CPU
 		{2E653E3E-17EE-4ED8-B643-F93EB0122293}.Release|x86.ActiveCfg = Release|Any CPU
 		{2E653E3E-17EE-4ED8-B643-F93EB0122293}.Release|x86.Build.0 = Release|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Debug|x64.Build.0 = Debug|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Debug|x86.Build.0 = Debug|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Release|x64.ActiveCfg = Release|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Release|x64.Build.0 = Release|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Release|x86.ActiveCfg = Release|Any CPU
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -160,5 +176,7 @@ Global
 		{C81E6922-11BE-4366-BA44-84F36BE0BD18} = {4CD1E502-B6A4-424C-D2FF-A9F293334FB4}
 		{4CE02601-2288-0AA8-6708-C9B1A68D7DB9} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
 		{2E653E3E-17EE-4ED8-B643-F93EB0122293} = {4CE02601-2288-0AA8-6708-C9B1A68D7DB9}
+		{731BD72B-0982-4E88-BB50-C63CF14538F0} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
+		{3CDDB36C-95BF-4299-A8A0-7BB3B1FA59CE} = {731BD72B-0982-4E88-BB50-C63CF14538F0}
 	EndGlobalSection
 EndGlobal

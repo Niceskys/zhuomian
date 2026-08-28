@@ -91,13 +91,27 @@ The enhanced-host probe passed 20/20 runs on Windows 11 build 26100, x64:
 - foreground was preserved and every fallback host was destroyed;
 - missing candidate, attachment failure and DPI-reset policy cases all selected fallback.
 
-This validates rejection and automatic degradation, not Enhanced WorkerW attachment. WorkerW is now explicitly optional and non-blocking on this environment. Final fallback visual usability and any future cross-build WorkerW attachment remain open.
+This validates rejection and automatic degradation, not Enhanced WorkerW attachment. WorkerW is now explicitly optional and non-blocking on this environment. Any future cross-build WorkerW attachment remains open; the fallback visual candidate is assessed separately below.
+
+### Fallback visual usability — conditional pass
+
+The public fallback visual-usability probe passed 5/5 runs on Windows 11 build 26100, x64, with one 2560 x 1600 display at 150% scaling:
+
+- controlled Space pixels were visible on the exposed real desktop;
+- transparent host pixels passed pointer hit testing through to the desktop;
+- a physical click on a visible Preview Item executed its simulated action exactly once;
+- the Preview click preserved the Shell foreground;
+- a normal non-TopMost application window covered the overlapped Space region;
+- the host remained borderless, NoActivate and non-TopMost and was destroyed during cleanup;
+- the previous window view and pointer were restored after every run.
+
+This is a conditional product pass. The public fallback has no documented Shell band below desktop icons, so opaque Space rectangles can obscure icons when they overlap. Production work must include placement conflict handling and continuous Z-order maintenance. The committed screenshot proof contains only controlled probe surfaces and excludes wallpaper, icons and filenames.
 
 P0-01 and P0-02 remain open. Still required:
 
 - real dual-monitor mixed-DPI and hot-plug evidence;
 - real full-screen and secure-desktop foreground lifecycle evidence;
 - enhanced-host and remaining platform lifecycle recovery;
-- fallback visual usability assessment.
+- production fallback Z-order maintenance and desktop-icon overlap handling beyond the validated visual candidate.
 
-See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foreground-classification.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md), [the Foreground Classification Spike](../spikes/ForegroundClassification/README.md) and [the Enhanced Hosting Spike](../spikes/EnhancedHosting/README.md).
+See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foreground-classification.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md), [the Foreground Classification Spike](../spikes/ForegroundClassification/README.md), [the Enhanced Hosting Spike](../spikes/EnhancedHosting/README.md) and [the Fallback Visual Usability Spike](../spikes/FallbackVisualUsability/README.md).
