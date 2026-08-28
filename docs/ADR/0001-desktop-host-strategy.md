@@ -34,7 +34,9 @@ The corrected fallback recovery probe passes 20/20 forced Explorer restart cycle
 
 ### Enhanced WorkerW host
 
-Potentially achieves the intended desktop band, but depends on undocumented Shell topology. Not yet tested and may only be accepted as an optional adapter.
+Potentially achieves the intended desktop band, but depends on undocumented Shell topology. On Windows 11 build 26100, 15 WorkerW windows were observed but none was visible or work-area-sized. The private `0x052C` request was delivered without producing a viable candidate. The probe rejected Enhanced and selected the public fallback 20/20 times without attempting cross-process `SetParent`.
+
+Cross-process attachment remains unaccepted. Microsoft documents that `SetParent` can forcibly reset the child DPI-awareness context when processes differ, so an observed class name is not enough to justify attachment.
 
 ### Single full-virtual-screen host
 
@@ -47,7 +49,7 @@ No production host is accepted yet.
 Continue Phase 0B with two adapters behind `IDesktopHost`:
 
 1. Treat the public Win32 host as the mandatory fallback candidate.
-2. Evaluate WorkerW only as an enhanced candidate.
+2. Keep WorkerW disabled unless capability discovery, attachment and DPI-preservation checks all pass; current evidence selects fallback.
 3. Do not let product or interaction code observe Shell HWND details.
 
 ## Consequences
@@ -56,16 +58,17 @@ Continue Phase 0B with two adapters behind `IDesktopHost`:
 - The fallback may not visually satisfy “between wallpaper and icons”; product presentation must be honest about this limitation.
 - Basic focus/input separation now has disposable Win32 evidence. WinUI/IME/accessibility integration still requires evidence before this ADR can become Accepted.
 - Abrupt Explorer recovery for the public fallback path has repeated evidence. Enhanced WorkerW invalidation and the remaining platform lifecycle matrix still require evidence before this ADR can become Accepted.
+- Current-build WorkerW discovery and private activation produced no viable host; automatic fallback passed 20/20 runs. WorkerW remains optional and non-blocking.
 
 ## Validation and rollback
 
-Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../../spikes/MultiMonitorDpi/README.md), and [the Explorer Recovery Spike](../../spikes/ExplorerRecovery/README.md). Acceptance requires:
+Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../../spikes/ExplorerRecovery/README.md), and [the Enhanced Hosting Spike](../../spikes/EnhancedHosting/README.md). Acceptance requires:
 
 - repeated NoActivate evidence;
 - real dual-monitor mixed-DPI and hot-plug evidence beyond the validated one-monitor host and deterministic mapping;
 - WinUI keyboard-mode, IME and accessibility evidence beyond the validated Win32 transition;
 - enhanced-host Explorer recovery and remaining lifecycle-matrix evidence beyond the validated abrupt fallback recovery;
-- enhanced host comparison and failure fallback;
+- fallback visual-usability evidence and, if WorkerW is ever enabled, valid cross-build attachment/DPI evidence;
 - no TopMost dependency.
 
 The Spike is disposable and can be removed without affecting production code.

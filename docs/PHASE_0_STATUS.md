@@ -79,12 +79,25 @@ The foreground-classification probe passed 5/5 runs on Windows 11 build 26100, x
 
 The accepted candidate rule uses exact Shell HWND identity rather than trusting the Explorer process. Real game/video full-screen transitions, lock/UAC secure desktop and event-delivery/debounce remain open, so [ADR-0002](ADR/0002-foreground-classification.md) remains Proposed.
 
+### Enhanced WorkerW comparison and automatic fallback — fallback pass
+
+The enhanced-host probe passed 20/20 runs on Windows 11 build 26100, x64:
+
+- 15 WorkerW windows were observed, but none was visible or work-area-sized;
+- the private WorkerW request was delivered without producing a viable candidate;
+- cross-process `SetParent` was not attempted against invalid candidates;
+- public fallback was selected 20/20 times;
+- fallback remained borderless, NoActivate, non-TopMost, work-area mapped and DPI-valid;
+- foreground was preserved and every fallback host was destroyed;
+- missing candidate, attachment failure and DPI-reset policy cases all selected fallback.
+
+This validates rejection and automatic degradation, not Enhanced WorkerW attachment. WorkerW is now explicitly optional and non-blocking on this environment. Final fallback visual usability and any future cross-build WorkerW attachment remain open.
+
 P0-01 and P0-02 remain open. Still required:
 
 - real dual-monitor mixed-DPI and hot-plug evidence;
 - real full-screen and secure-desktop foreground lifecycle evidence;
 - enhanced-host and remaining platform lifecycle recovery;
-- Enhanced WorkerW comparison and automatic fallback;
 - fallback visual usability assessment.
 
-See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foreground-classification.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md) and [the Foreground Classification Spike](../spikes/ForegroundClassification/README.md).
+See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foreground-classification.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md), [the Foreground Classification Spike](../spikes/ForegroundClassification/README.md) and [the Enhanced Hosting Spike](../spikes/EnhancedHosting/README.md).
