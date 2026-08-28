@@ -27,6 +27,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ExplorerRecovery", "Explore
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.ExplorerRecovery", "spikes\ExplorerRecovery\Zhuomian.Spike.ExplorerRecovery\Zhuomian.Spike.ExplorerRecovery.csproj", "{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ForegroundClassification", "ForegroundClassification", "{4CD1E502-B6A4-424C-D2FF-A9F293334FB4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.ForegroundClassification", "spikes\ForegroundClassification\Zhuomian.Spike.ForegroundClassification\Zhuomian.Spike.ForegroundClassification.csproj", "{C81E6922-11BE-4366-BA44-84F36BE0BD18}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -109,6 +113,18 @@ Global
 		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Release|x64.Build.0 = Release|Any CPU
 		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Release|x86.ActiveCfg = Release|Any CPU
 		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Release|x86.Build.0 = Release|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Debug|x64.Build.0 = Debug|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Debug|x86.Build.0 = Debug|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Release|x64.ActiveCfg = Release|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Release|x64.Build.0 = Release|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Release|x86.ActiveCfg = Release|Any CPU
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -124,5 +140,7 @@ Global
 		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A} = {97DFD586-D32B-1761-1650-1BCFFE06A8F0}
 		{CA2421D3-71BD-DA5D-3A6F-AF84CA64C9EE} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
 		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF} = {CA2421D3-71BD-DA5D-3A6F-AF84CA64C9EE}
+		{4CD1E502-B6A4-424C-D2FF-A9F293334FB4} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
+		{C81E6922-11BE-4366-BA44-84F36BE0BD18} = {4CD1E502-B6A4-424C-D2FF-A9F293334FB4}
 	EndGlobalSection
 EndGlobal
