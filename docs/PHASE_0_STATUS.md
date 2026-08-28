@@ -77,7 +77,23 @@ The foreground-classification probe passed 5/5 runs on Windows 11 build 26100, x
 - full-screen, cloaked, missing-window, inaccessible-process and same-Explorer-process/non-Shell cases failed safe;
 - foreground and pointer position were restored after every run.
 
-The accepted candidate rule uses exact Shell HWND identity rather than trusting the Explorer process. Real game/video full-screen transitions, lock/UAC secure desktop and event-delivery/debounce remain open, so [ADR-0002](ADR/0002-foreground-classification.md) remains Proposed.
+The accepted candidate rule uses exact Shell HWND identity rather than trusting the Explorer process. Real full-screen external-process coverage is recorded below; lock/UAC secure desktop and event-delivery/debounce remain open, so [ADR-0002](ADR/0002-foreground-classification.md) remains Proposed.
+
+### Full-screen and secure-desktop lifecycle — full-screen pass, secure desktop pending
+
+The platform-lifecycle probe passed 5/5 automated runs on Windows 11 build 26100, x64, with one physical monitor:
+
+- a separate real borderless process covered the complete primary monitor and became foreground in every run;
+- all five windows were detected as external full-screen and classified `Suspended`;
+- 500 suspended Hover attempts produced zero expansions;
+- pointer capture, keyboard mode, animation and media ownership entered released/stopped state;
+- the live input desktop was accessible and named `Default`;
+- WTS session notification registration and unregister cleanup passed;
+- Unlock alone stayed suspended, and Desktop Ready required an accessible `Default` input desktop before safe resume;
+- safe resume began `ExternalForeground / Disarmed / NoKeyboardCapture / Idle`;
+- every child process exited and the original foreground and pointer were restored.
+
+`CoverageComplete` is false. The unattended probe intentionally did not call `LockWorkStation`, trigger UAC, enter sleep or disconnect the session. Real `WTS_SESSION_LOCK`, `WTS_SESSION_UNLOCK`, `WTS_SESSION_DESKTOP_READY`, Winlogon/UAC, sleep and remote-session transitions require a user-attended compatibility run.
 
 ### Enhanced WorkerW comparison and automatic fallback — fallback pass
 
@@ -110,8 +126,8 @@ This is a conditional product pass. The public fallback has no documented Shell 
 P0-01 and P0-02 remain open. Still required:
 
 - real dual-monitor mixed-DPI and hot-plug evidence;
-- real full-screen and secure-desktop foreground lifecycle evidence;
+- user-attended lock/UAC, sleep and remote-session lifecycle evidence beyond the validated real full-screen path;
 - enhanced-host and remaining platform lifecycle recovery;
 - production fallback Z-order maintenance and desktop-icon overlap handling beyond the validated visual candidate.
 
-See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foreground-classification.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md), [the Foreground Classification Spike](../spikes/ForegroundClassification/README.md), [the Enhanced Hosting Spike](../spikes/EnhancedHosting/README.md) and [the Fallback Visual Usability Spike](../spikes/FallbackVisualUsability/README.md).
+See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foreground-classification.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md), [the Foreground Classification Spike](../spikes/ForegroundClassification/README.md), [the Enhanced Hosting Spike](../spikes/EnhancedHosting/README.md), [the Fallback Visual Usability Spike](../spikes/FallbackVisualUsability/README.md) and [the Platform Lifecycle Spike](../spikes/PlatformLifecycle/README.md).
