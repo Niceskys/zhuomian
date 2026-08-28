@@ -52,11 +52,25 @@ The disposable monitor/DPI probe passed 10/10 runs on Windows 11 build 26100, x6
 
 The probe reports `Passed: true` but `CoverageComplete: false`. A second physical display, a real mixed-DPI pair and hot-plug cycles were not available, so this evidence must not be treated as completion of the multi-monitor exit criterion.
 
+### Explorer restart and fallback-host recovery — pass with remaining scope
+
+The corrected recovery harness passed 20/20 forced Explorer/Shell restart cycles on Windows 11 build 26100, x64:
+
+- host loss was detected from the Shell process-generation change;
+- the stale host was destroyed;
+- input capture, animation callbacks and media ownership entered the modeled stopped/released state;
+- the replacement Shell was discovered and a new NoActivate host was created without becoming foreground;
+- final state was `DesktopAvailable / Disarmed / NoKeyboardCapture / Idle`;
+- every run ended with Explorer available and no probe windows;
+- recovery ranged from about 0.80 to 1.25 seconds against the provisional 5-second budget.
+
+An earlier 20-cycle baseline that gated recovery on `TaskbarCreated` failed 10/20 cycles. The corrected policy treats that broadcast as advisory and the Shell window plus process generation as authoritative. Abrupt fallback recovery is validated; graceful exit, enhanced WorkerW invalidation, sleep/lock/UAC and long-running soak remain open.
+
 P0-01 and P0-02 remain open. Still required:
 
 - real dual-monitor mixed-DPI and hot-plug evidence;
-- Explorer restart and repeated host recovery;
+- enhanced-host and remaining platform lifecycle recovery;
 - Enhanced WorkerW comparison and automatic fallback;
 - fallback visual usability assessment.
 
-See [ADR-0001](ADR/0001-desktop-host-strategy.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md) and [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md).
+See [ADR-0001](ADR/0001-desktop-host-strategy.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md) and [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md).

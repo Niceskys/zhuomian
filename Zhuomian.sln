@@ -23,6 +23,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MultiMonitorDpi", "MultiMon
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.MultiMonitorDpi", "spikes\MultiMonitorDpi\Zhuomian.Spike.MultiMonitorDpi\Zhuomian.Spike.MultiMonitorDpi.csproj", "{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ExplorerRecovery", "ExplorerRecovery", "{CA2421D3-71BD-DA5D-3A6F-AF84CA64C9EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zhuomian.Spike.ExplorerRecovery", "spikes\ExplorerRecovery\Zhuomian.Spike.ExplorerRecovery\Zhuomian.Spike.ExplorerRecovery.csproj", "{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -93,6 +97,18 @@ Global
 		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Release|x64.Build.0 = Release|Any CPU
 		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Release|x86.ActiveCfg = Release|Any CPU
 		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A}.Release|x86.Build.0 = Release|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Debug|x64.Build.0 = Debug|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Debug|x86.Build.0 = Debug|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Release|x64.ActiveCfg = Release|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Release|x64.Build.0 = Release|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Release|x86.ActiveCfg = Release|Any CPU
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -106,5 +122,7 @@ Global
 		{BE97BB12-476C-4122-99D7-0C851493D93B} = {3C916D61-55A6-FD2A-2F39-57A3CC54AB33}
 		{97DFD586-D32B-1761-1650-1BCFFE06A8F0} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
 		{05BC6D78-FEEC-465E-80A3-DEDEE66E105A} = {97DFD586-D32B-1761-1650-1BCFFE06A8F0}
+		{CA2421D3-71BD-DA5D-3A6F-AF84CA64C9EE} = {674B3D0D-B3C1-BDFD-64ED-056E74CE37B3}
+		{524A989A-5AF5-4E4D-B459-6E2DE0C40DCF} = {CA2421D3-71BD-DA5D-3A6F-AF84CA64C9EE}
 	EndGlobalSection
 EndGlobal

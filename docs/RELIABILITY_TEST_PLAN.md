@@ -41,6 +41,8 @@
 5. 恢复静态 Workspace。
 6. 保持 Disarmed/NoKeyboardCapture。
 
+`TaskbarCreated` 只能作为辅助信号，不得单独证明 Explorer 已重启：它可能因 DPI 变化广播，也可能在受控重启中未被观察到。恢复权威条件至少要关联新的有效 Shell window 与不同的 Shell process generation。
+
 测试覆盖正常退出、崩溃、重启失败、重复重启、虚拟桌面切换、睡眠唤醒、锁屏和 UAC 安全桌面返回。
 
 ## 4. 故障注入

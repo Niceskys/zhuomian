@@ -30,6 +30,8 @@ A separate focus/input probe passes 5/5 one-monitor runs: a physical click on th
 
 The per-monitor/DPI probe passes 10/10 runs on one 2560×1600 display at 150% scaling. It creates one independent Per-Monitor V2 host for every enumerated monitor, proves the host has no OS frame or non-client border, matches the monitor work area, and passes deterministic 96/144-DPI topology mapping. Hardware coverage remains incomplete because a real mixed-DPI pair and hot-plug were unavailable.
 
+The corrected fallback recovery probe passes 20/20 forced Explorer restart cycles with recovery between about 0.80 and 1.25 seconds. A prior design that blocked on `TaskbarCreated` failed 10/20 cycles despite the Shell returning. Therefore, Shell window validity plus a different owning process generation is the authoritative recovery condition; `TaskbarCreated` is advisory telemetry only.
+
 ### Enhanced WorkerW host
 
 Potentially achieves the intended desktop band, but depends on undocumented Shell topology. Not yet tested and may only be accepted as an optional adapter.
@@ -52,16 +54,17 @@ Continue Phase 0B with two adapters behind `IDesktopHost`:
 
 - Zhuomian can retain a supported fallback even if enhanced hosting fails.
 - The fallback may not visually satisfy “between wallpaper and icons”; product presentation must be honest about this limitation.
-- Basic focus/input separation now has disposable Win32 evidence. WinUI/IME/accessibility integration and Explorer lifecycle still require evidence before this ADR can become Accepted.
+- Basic focus/input separation now has disposable Win32 evidence. WinUI/IME/accessibility integration still requires evidence before this ADR can become Accepted.
+- Abrupt Explorer recovery for the public fallback path has repeated evidence. Enhanced WorkerW invalidation and the remaining platform lifecycle matrix still require evidence before this ADR can become Accepted.
 
 ## Validation and rollback
 
-Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../../spikes/FocusAndInput/README.md), and [the Multi-monitor/DPI Spike](../../spikes/MultiMonitorDpi/README.md). Acceptance requires:
+Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../../spikes/MultiMonitorDpi/README.md), and [the Explorer Recovery Spike](../../spikes/ExplorerRecovery/README.md). Acceptance requires:
 
 - repeated NoActivate evidence;
 - real dual-monitor mixed-DPI and hot-plug evidence beyond the validated one-monitor host and deterministic mapping;
 - WinUI keyboard-mode, IME and accessibility evidence beyond the validated Win32 transition;
-- Explorer restart recovery;
+- enhanced-host Explorer recovery and remaining lifecycle-matrix evidence beyond the validated abrupt fallback recovery;
 - enhanced host comparison and failure fallback;
 - no TopMost dependency.
 

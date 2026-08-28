@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "timestampUtc": "2026-08-27T11:01:10.4341578+00:00",
+  "osVersion": "Microsoft Windows NT 10.0.26100.0",
+  "processArchitecture": "X64",
+  "requestedRuns": 20,
+  "passedRuns": 20,
+  "failedRuns": 0,
+  "passed": true,
+  "recoveryBudgetMilliseconds": 5000,
+  "minimumRecoveryMilliseconds": 803.8623,
+  "maximumRecoveryMilliseconds": 1250.6217,
+  "taskbarCreatedObservedRuns": 0,
+  "runs": [
+    {
+      "run": 1,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 1185.938,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 803.8623,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 876.3095,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 4,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 926.4121,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 5,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 915.6102,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 6,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 1250.6217,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 7,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 853.9347,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 8,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 886.4838,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 9,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 884.6248,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 10,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 895.572,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 11,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 868.1196,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 12,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 859.0139,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 13,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 891.5253,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 14,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 852.2289,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 15,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 881.0751,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 16,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 848.9247,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 17,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 821.5111,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 18,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 879.5323,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 19,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 898.6816,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    },
+    {
+      "run": 20,
+      "exitCode": 0,
+      "passed": true,
+      "recoveryMilliseconds": 850.3997,
+      "taskbarCreatedReceived": false,
+      "failedChecks": []
+    }
+  ],
+  "validatedFinalState": {
+    "desktopAvailability": "DesktopAvailable",
+    "intentGate": "Disarmed",
+    "keyboardMode": "NoKeyboardCapture",
+    "spaceState": "Idle"
+  },
+  "validatedBehavior": {
+    "hostLostDetected": true,
+    "initialHostDestroyedAfterLoss": true,
+    "taskbarCreatedReceived": false,
+    "newShellGenerationDetected": true,
+    "newHostCreated": true,
+    "newHostNoActivate": true,
+    "newHostNeverForeground": true,
+    "inputCaptureReleased": true,
+    "animationCallbacksStopped": true,
+    "mediaResourcesReleased": true,
+    "explorerAvailableAtEnd": true,
+    "allProbeWindowsDestroyed": true
+  },
+  "limitations": [
+    "The public fallback host is proactively invalidated when the Shell process generation changes.",
+    "TaskbarCreated is recorded as advisory evidence and is not an authoritative recovery gate.",
+    "This probe models input, animation, and media shutdown flags; production resource owners do not exist yet.",
+    "Enhanced WorkerW parent invalidation, graceful Shell exit, and long-running soak remain separate validation work."
+  ]
+}
