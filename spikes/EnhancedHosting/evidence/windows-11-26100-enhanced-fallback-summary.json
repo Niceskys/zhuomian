@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "timestampUtc": "2026-08-28T02:11:49.6772012+00:00",
+  "osVersion": "Microsoft Windows NT 10.0.26100.0",
+  "processArchitecture": "X64",
+  "requestedRuns": 20,
+  "passedRuns": 20,
+  "failedRuns": 0,
+  "passed": true,
+  "workerWCountBeforePrivateRequest": 15,
+  "visibleWorkerWCountBeforePrivateRequest": 0,
+  "viableWorkerWCountBeforePrivateRequest": 0,
+  "privateWorkerRequestDelivered": true,
+  "workerWCountAfterPrivateRequest": 15,
+  "visibleWorkerWCountAfterPrivateRequest": 0,
+  "viableWorkerWCountAfterPrivateRequest": 0,
+  "privateRequestProducedViableCandidate": false,
+  "fallbackRuns": 20,
+  "crossProcessSetParentAttempts": 0,
+  "policyChecks": [
+    {
+      "Name": "all-enhanced-preconditions-select-enhanced",
+      "Passed": true
+    },
+    {
+      "Name": "missing-candidate-selects-fallback",
+      "Passed": true
+    },
+    {
+      "Name": "attachment-failure-selects-fallback",
+      "Passed": true
+    },
+    {
+      "Name": "dpi-reset-selects-fallback",
+      "Passed": true
+    },
+    {
+      "Name": "all-failures-select-fallback",
+      "Passed": true
+    }
+  ],
+  "validatedFallback": {
+    "shownWithoutActivation": true,
+    "noActivate": true,
+    "notTopMost": true,
+    "borderless": true,
+    "clientAreaMatchedWindow": true,
+    "matchedWorkArea": true,
+    "dpiAvailable": true,
+    "destroyed": true
+  },
+  "runs": [
+    {
+      "run": 1,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 4,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 5,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 6,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 7,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 8,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 9,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 10,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 11,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 12,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 13,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 14,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 15,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 16,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 17,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 18,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 19,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    },
+    {
+      "run": 20,
+      "exitCode": 0,
+      "passed": true,
+      "viableWorkerWCount": 0,
+      "selectedHostMode": "PublicWin32Fallback",
+      "automaticFallbackOccurred": true,
+      "crossProcessSetParentAttempted": false,
+      "failedChecks": []
+    }
+  ],
+  "enhancedRejectionReasons": [
+    "no-visible-shell-owned-workarea-sized-workerw",
+    "cross-process-attachment-not-validated",
+    "cross-process-dpi-preservation-not-proven"
+  ],
+  "limitations": [
+    "WorkerW and message 0x052C are undocumented Shell behavior and are never required by the product.",
+    "No viable WorkerW candidate existed on this Windows build, so cross-process SetParent was not attempted.",
+    "Microsoft documents that cross-process SetParent can reset the child DPI-awareness context.",
+    "The public fallback technical contract is validated; visual usability remains separate evidence."
+  ]
+}
