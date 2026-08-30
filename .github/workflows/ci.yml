@@ -33,6 +33,10 @@ jobs:
         shell: pwsh
         run: ./scripts/performance/test-process-sampler.ps1
 
+      - name: Validate process sample summarizer
+        shell: pwsh
+        run: ./scripts/performance/test-process-sample-summarizer.ps1
+
       - name: Detect solution
         id: solution
         shell: pwsh
