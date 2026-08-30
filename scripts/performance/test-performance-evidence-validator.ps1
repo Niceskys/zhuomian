@@ -148,7 +148,7 @@ try {
     }
     Assert-Fails -Evidence $invalidDroppedFrames -Name 'invalid-dropped-frames.json' -ExpectedMessagePattern 'between 0 and 1'
 
-    Write-Host 'Performance evidence validator self-test passed: 1 valid fixture and 5 invalid fixtures.'
+    Write-Host 'Performance evidence validator self-test passed: 1 valid fixture and 6 invalid fixtures.'
 }
 finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
