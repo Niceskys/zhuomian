@@ -45,18 +45,18 @@ Foreground change notification and debouncing remain implementation work. Produc
 
 The [Foreground Classification Spike](../../spikes/ForegroundClassification/README.md) passes 5/5 runs on Windows 11 build 26100, including 500 real external samples, the complete 24-case Hover truth table per run and synthetic failure-safe cases.
 
-The [Platform Lifecycle Spike](../../spikes/PlatformLifecycle/README.md) passes 5/5 automated runs against a real separate borderless process covering the primary monitor. All five transitions became foreground, classified as `Suspended`, released pointer/keyboard/animation/media state and produced 0/500 Hover expansions. The live default input desktop was accessible and named `Default`; WTS session notification registration and cleanup succeeded. Unlock and Desktop Ready ordering is validated as deterministic policy, not as a real lock/UAC transition.
+The [Platform Lifecycle Spike](../../spikes/PlatformLifecycle/README.md) passes 5/5 automated runs against a real separate borderless process covering the primary monitor. All five transitions became foreground and classified as `Suspended`; the live default input desktop was accessible and named `Default`; WTS session notification registration and cleanup succeeded. Unlock/Desktop Ready ordering, Hover suppression after `Suspended`, and pointer/keyboard/animation/media release are deterministic lifecycle-policy assertions in this Spike, not proof that a production Hover dispatcher or live runtime-resource owners were exercised.
 
 ## Consequences
 
 - False positives favor blocking Hover rather than interrupting another application.
 - A desktop intent click may need a separate hit-test path when the exact foreground HWND is not the public Shell window.
 - Real full-screen classification now has repeated external-process evidence.
-- Real lock/UAC transitions, sleep/remote-session behavior and foreground event delivery remain required before this ADR becomes Accepted.
+- Real lock/UAC transitions, sleep/remote-session behavior, foreground event delivery/debounce and lifecycle integration with actual runtime owners remain required before this ADR becomes Accepted.
 
 ## Validation and rollback
 
-Acceptance requires user-attended real lock/UAC lifecycle evidence, sleep/remote-session evidence, event-delivery/debounce testing, and no external/disarmed Hover expansion. The automated full-screen criterion is satisfied; the Spike is disposable and can be removed without affecting production code.
+Acceptance requires user-attended real lock/UAC lifecycle evidence, sleep/remote-session evidence, event-delivery/debounce testing, integrated no-external/disarmed-Hover behavior, and proof that real pointer/keyboard/animation/media ownership obeys suspension. The automated real full-screen classification criterion is satisfied; the Spike is disposable and can be removed without affecting production code.
 
 ## References
 
