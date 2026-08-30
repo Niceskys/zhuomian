@@ -72,11 +72,12 @@ CI 运行证据契约的确定性自测，但不执行也不冒充真实性能�
 - 参数通过 `ProcessStartInfo.ArgumentList` 逐项传递，不拼接 shell command string；
 - 输出目录必须为空，避免不同采样批次混合；
 - 目标在 warm-up/measurement 期间提前退出即判定该批次失败；
-- 每次 repetition 结束后必须终止并等待其拥有的 process tree；清理失败即失败；
+- 每个目标启动后立即分配到私有 Windows Job Object，并启用 `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`；成功 assignment 之后由该目标创建且未显式 breakaway 的后代会继承 Job containment；
+- 每次 repetition 的 finally 都关闭 Job Object；因此根进程即使已提前退出，已经归入该 Job 的存活后代仍必须被 kill-on-close 清理，根进程仍存活时还必须在 5 秒内确认退出；
 - raw CSV 不持久化可执行文件完整路径、working directory 或用户 home path；
-- 当前采样器只对**直接拥有且保持存活的目标进程**负责，不自动跟踪启动器退出后转移到另一个独立进程的 packaged/activation 模型。
+- 当前保证从**成功 Job assignment**开始。目标在 `Process.Start()` 返回到 assignment 成功之间创建的进程、显式 breakaway 进程，以及启动器退出后转移到另一个独立 packaged/activation 进程的模型，不属于本采样器的 containment/测量保证；这些情况必须由后续场景 runner 单独处理。
 
-`scripts/performance/test-process-sampler.ps1` 在 CI 中使用临时 `pwsh` 子进程和缩短的显式参数做烟测，验证采样、UTC 格式、elapsed 单调性、资源字段、子进程清理以及 fail-closed 路径。该烟测是**工具链证据**，不是 Zhuomian 性能结果；它不得参与 Baseline/Enhanced 阈值校准。
+`scripts/performance/test-process-sampler.ps1` 在 CI 中使用临时 `pwsh` 子进程和缩短的显式参数做烟测，验证采样、UTC 格式、elapsed 单调性、资源字段、正常根进程清理、fail-closed 路径，以及“根进程提前退出但已归入 Job 的长寿命子进程仍被清理”的回归场景。该烟测是**工具链证据**，不是 Zhuomian 性能结果；它不得参与 Baseline/Enhanced 阈值校准。
 
 ## 3. 参考硬件档位
 
