@@ -6,7 +6,7 @@
 
 - Specification and governance baseline merged.
 - Active `main` ruleset requires PRs and the strict `docs` check.
-- .NET solution, analyzer policy, Core contract and 15 tests merged.
+- .NET solution, analyzer policy, Core contract and baseline test suite merged.
 - CI restores, builds, formats, tests and uploads TRX evidence with zero annotations.
 - Diagnostic field/privacy contract established.
 
@@ -77,7 +77,20 @@ The foreground-classification probe passed 5/5 runs on Windows 11 build 26100, x
 - full-screen, cloaked, missing-window, inaccessible-process and same-Explorer-process/non-Shell cases failed safe;
 - foreground and pointer position were restored after every run.
 
-The accepted candidate rule uses exact Shell HWND identity rather than trusting the Explorer process. Real full-screen external-process coverage is recorded below; lock/UAC secure desktop, event-delivery/debounce and final production integration remain open, so [ADR-0002](ADR/0002-foreground-classification.md) remains Proposed.
+The accepted candidate rule uses exact Shell HWND identity rather than trusting the Explorer process. Real full-screen external-process coverage is recorded below; lock/UAC secure desktop, real event delivery and final production integration remain open, so [ADR-0002](ADR/0002-foreground-classification.md) remains Proposed.
+
+### Foreground event debounce reference model — deterministic pass, OS delivery pending
+
+A web-safe executable reference model now freezes the candidate notification-coalescing semantics and is covered by six deterministic xUnit tests in the normal CI test assembly:
+
+- the first hint after idle requests immediate leading-edge reconciliation;
+- burst hints use a 50 ms provisional settle window;
+- continuous bursts cannot starve authoritative re-read beyond a 100 ms provisional interval between reconciliation starts;
+- every hint advances a generation, invalidating stale classifier results;
+- obsolete timer generations cannot consume newer pending work;
+- after pending work drains, the reference model has no idle polling work.
+
+This closes only the deterministic debounce/coalescing policy question. The reference model does not install `SetWinEventHook`, observe `EVENT_SYSTEM_FOREGROUND`, measure callback loss/duplication/reordering, cross the production dispatcher, or exercise real HWND churn. Real Windows event delivery and integration therefore remain open. See [the reference-model Spike](../spikes/ForegroundEventDebounce/README.md).
 
 ### Full-screen and secure-desktop lifecycle — real classification pass, lifecycle integration pending
 
@@ -134,8 +147,9 @@ P0-01 through P0-04 remain incomplete as a group. Still required:
 
 - real dual-monitor mixed-DPI and hot-plug evidence;
 - user-attended lock/UAC, sleep and remote-session lifecycle evidence beyond the validated real full-screen classification path;
-- event-driven foreground delivery/debounce and integrated lifecycle resource-release evidence;
+- real foreground event delivery plus dispatcher/integration evidence under the now-tested debounce policy;
+- integrated lifecycle resource-release evidence;
 - enhanced-host and remaining platform lifecycle recovery;
 - production fallback Z-order maintenance and desktop-icon overlap handling beyond the validated visual candidate.
 
-See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foreground-classification.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md), [the Foreground Classification Spike](../spikes/ForegroundClassification/README.md), [the Enhanced Hosting Spike](../spikes/EnhancedHosting/README.md), [the Fallback Visual Usability Spike](../spikes/FallbackVisualUsability/README.md) and [the Platform Lifecycle Spike](../spikes/PlatformLifecycle/README.md).
+See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foreground-classification.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md), [the Foreground Classification Spike](../spikes/ForegroundClassification/README.md), [the Foreground Event Debounce Spike](../spikes/ForegroundEventDebounce/README.md), [the Enhanced Hosting Spike](../spikes/EnhancedHosting/README.md), [the Fallback Visual Usability Spike](../spikes/FallbackVisualUsability/README.md) and [the Platform Lifecycle Spike](../spikes/PlatformLifecycle/README.md).
