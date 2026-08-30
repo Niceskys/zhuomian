@@ -6,7 +6,7 @@
 
 - Specification and governance baseline merged.
 - Active `main` ruleset requires PRs and the strict `docs` check.
-- .NET solution, analyzer policy, Core contract and 15 tests merged.
+- .NET solution, analyzer policy, Core contract and baseline test suite merged.
 - CI restores, builds, formats, tests and uploads TRX evidence with zero annotations.
 - Diagnostic field/privacy contract established.
 
