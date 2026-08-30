@@ -123,9 +123,36 @@ if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
 
 $resolvedEvidencePath = (Resolve-Path -LiteralPath $Path).Path
 $evidenceDirectory = Split-Path -Parent $resolvedEvidencePath
+$rawJson = Get-Content -LiteralPath $resolvedEvidencePath -Raw
+
+$jsonDocument = $null
+try {
+    $jsonDocument = [System.Text.Json.JsonDocument]::Parse($rawJson)
+    $timestampElement = $jsonDocument.RootElement.GetProperty('collectedAtUtc')
+    if ($timestampElement.ValueKind -ne [System.Text.Json.JsonValueKind]::String) {
+        throw "evidence.collectedAtUtc must be a non-empty UTC string."
+    }
+
+    $collectedAtUtc = $timestampElement.GetString()
+    if ([string]::IsNullOrWhiteSpace($collectedAtUtc)) {
+        throw "evidence.collectedAtUtc must be a non-empty UTC string."
+    }
+}
+catch {
+    if ($_.Exception.Message -like 'evidence.collectedAtUtc*') {
+        throw
+    }
+
+    throw "Performance evidence is not valid JSON or is missing collectedAtUtc: $($_.Exception.Message)"
+}
+finally {
+    if ($null -ne $jsonDocument) {
+        $jsonDocument.Dispose()
+    }
+}
 
 try {
-    $evidence = Get-Content -LiteralPath $resolvedEvidencePath -Raw | ConvertFrom-Json
+    $evidence = $rawJson | ConvertFrom-Json
 }
 catch {
     throw "Performance evidence is not valid JSON: $($_.Exception.Message)"
@@ -146,14 +173,21 @@ if ($scenarioId -notmatch '^S[1-8]$') {
     throw "evidence.scenarioId must be one of S1 through S8."
 }
 
-$collectedAtUtc = Get-RequiredString -Object $evidence -Name 'collectedAtUtc' -Context 'evidence'
+if ($collectedAtUtc -notmatch '(?i)(Z|\+00:00)$') {
+    throw "evidence.collectedAtUtc must use UTC offset Z or +00:00."
+}
+
 $parsedTimestamp = [DateTimeOffset]::MinValue
 if (-not [DateTimeOffset]::TryParse(
         $collectedAtUtc,
         [Globalization.CultureInfo]::InvariantCulture,
-        [Globalization.DateTimeStyles]::AssumeUniversal,
+        [Globalization.DateTimeStyles]::None,
         [ref]$parsedTimestamp)) {
-    throw "evidence.collectedAtUtc must be an ISO-8601 timestamp."
+    throw "evidence.collectedAtUtc must be a valid ISO-8601 UTC timestamp."
+}
+
+if ($parsedTimestamp.Offset -ne [TimeSpan]::Zero) {
+    throw "evidence.collectedAtUtc must resolve to UTC offset zero."
 }
 
 $machineTier = Get-RequiredString -Object $evidence -Name 'machineTier' -Context 'evidence'
