@@ -7,7 +7,7 @@
 - Specification and governance baseline merged.
 - Active `main` ruleset requires PRs and the strict `docs` check.
 - .NET solution, analyzer policy, Core contract and baseline test suite merged.
-- CI validates documentation and the performance-evidence contract, then restores, builds, formats, tests and uploads TRX evidence with zero annotations.
+- CI validates documentation, the performance-evidence contract and the generic process-sampler smoke test, then restores, builds, formats, tests and uploads TRX evidence with zero annotations.
 - Diagnostic field/privacy contract established.
 
 ## Phase 0B — In progress
@@ -158,9 +158,9 @@ See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foregroun
 
 Phase 0B exit conditions above remain open. The following work is allowed in parallel because it does not depend on unavailable attended hardware and does not advance the Phase 0B exit gate.
 
-### P0-07 performance evidence contract — deterministic tooling pass, benchmark pending
+### P0-07 performance tooling — evidence contract + generic sampler pass, product benchmark pending
 
-A dependency-free PowerShell evidence validator and self-test now establish the machine-readable result contract described in [PERFORMANCE_BUDGET.md](PERFORMANCE_BUDGET.md):
+The machine-readable evidence contract remains enforced by `scripts/performance/validate-performance-evidence.ps1` and its deterministic self-test:
 
 - full 40-character commit SHA, scenario ID and UTC provenance are required;
 - Windows/App SDK/GPU driver, CPU/RAM/GPU and display DPI/refresh metadata are required;
@@ -171,12 +171,23 @@ A dependency-free PowerShell evidence validator and self-test now establish the 
 - `CI` and `Exploratory` machine tiers cannot be marked eligible for threshold calibration;
 - CI runs one valid and seven invalid temporary fixtures to verify required acceptance/rejection behavior, including non-UTC and non-ISO timestamp rejection.
 
-This is **protocol-tooling evidence only**. No Zhuomian performance scenario is measured by the hosted runner, no CPU/GPU/memory/frame budget is claimed, and no provisional threshold is frozen.
+A generic owned-process sampler is now added as separate tooling groundwork:
+
+- one fresh directly owned target process is launched per repetition;
+- defaults remain 60s warm-up / 300s measurement / 1000ms interval / 3 repetitions;
+- raw CSV records UTC timestamp, monotonic elapsed time, normalized process CPU, Private Bytes, Working Set, handle count and thread count;
+- structured arguments use `ProcessStartInfo.ArgumentList` rather than shell concatenation;
+- non-empty output, target early exit, invalid samples or owned-process cleanup failure fail the run;
+- raw CSV does not persist executable/working-directory/home paths;
+- CI smoke-tests two short temporary `pwsh` runs plus failure paths and deletes all smoke data.
+
+This remains **protocol/tooling evidence only**. The hosted runner is not a Zhuomian Baseline/Enhanced performance machine, the shortened `pwsh` smoke test is not a product benchmark, no S1-S8 product scenario is measured and no provisional threshold is frozen.
 
 P0-07 remains incomplete. Still required:
 
-- a repeatable Release x64 collection runner/sampling script;
-- real raw measurements for applicable S1-S8 scenarios;
+- bind the sampler to repeatable Release x64 Zhuomian S1-S8 scenario orchestration;
+- generate complete evidence metadata, per-metric Average/P95/P99/max summaries and run selection from raw samples;
+- collect real raw measurements for applicable S1-S8 scenarios;
 - Baseline and Enhanced real-machine evidence;
 - same-protocol median/worst-run comparison;
 - threshold calibration from reproducible measurements.
