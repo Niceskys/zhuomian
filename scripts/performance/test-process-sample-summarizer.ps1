@@ -12,13 +12,14 @@ if (-not (Test-Path -LiteralPath $summarizer -PathType Leaf)) {
 function Write-RunFixture {
     param(
         [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][int]$Offset
+        [Parameter(Mandatory)][int]$Offset,
+        [int]$SampleCount = 20
     )
 
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add('timestampUtc,elapsedMilliseconds,cpuPercent,privateBytes,workingSetBytes,handleCount,threadCount')
 
-    for ($index = 1; $index -le 20; $index++) {
+    for ($index = 1; $index -le $SampleCount; $index++) {
         $timestamp = [DateTimeOffset]::new(2026, 8, 30, 0, 0, 0, [TimeSpan]::Zero).AddMilliseconds($index * 100).ToString('O', [Globalization.CultureInfo]::InvariantCulture)
         $value = $index + $Offset
         $lines.Add("$timestamp,$($index * 100),$value,$($value * 100),$($value * 200),$($value + 2),$($value + 1)")
@@ -103,6 +104,17 @@ try {
         throw 'Persisted summary does not match the in-memory summary.'
     }
 
+    $hundredDirectory = Join-Path $tempRoot 'hundred-runs'
+    New-Item -ItemType Directory -Path $hundredDirectory -Force | Out-Null
+    for ($run = 1; $run -le 100; $run++) {
+        Write-RunFixture -Path (Join-Path $hundredDirectory ('run-{0:D2}.csv' -f $run)) -Offset $run -SampleCount 1
+    }
+
+    $hundredSummary = & $summarizer -InputDirectory $hundredDirectory -OutputPath (Join-Path $tempRoot 'hundred-summary.json')
+    if ($hundredSummary.runCount -ne 100 -or $hundredSummary.runs[99].run -ne 100 -or $hundredSummary.runs[99].rawResultFile -ne 'run-100.csv') {
+        throw 'Summarizer did not preserve numeric ordering through run-100.csv.'
+    }
+
     $gapDirectory = Join-Path $tempRoot 'gap'
     New-Item -ItemType Directory -Path $gapDirectory -Force | Out-Null
     Write-RunFixture -Path (Join-Path $gapDirectory 'run-01.csv') -Offset 0
@@ -139,7 +151,17 @@ try {
         & $summarizer -InputDirectory $nonFiniteDirectory -OutputPath (Join-Path $tempRoot 'non-finite-summary.json') | Out-Null
     }
 
-    Write-Host 'Process sample summarizer self-test passed: deterministic per-run statistics plus gap/header/timing/non-finite rejection.'
+    $fractionalResourceDirectory = Join-Path $tempRoot 'fractional-resource'
+    New-Item -ItemType Directory -Path $fractionalResourceDirectory -Force | Out-Null
+    @(
+        'timestampUtc,elapsedMilliseconds,cpuPercent,privateBytes,workingSetBytes,handleCount,threadCount',
+        '2026-08-30T00:00:00.1000000+00:00,100,1,100,200,3.5,2'
+    ) | Set-Content -LiteralPath (Join-Path $fractionalResourceDirectory 'run-01.csv') -Encoding utf8
+    Assert-Fails -ExpectedMessagePattern 'non-negative integer' -Action {
+        & $summarizer -InputDirectory $fractionalResourceDirectory -OutputPath (Join-Path $tempRoot 'fractional-summary.json') | Out-Null
+    }
+
+    Write-Host 'Process sample summarizer self-test passed: deterministic per-run statistics, run-100 ordering, and gap/header/timing/non-finite/non-integer rejection.'
 }
 finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
