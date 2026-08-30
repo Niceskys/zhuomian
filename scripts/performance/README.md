@@ -31,16 +31,18 @@ pwsh ./scripts/performance/collect-process-samples.ps1 `
   -OutputDirectory <empty-output-directory>
 ```
 
-The sampler launches and owns one fresh child process per repetition. Defaults follow the current protocol: 60 seconds warm-up, 300 seconds measurement, 1000 ms sampling interval and 3 repetitions. Each `run-XX.csv` contains only:
+The Windows sampler launches one fresh directly owned root process per repetition. Defaults follow the current protocol: 60 seconds warm-up, 300 seconds measurement, 1000 ms sampling interval and 3 repetitions. Each `run-XX.csv` contains only:
 
 - UTC timestamp and monotonic elapsed milliseconds;
 - processor-count-normalized CPU percentage;
 - Private Bytes and Working Set;
 - handle count and thread count.
 
-Arguments are passed through `ProcessStartInfo.ArgumentList`; the sampler does not build a shell command string. The target must remain as the directly owned process for the measurement. Early exit, a non-empty output directory, invalid samples or cleanup failure abort the run. The sampler terminates its owned process tree after each repetition.
+Arguments are passed through `ProcessStartInfo.ArgumentList`; the sampler does not build a shell command string. Immediately after start, the root process is assigned to a private Windows Job Object configured with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. Descendants created after successful assignment inherit normal Job containment unless they explicitly break away. Closing the Job in `finally` therefore cleans already-contained descendants even when the root process has exited early; if the root is still alive, the sampler also requires it to terminate within 5 seconds.
 
-The returned PowerShell object may contain the resolved output directory and launched PIDs for the invoking session, but those values are not written into the raw CSV. Durable evidence must still go through `validate-performance-evidence.ps1` and its privacy/path rules.
+The containment boundary begins only after successful Job assignment. A process created in the narrow start-to-assignment window, an explicit Job-breakaway process, or a packaged/activation handoff to an independent process is not claimed as contained or measured by this generic sampler. Those activation models require future scenario-runner handling.
+
+The returned PowerShell object may contain the resolved output directory and launched root PIDs for the invoking session, but those values are not written into the raw CSV. Durable evidence must still go through `validate-performance-evidence.ps1` and its privacy/path rules.
 
 ### Sampler smoke test
 
@@ -48,7 +50,7 @@ The returned PowerShell object may contain the resolved output directory and lau
 pwsh ./scripts/performance/test-process-sampler.ps1
 ```
 
-CI uses two short temporary `pwsh` child runs plus rejection cases to verify sampling, UTC formatting, monotonic elapsed time, resource fields, cleanup and fail-closed behavior. The shortened smoke protocol is **tooling evidence only**. It is not a Zhuomian performance run and cannot be used for threshold calibration.
+CI uses two short temporary `pwsh` root runs plus rejection/cleanup cases to verify sampling, UTC formatting, monotonic elapsed time, resource fields, root cleanup and fail-closed behavior. A regression fixture also delays long enough for Job assignment, spawns a long-lived child, lets the root exit early, and requires the contained child to disappear after Job close. The shortened smoke protocol is **tooling evidence only**. It is not a Zhuomian performance run and cannot be used for threshold calibration.
 
 ## Still required for P0-07
 
