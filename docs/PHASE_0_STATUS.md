@@ -7,7 +7,7 @@
 - Specification and governance baseline merged.
 - Active `main` ruleset requires PRs and the strict `docs` check.
 - .NET solution, analyzer policy, Core contract and baseline test suite merged.
-- CI validates documentation, the performance-evidence contract, the generic process-sampler smoke test and the deterministic per-run sample-summarizer self-test, then restores, builds, formats, tests and uploads TRX evidence with zero annotations.
+- CI validates documentation, the performance-evidence contract, the generic process-sampler smoke test, the deterministic per-run sample summarizer and cross-run selector, then restores, builds, formats, tests and uploads TRX evidence with zero annotations.
 - Diagnostic field/privacy contract established.
 
 ## Phase 0B — In progress
@@ -158,7 +158,7 @@ See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foregroun
 
 Phase 0B exit conditions above remain open. The following work is allowed in parallel because it does not depend on unavailable attended hardware and does not advance the Phase 0B exit gate.
 
-### P0-07 performance tooling — evidence contract + generic sampler + per-run summary pass, product benchmark pending
+### P0-07 performance tooling — contract + sampler + per-run summary + cross-run selection pass, product benchmark pending
 
 The machine-readable evidence contract remains enforced by `scripts/performance/validate-performance-evidence.ps1` and its deterministic self-test:
 
@@ -169,7 +169,7 @@ The machine-readable evidence contract remains enforced by `scripts/performance/
 - raw result paths must be relative, exist beside the evidence set and avoid traversal/private home paths;
 - metrics require Average/P95/P99/max ordering, and frame presentation requires a bounded dropped-frame ratio or explicit non-applicability;
 - `CI` and `Exploratory` machine tiers cannot be marked eligible for threshold calibration;
-- CI runs one valid and seven invalid temporary fixtures to verify required acceptance/rejection behavior, including non-UTC and non-ISO timestamp rejection.
+- CI runs one valid and eleven invalid temporary fixtures to verify required acceptance/rejection behavior, including timestamps, selector semantics and median/worst consistency.
 
 A generic owned-process sampler is now added as separate tooling groundwork:
 
@@ -189,12 +189,21 @@ The deterministic per-run summarizer is also present:
 - sampler-format validation covers exact headers, UTC timestamps, strictly increasing elapsed time, finite non-negative CPU/elapsed values, integer resource values and numeric ordering through `run-100.csv`;
 - CI uses synthetic temporary fixtures to verify the deterministic math and rejection paths; those fixtures are tooling evidence only and are deleted after the test.
 
-This remains **protocol/tooling evidence only**. The hosted runner is not a Zhuomian Baseline/Enhanced performance machine, the shortened `pwsh` smoke test and synthetic summarizer fixtures are not product benchmarks, no S1-S8 product scenario is measured and no provisional threshold is frozen.
+The deterministic cross-run selector is now present:
+
+- `scripts/performance/select-performance-runs.ps1` requires an explicit primary metric, statistic and severity direction instead of guessing them from observed values;
+- it ranks runs from best to worst, selects nearest-rank 50% as median, selects the highest-severity run as worst and uses the lowest run number for ties;
+- its `selectionSchemaVersion: 1` output preserves the complete ranking, selector/unit/policy and median/worst indices and values;
+- final evidence `metrics[]` is defined as the median-run metrics, and the validator cross-checks its selected statistic against `medianValue` plus the worst-value direction;
+- CI covers higher/lower-is-worse, odd/even counts, ties, missing/duplicate metrics, run gaps, unit mismatch and non-finite data;
+- this freezes tooling semantics only; it does not assemble final evidence or create benchmark claims.
+
+This remains **protocol/tooling evidence only**. The hosted runner is not a Zhuomian Baseline/Enhanced performance machine, the shortened `pwsh` smoke test and synthetic summary/selection fixtures are not product benchmarks, no S1-S8 product scenario is measured and no provisional threshold is frozen.
 
 P0-07 remains incomplete. Still required:
 
 - bind the sampler to repeatable Release x64 Zhuomian S1-S8 scenario orchestration;
-- freeze cross-run final evidence/run-selection semantics and assemble complete evidence metadata from validated raw samples/per-run summaries;
+- assemble complete final evidence metadata from validated raw samples, per-run summaries and run selection;
 - collect real raw measurements for applicable S1-S8 scenarios;
 - Baseline and Enhanced real-machine evidence;
 - same-protocol median/worst-run comparison;

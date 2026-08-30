@@ -298,10 +298,65 @@ else {
 }
 
 $runSelection = Get-RequiredProperty -Object $evidence -Name 'runSelection' -Context 'evidence'
+$selector = Get-RequiredProperty -Object $runSelection -Name 'selector' -Context 'evidence.runSelection'
+$selectorMetricName = Get-RequiredString -Object $selector -Name 'metricName' -Context 'evidence.runSelection.selector'
+$selectorUnit = Get-RequiredString -Object $selector -Name 'unit' -Context 'evidence.runSelection.selector'
+$selectorStatistic = Get-RequiredString -Object $selector -Name 'statistic' -Context 'evidence.runSelection.selector'
+if ($selectorStatistic -notin @('average', 'p95', 'p99', 'max')) {
+    throw "evidence.runSelection.selector.statistic must be average, p95, p99, or max."
+}
+
+$selectorDirection = Get-RequiredString -Object $selector -Name 'direction' -Context 'evidence.runSelection.selector'
+if ($selectorDirection -notin @('higher-is-worse', 'lower-is-worse')) {
+    throw "evidence.runSelection.selector.direction must be higher-is-worse or lower-is-worse."
+}
+
+$medianMethod = Get-RequiredString -Object $selector -Name 'medianMethod' -Context 'evidence.runSelection.selector'
+if ($medianMethod -ne 'nearest-rank-50') {
+    throw "evidence.runSelection.selector.medianMethod must be nearest-rank-50."
+}
+
+$tieBreak = Get-RequiredString -Object $selector -Name 'tieBreak' -Context 'evidence.runSelection.selector'
+if ($tieBreak -ne 'lowest-run-number') {
+    throw "evidence.runSelection.selector.tieBreak must be lowest-run-number."
+}
+
 $medianRun = Get-RequiredInteger -Object $runSelection -Name 'medianRun' -Context 'evidence.runSelection' -Minimum 1
+$medianValue = Get-RequiredNumber -Object $runSelection -Name 'medianValue' -Context 'evidence.runSelection'
 $worstRun = Get-RequiredInteger -Object $runSelection -Name 'worstRun' -Context 'evidence.runSelection' -Minimum 1
+$worstValue = Get-RequiredNumber -Object $runSelection -Name 'worstValue' -Context 'evidence.runSelection'
 if ($medianRun -gt $repetitions -or $worstRun -gt $repetitions) {
     throw "evidence.runSelection indices must be within evidence.protocol.repetitions."
+}
+
+$selectorMetrics = @($metrics | Where-Object {
+        $nameProperty = $_.PSObject.Properties['name']
+        $null -ne $nameProperty -and $nameProperty.Value -eq $selectorMetricName
+    })
+if ($selectorMetrics.Count -ne 1) {
+    throw "evidence.metrics must contain exactly one run-selection metric named '$selectorMetricName'."
+}
+
+$selectorMetric = $selectorMetrics[0]
+$metricUnit = Get-RequiredString -Object $selectorMetric -Name 'unit' -Context "evidence.metrics[$selectorMetricName]"
+if ($metricUnit -ne $selectorUnit) {
+    throw "evidence.runSelection.selector.unit must match the selected evidence.metrics unit."
+}
+
+$selectedMedianValue = Get-RequiredNumber `
+    -Object $selectorMetric `
+    -Name $selectorStatistic `
+    -Context "evidence.metrics[$selectorMetricName]"
+if ([Math]::Abs($selectedMedianValue - $medianValue) -gt 0.000000001) {
+    throw "evidence.metrics must describe medianRun: the selected metric statistic must equal evidence.runSelection.medianValue."
+}
+
+if ($selectorDirection -eq 'higher-is-worse' -and $worstValue -lt $medianValue) {
+    throw "evidence.runSelection.worstValue must be >= medianValue when direction is higher-is-worse."
+}
+
+if ($selectorDirection -eq 'lower-is-worse' -and $worstValue -gt $medianValue) {
+    throw "evidence.runSelection.worstValue must be <= medianValue when direction is lower-is-worse."
 }
 
 [pscustomobject]@{
