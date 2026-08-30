@@ -35,6 +35,26 @@ function Assert-Fails {
     }
 }
 
+function Assert-ProcessStops {
+    param(
+        [Parameter(Mandatory)]
+        [int]$ProcessId,
+
+        [int]$TimeoutMilliseconds = 5000
+    )
+
+    $deadline = [DateTimeOffset]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+    while ([DateTimeOffset]::UtcNow -lt $deadline) {
+        if ($null -eq (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) {
+            return
+        }
+
+        Start-Sleep -Milliseconds 100
+    }
+
+    throw "Sampler left descendant process $ProcessId running after Job Object cleanup."
+}
+
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("zhuomian-process-sampler-{0}" -f [guid]::NewGuid())
 $sampleDirectory = Join-Path $tempRoot 'samples'
 New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
@@ -115,7 +135,7 @@ try {
 
     foreach ($processId in $result.LaunchedProcessIds) {
         if ($null -ne (Get-Process -Id $processId -ErrorAction SilentlyContinue)) {
-            throw "Sampler left an owned process running after measurement."
+            throw "Sampler left an owned root process running after measurement."
         }
     }
 
@@ -146,7 +166,46 @@ try {
             -Repetitions 1 | Out-Null
     }
 
-    Write-Host 'Process sampler smoke test passed: two short repetitions plus non-empty-output and early-exit rejection.'
+    $descendantPidPath = Join-Path $tempRoot 'descendant.pid'
+    $spawnAndExitScript = Join-Path $tempRoot 'spawn-child-and-exit.ps1'
+    @'
+param([Parameter(Mandatory)][string]$ChildPidPath)
+
+$childStart = [System.Diagnostics.ProcessStartInfo]::new()
+$childStart.FileName = (Get-Process -Id $PID).Path
+$childStart.UseShellExecute = $false
+foreach ($argument in @('-NoLogo', '-NoProfile', '-NonInteractive', '-Command', 'Start-Sleep -Seconds 30')) {
+    $childStart.ArgumentList.Add($argument)
+}
+
+# Leave time for the sampler to assign this root process to its private Job Object.
+Start-Sleep -Milliseconds 300
+$child = [System.Diagnostics.Process]::Start($childStart)
+Set-Content -LiteralPath $ChildPidPath -Value $child.Id -Encoding ascii
+$child.Dispose()
+exit 0
+'@ | Set-Content -LiteralPath $spawnAndExitScript -Encoding utf8
+
+    $earlyTreeDirectory = Join-Path $tempRoot 'early-tree-exit'
+    Assert-Fails -ExpectedMessagePattern 'exited' -Action {
+        & $sampler `
+            -ExecutablePath $pwshPath `
+            -ArgumentList @('-NoLogo', '-NoProfile', '-NonInteractive', '-File', $spawnAndExitScript, '-ChildPidPath', $descendantPidPath) `
+            -OutputDirectory $earlyTreeDirectory `
+            -WarmupSeconds 0 `
+            -MeasurementSeconds 2 `
+            -SampleIntervalMilliseconds 200 `
+            -Repetitions 1 | Out-Null
+    }
+
+    if (-not (Test-Path -LiteralPath $descendantPidPath -PathType Leaf)) {
+        throw "Descendant-cleanup fixture did not record its child PID."
+    }
+
+    $descendantPid = [int](Get-Content -LiteralPath $descendantPidPath -Raw).Trim()
+    Assert-ProcessStops -ProcessId $descendantPid
+
+    Write-Host 'Process sampler smoke test passed: two short repetitions, non-empty-output/early-exit rejection, and descendant cleanup after early root exit.'
 }
 finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
