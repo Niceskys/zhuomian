@@ -52,7 +52,7 @@ function New-ValidEvidence {
         rawResultFiles = @('raw/run1.csv')
         metrics = @(
             [ordered]@{
-                name = 'cpu-percent'
+                name = 'cpuPercent'
                 unit = 'percent'
                 average = 0.5
                 p95 = 0.7
@@ -65,8 +65,18 @@ function New-ValidEvidence {
             notApplicableReason = 'Contract fixture does not present frames.'
         }
         runSelection = [ordered]@{
+            selector = [ordered]@{
+                metricName = 'cpuPercent'
+                unit = 'percent'
+                statistic = 'average'
+                direction = 'higher-is-worse'
+                medianMethod = 'nearest-rank-50'
+                tieBreak = 'lowest-run-number'
+            }
             medianRun = 2
+            medianValue = 0.5
             worstRun = 3
+            worstValue = 0.8
         }
     }
 }
@@ -152,7 +162,23 @@ try {
     }
     Assert-Fails -Evidence $invalidDroppedFrames -Name 'invalid-dropped-frames.json' -ExpectedMessagePattern 'between 0 and 1'
 
-    Write-Host 'Performance evidence validator self-test passed: 1 valid fixture and 7 invalid fixtures.'
+    $invalidDirection = New-ValidEvidence
+    $invalidDirection.runSelection.selector.direction = 'sideways'
+    Assert-Fails -Evidence $invalidDirection -Name 'invalid-selection-direction.json' -ExpectedMessagePattern 'higher-is-worse or lower-is-worse'
+
+    $missingSelectionMetric = New-ValidEvidence
+    $missingSelectionMetric.runSelection.selector.metricName = 'missingMetric'
+    Assert-Fails -Evidence $missingSelectionMetric -Name 'missing-selection-metric.json' -ExpectedMessagePattern 'exactly one run-selection metric'
+
+    $medianMetricMismatch = New-ValidEvidence
+    $medianMetricMismatch.runSelection.medianValue = 0.6
+    Assert-Fails -Evidence $medianMetricMismatch -Name 'median-metric-mismatch.json' -ExpectedMessagePattern 'metrics must describe medianRun'
+
+    $invalidWorstDirection = New-ValidEvidence
+    $invalidWorstDirection.runSelection.worstValue = 0.4
+    Assert-Fails -Evidence $invalidWorstDirection -Name 'invalid-worst-direction.json' -ExpectedMessagePattern 'worstValue must be >= medianValue'
+
+    Write-Host 'Performance evidence validator self-test passed: 1 valid fixture and 11 invalid fixtures.'
 }
 finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue

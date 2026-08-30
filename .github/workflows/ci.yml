@@ -37,6 +37,10 @@ jobs:
         shell: pwsh
         run: ./scripts/performance/test-process-sample-summarizer.ps1
 
+      - name: Validate cross-run selection
+        shell: pwsh
+        run: ./scripts/performance/test-performance-run-selector.ps1
+
       - name: Detect solution
         id: solution
         shell: pwsh

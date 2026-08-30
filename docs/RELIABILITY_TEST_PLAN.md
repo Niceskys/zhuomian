@@ -8,6 +8,7 @@
 - 性能证据契约校验器的确定性自测；
 - 通用进程采样器的短时 tooling smoke test；
 - 进程样本 per-run 统计器的确定性自测；
+- 跨 run median/worst 选择器的确定性和拒绝路径自测；
 - restore/build；
 - 当前仓库已有的 unit、model 与 deterministic interaction tests；
 - analyzer/code-style 检查，warning 不得被静默忽略；
@@ -20,7 +21,7 @@
 - UI 行为出现后：真实 UI automation、IME、Reduced Motion 与截图/录屏证据；
 - performance-sensitive 能力出现后：按性能协议生成可复核原始结果。
 
-当前仓库已经包含 .NET solution、Core/test 项目和多个 disposable Spike。现行 PR CI 会先验证文档、性能证据契约、通用进程采样器和 per-run 样本统计器，再 restore/build solution、执行 `dotnet format --verify-no-changes`、运行测试并上传 TRX。性能契约自测只证明校验工具可执行；采样器 smoke test 只使用临时 `pwsh` 子进程和缩短参数验证采样/清理/fail-closed 行为；统计器自测只使用临时合成 CSV 验证数学计算与格式拒绝路径。这些 tooling tests 都**不产生 Zhuomian 基准或阈值校准证据**。Persistence/migration 生产能力尚未进入仓库，因此其专项测试目前是**尚未适用**，不是“已通过”证据。
+当前仓库已经包含 .NET solution、Core/test 项目和多个 disposable Spike。现行 PR CI 会先验证文档、性能证据契约、通用进程采样器、per-run 样本统计器和跨 run 选择器，再 restore/build solution、执行 `dotnet format --verify-no-changes`、运行测试并上传 TRX。性能契约自测只证明校验工具可执行；采样器 smoke test 只使用临时 `pwsh` 子进程和缩短参数验证采样/清理/fail-closed 行为；统计器与选择器自测只使用临时合成数据验证数学计算、选择语义与格式拒绝路径。这些 tooling tests 都**不产生 Zhuomian 基准或阈值校准证据**。Persistence/migration 生产能力尚未进入仓库，因此其专项测试目前是**尚未适用**，不是“已通过”证据。
 
 ## 2. 确定性状态机测试
 

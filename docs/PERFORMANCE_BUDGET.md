@@ -42,7 +42,11 @@ P0-07 使用 `schemaVersion: 1` 的 JSON 证据文件。校验器位于 `scripts
 - `collectionCommand` 与存在的相对 `rawResultFiles`；
 - `metrics[]` 的 name/unit/Average/P95/P99/max；
 - `framePresentation` 的 measured/dropped-frame ratio 或不适用原因；
-- `runSelection` 的 median/worst run。
+- `runSelection` 的显式 selector、median/worst run 及对应选择值。
+
+`metrics[]` 表示选中的中位 run。`runSelection` 必须包含 `selector.metricName`、unit、`selector.statistic`（`average`/`p95`/`p99`/`max`）、`selector.direction`（`higher-is-worse`/`lower-is-worse`）、`selector.medianMethod = nearest-rank-50`、`selector.tieBreak = lowest-run-number`，以及 `medianRun`/`medianValue`、`worstRun`/`worstValue`。
+
+选择指标由场景协议显式给出，不允许工具根据观察值猜测。按严重度从好到坏排序后，中位 run 使用 rank `ceil(0.5 * N)`；最差 run 取最高严重度；相同选择值用较小 run 编号打破并列。`metrics[]` 中选择指标的对应 statistic 必须等于 `medianValue`。方向为 higher-is-worse 时 `worstValue >= medianValue`，方向相反时不等式相反。
 
 约束：
 
@@ -55,7 +59,13 @@ P0-07 使用 `schemaVersion: 1` 的 JSON 证据文件。校验器位于 `scripts
 
 CI 运行证据契约的确定性自测，但不执行也不冒充真实性能基准。校验器通过只能证明“证据格式可复核”，不能证明 Zhuomian 达到任何性能预算。
 
-### 2.2 通用进程采样器
+### 2.2 跨 run 选择器
+
+`scripts/performance/select-performance-runs.ps1` 消费 `summarySchemaVersion: 1` 单轮统计结果，并输出独立的 `selectionSchemaVersion: 1` 选择记录。它要求所有 run 连续、选择指标唯一、unit 一致、选择 statistic 为有限非负数，并拒绝覆盖已有输出。
+
+`scripts/performance/test-performance-run-selector.ps1` 在 CI 中验证两个严重度方向、奇数/偶数 run、nearest-rank 50%、并列规则及损坏 summary 拒绝路径。该工具只冻结跨 run 数学语义，不组装硬件/build metadata，也不产生真实性能成绩。
+
+### 2.3 通用进程采样器
 
 `scripts/performance/collect-process-samples.ps1` 提供 P0-07 的原始进程资源采样基础。它直接启动并拥有一个目标子进程，每次 repetition 使用新的进程实例，默认参数与标准协议一致：60s warm-up、300s measurement、1000ms sample interval、3 repetitions。
 
@@ -132,7 +142,7 @@ WinUI/packaging 基线可能要求调整内存门槛。调整只能依据可复�
 证据契约和通用采样器完成不等于 P0-07 完成。仍必须具备：
 
 - 将采样器绑定到可重复执行的 **Release x64 Zhuomian S1-S8 场景编排**；
-- 从原始时间序列生成完整 evidence metadata、每项 Average/P95/P99/max 与 run selection；
+- 从原始时间序列、单轮统计和 run selection 组装完整 evidence metadata；
 - 对适用固定场景生成真实原始结果；
 - Baseline 与 Enhanced 至少两档真实机器数据；
 - 同协议下的中位/最差运行比较；

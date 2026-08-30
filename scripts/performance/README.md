@@ -80,10 +80,34 @@ pwsh ./scripts/performance/test-process-sample-summarizer.ps1
 
 CI uses synthetic temporary CSV fixtures to verify deterministic averages and nearest-rank percentiles plus rejection of run-number gaps, wrong headers, non-monotonic elapsed time and non-finite numeric data. These fixtures are mathematical/tooling evidence only and are deleted after the test.
 
+## Cross-run selection
+
+```powershell
+pwsh ./scripts/performance/select-performance-runs.ps1 `
+  -SummaryPath <per-run-summary.json> `
+  -OutputPath <run-selection.json> `
+  -MetricName cpuPercent `
+  -Statistic average `
+  -Direction higher-is-worse
+```
+
+Run selection is scenario-defined, not globally inferred. The caller must explicitly provide one primary metric present exactly once in every run, one statistic (`average`, `p95`, `p99`, or `max`), and whether higher or lower values are worse.
+
+The selector orders runs from best to worst severity. `medianRun` is nearest-rank 50% (`ceil(0.5 * N)`) in that order; `worstRun` is the highest-severity run. Equal values use the lowest run number. The output records the selector, unit, policy, complete ranking, median/worst indices and values under `selectionSchemaVersion: 1`.
+
+Final evidence `metrics[]` represents the selected median run. Its selected metric/statistic must equal `runSelection.medianValue`; `runSelection.worstValue` preserves the primary worst-run comparison. The evidence validator enforces these relationships.
+
+### Run-selection self-test
+
+```powershell
+pwsh ./scripts/performance/test-performance-run-selector.ps1
+```
+
+CI verifies both severity directions, odd/even nearest-rank selection, deterministic ties, selector metadata and malformed-summary rejection. Synthetic selection fixtures do not constitute performance results.
+
 ## Still required for P0-07
 
 - bind the generic sampler to repeatable **Release x64 Zhuomian scenario orchestration** for applicable S1-S8 cases;
-- define and implement the cross-run policy that maps per-run summaries into final evidence `metrics[]` plus median/worst run selection;
 - assemble complete evidence metadata around validated raw samples and selected runs;
 - collect actual raw measurements on at least Baseline and Enhanced real machines;
 - compare median/worst runs under the same protocol;
