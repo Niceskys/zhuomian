@@ -137,6 +137,19 @@ try {
     if ([string]::IsNullOrWhiteSpace($collectedAtUtc)) {
         throw "evidence.collectedAtUtc must be a non-empty UTC string."
     }
+
+    if ($collectedAtUtc -notmatch '(Z|\+00:00)$') {
+        throw "evidence.collectedAtUtc must use UTC offset Z or +00:00."
+    }
+
+    $parsedTimestamp = [DateTimeOffset]::MinValue
+    if (-not $timestampElement.TryGetDateTimeOffset([ref]$parsedTimestamp)) {
+        throw "evidence.collectedAtUtc must use the extended ISO-8601 date/time profile accepted by System.Text.Json."
+    }
+
+    if ($parsedTimestamp.Offset -ne [TimeSpan]::Zero) {
+        throw "evidence.collectedAtUtc must resolve to UTC offset zero."
+    }
 }
 catch {
     if ($_.Exception.Message -like 'evidence.collectedAtUtc*') {
@@ -171,23 +184,6 @@ if ($commitSha -notmatch '^[0-9a-fA-F]{40}$') {
 $scenarioId = Get-RequiredString -Object $evidence -Name 'scenarioId' -Context 'evidence'
 if ($scenarioId -notmatch '^S[1-8]$') {
     throw "evidence.scenarioId must be one of S1 through S8."
-}
-
-if ($collectedAtUtc -notmatch '(?i)(Z|\+00:00)$') {
-    throw "evidence.collectedAtUtc must use UTC offset Z or +00:00."
-}
-
-$parsedTimestamp = [DateTimeOffset]::MinValue
-if (-not [DateTimeOffset]::TryParse(
-        $collectedAtUtc,
-        [Globalization.CultureInfo]::InvariantCulture,
-        [Globalization.DateTimeStyles]::None,
-        [ref]$parsedTimestamp)) {
-    throw "evidence.collectedAtUtc must be a valid ISO-8601 UTC timestamp."
-}
-
-if ($parsedTimestamp.Offset -ne [TimeSpan]::Zero) {
-    throw "evidence.collectedAtUtc must resolve to UTC offset zero."
 }
 
 $machineTier = Get-RequiredString -Object $evidence -Name 'machineTier' -Context 'evidence'
@@ -261,7 +257,7 @@ foreach ($rawResultFile in $rawResultFiles) {
     }
 
     if ([IO.Path]::IsPathRooted($rawResultFile) -or $rawResultFile -match '(^|[\\/])\.\.([\\/]|$)') {
-        throw "evidence.rawResultFiles entries must be repository-relative paths without traversal."
+        throw "evidence.rawResultFiles entries must be evidence-relative paths without traversal."
     }
 
     if (Test-ContainsPrivatePath -Value $rawResultFile) {

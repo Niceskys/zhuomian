@@ -124,6 +124,10 @@ try {
     $nonUtcTimestamp.collectedAtUtc = '2026-08-30T08:00:00+08:00'
     Assert-Fails -Evidence $nonUtcTimestamp -Name 'non-utc-timestamp.json' -ExpectedMessagePattern 'must use UTC offset'
 
+    $nonIsoTimestamp = New-ValidEvidence
+    $nonIsoTimestamp.collectedAtUtc = '2026/08/30 00:00:00Z'
+    Assert-Fails -Evidence $nonIsoTimestamp -Name 'non-iso-timestamp.json' -ExpectedMessagePattern 'extended ISO-8601'
+
     $ciCalibration = New-ValidEvidence
     $ciCalibration.eligibleForThresholdCalibration = $true
     Assert-Fails -Evidence $ciCalibration -Name 'ci-calibration.json' -ExpectedMessagePattern 'Only Baseline or Enhanced'
@@ -134,7 +138,7 @@ try {
 
     $privateRawPath = New-ValidEvidence
     $privateRawPath.rawResultFiles = @('C:\Users\example\run.csv')
-    Assert-Fails -Evidence $privateRawPath -Name 'private-raw-path.json' -ExpectedMessagePattern 'repository-relative paths'
+    Assert-Fails -Evidence $privateRawPath -Name 'private-raw-path.json' -ExpectedMessagePattern 'evidence-relative paths'
 
     $invalidPercentiles = New-ValidEvidence
     $invalidPercentiles.metrics[0].p95 = 10
@@ -148,7 +152,7 @@ try {
     }
     Assert-Fails -Evidence $invalidDroppedFrames -Name 'invalid-dropped-frames.json' -ExpectedMessagePattern 'between 0 and 1'
 
-    Write-Host 'Performance evidence validator self-test passed: 1 valid fixture and 6 invalid fixtures.'
+    Write-Host 'Performance evidence validator self-test passed: 1 valid fixture and 7 invalid fixtures.'
 }
 finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
