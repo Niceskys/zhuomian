@@ -120,6 +120,10 @@ function Assert-Fails {
 try {
     Assert-Passes -Evidence (New-ValidEvidence) -Name 'valid.json'
 
+    $nonUtcTimestamp = New-ValidEvidence
+    $nonUtcTimestamp.collectedAtUtc = '2026-08-30T08:00:00+08:00'
+    Assert-Fails -Evidence $nonUtcTimestamp -Name 'non-utc-timestamp.json' -ExpectedMessagePattern 'must use UTC offset'
+
     $missingGpuDriver = New-ValidEvidence
     $missingGpuDriver.environment.Remove('gpuDriver')
     Assert-Fails -Evidence $missingGpuDriver -Name 'missing-gpu-driver.json' -ExpectedMessagePattern 'gpuDriver is required'
@@ -148,7 +152,7 @@ try {
     }
     Assert-Fails -Evidence $invalidDroppedFrames -Name 'invalid-dropped-frames.json' -ExpectedMessagePattern 'between 0 and 1'
 
-    Write-Host 'Performance evidence validator self-test passed: 1 valid fixture and 6 invalid fixtures.'
+    Write-Host 'Performance evidence validator self-test passed: 1 valid fixture and 7 invalid fixtures.'
 }
 finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
