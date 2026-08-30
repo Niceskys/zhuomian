@@ -26,20 +26,172 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-function Stop-OwnedProcess {
+if (-not ('Zhuomian.Performance.ProcessJob' -as [type])) {
+    Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+
+namespace Zhuomian.Performance
+{
+    public sealed class ProcessJob : IDisposable
+    {
+        private const uint JobObjectLimitKillOnJobClose = 0x00002000;
+        private const int JobObjectExtendedLimitInformation = 9;
+
+        private IntPtr _handle;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct JobObjectBasicLimitInformation
+        {
+            public long PerProcessUserTimeLimit;
+            public long PerJobUserTimeLimit;
+            public uint LimitFlags;
+            public UIntPtr MinimumWorkingSetSize;
+            public UIntPtr MaximumWorkingSetSize;
+            public uint ActiveProcessLimit;
+            public UIntPtr Affinity;
+            public uint PriorityClass;
+            public uint SchedulingClass;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct IoCounters
+        {
+            public ulong ReadOperationCount;
+            public ulong WriteOperationCount;
+            public ulong OtherOperationCount;
+            public ulong ReadTransferCount;
+            public ulong WriteTransferCount;
+            public ulong OtherTransferCount;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct JobObjectExtendedLimitInformation
+        {
+            public JobObjectBasicLimitInformation BasicLimitInformation;
+            public IoCounters IoInfo;
+            public UIntPtr ProcessMemoryLimit;
+            public UIntPtr JobMemoryLimit;
+            public UIntPtr PeakProcessMemoryUsed;
+            public UIntPtr PeakJobMemoryUsed;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr CreateJobObject(IntPtr jobAttributes, string name);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetInformationJobObject(
+            IntPtr job,
+            int informationClass,
+            ref JobObjectExtendedLimitInformation information,
+            uint informationLength);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool CloseHandle(IntPtr handle);
+
+        public ProcessJob()
+        {
+            _handle = CreateJobObject(IntPtr.Zero, null);
+            if (_handle == IntPtr.Zero)
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to create performance-sampler Job Object.");
+            }
+
+            var information = new JobObjectExtendedLimitInformation();
+            information.BasicLimitInformation.LimitFlags = JobObjectLimitKillOnJobClose;
+
+            if (!SetInformationJobObject(
+                    _handle,
+                    JobObjectExtendedLimitInformation,
+                    ref information,
+                    (uint)Marshal.SizeOf<JobObjectExtendedLimitInformation>()))
+            {
+                var error = Marshal.GetLastWin32Error();
+                CloseHandle(_handle);
+                _handle = IntPtr.Zero;
+                throw new Win32Exception(error, "Failed to enable kill-on-close for performance-sampler Job Object.");
+            }
+        }
+
+        public void Assign(Process process)
+        {
+            if (process == null)
+            {
+                throw new ArgumentNullException(nameof(process));
+            }
+
+            if (_handle == IntPtr.Zero)
+            {
+                throw new ObjectDisposedException(nameof(ProcessJob));
+            }
+
+            if (!AssignProcessToJobObject(_handle, process.Handle))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to assign sampled process to performance-sampler Job Object.");
+            }
+        }
+
+        public void Dispose()
+        {
+            var handle = _handle;
+            if (handle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            _handle = IntPtr.Zero;
+            if (!CloseHandle(handle))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to close performance-sampler Job Object.");
+            }
+
+            GC.SuppressFinalize(this);
+        }
+
+        ~ProcessJob()
+        {
+            if (_handle != IntPtr.Zero)
+            {
+                CloseHandle(_handle);
+                _handle = IntPtr.Zero;
+            }
+        }
+    }
+}
+'@
+}
+
+function Close-OwnedJob {
     param(
         [Parameter(Mandatory)]
-        [System.Diagnostics.Process]$Process
+        [Zhuomian.Performance.ProcessJob]$Job,
+
+        [Parameter(Mandatory)]
+        [System.Diagnostics.Process]$Process,
+
+        [Parameter(Mandatory)]
+        [bool]$ProcessStarted
     )
 
-    if ($Process.HasExited) {
-        return
-    }
+    $Job.Dispose()
 
-    $Process.Kill($true)
-    if (-not $Process.WaitForExit(5000)) {
-        throw "Failed to terminate sampled process tree within 5 seconds."
+    if ($ProcessStarted -and -not $Process.HasExited) {
+        if (-not $Process.WaitForExit(5000)) {
+            throw "Failed to terminate sampled process after closing its Job Object within 5 seconds."
+        }
     }
+}
+
+if (-not $IsWindows) {
+    throw "The process sampler currently requires Windows because descendant containment uses a Windows Job Object."
 }
 
 if (-not (Test-Path -LiteralPath $ExecutablePath -PathType Leaf)) {
@@ -81,9 +233,12 @@ $processorCount = [Environment]::ProcessorCount
 
 for ($run = 1; $run -le $Repetitions; $run++) {
     $process = $null
+    $job = $null
     $processStarted = $false
 
     try {
+        $job = [Zhuomian.Performance.ProcessJob]::new()
+
         $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
         $startInfo.FileName = $resolvedExecutablePath
         $startInfo.WorkingDirectory = $resolvedWorkingDirectory
@@ -102,6 +257,7 @@ for ($run = 1; $run -le $Repetitions; $run++) {
 
         $processStarted = $true
         $launchedProcessIds.Add($process.Id)
+        $job.Assign($process)
 
         if ($WarmupSeconds -gt 0) {
             if ($process.WaitForExit($WarmupSeconds * 1000)) {
@@ -172,15 +328,23 @@ for ($run = 1; $run -le $Repetitions; $run++) {
         $sampleCounts.Add($rows.Count - 1)
     }
     finally {
-        if ($null -ne $process) {
+        if ($null -ne $job) {
             try {
-                if ($processStarted) {
-                    Stop-OwnedProcess -Process $process
+                if ($null -ne $process) {
+                    Close-OwnedJob -Job $job -Process $process -ProcessStarted $processStarted
+                }
+                else {
+                    $job.Dispose()
                 }
             }
             finally {
-                $process.Dispose()
+                if ($null -ne $process) {
+                    $process.Dispose()
+                }
             }
+        }
+        elseif ($null -ne $process) {
+            $process.Dispose()
         }
     }
 }
