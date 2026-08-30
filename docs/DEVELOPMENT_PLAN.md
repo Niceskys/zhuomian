@@ -102,6 +102,6 @@ Zhuomian 的产品方向成立，但 Desktop Hosting、前台窗口感知、键�
 - Phase 0A：已完成；规范基线、`main` Ruleset、Minimum CI、测试工程骨架和诊断约定已经建立。
 - Phase 0B：进行中；Desktop Host、NoActivate/显式焦点、Explorer 恢复、前台分类、前台事件防抖参考模型、单显示器 DPI、Fallback 可用性和真实外部全屏分类均已有相应证据，详见 [PHASE_0_STATUS.md](PHASE_0_STATUS.md)。
 - 仍未满足 Phase 0B 退出条件：真实双显示器混合 DPI/热插拔、用户参与的锁屏/UAC/睡眠/远程会话、真实前台事件投递与调度集成（防抖策略已有确定性参考模型）、真实生命周期资源释放、增强宿主剩余恢复路径与 Fallback 图标冲突/Z-order 生产策略仍待验证。
-- P0-05（材质）和 P0-06（Packaging）尚未开始完成性验证；P0-07 已建立机器可校验的性能证据契约、通用进程资源采样器及 CI tooling smoke test，但 Release x64 Zhuomian 场景编排、证据摘要/metadata、Baseline/Enhanced 实机结果和 provisional 阈值校准尚未完成，因此 P0-07 仍为未完成；P0-08 已完成。
+- P0-05（材质）和 P0-06（Packaging）尚未开始完成性验证；P0-07 已建立机器可校验的性能证据契约、通用进程资源采样器、确定性的 per-run Average/P95/P99/max 统计器及对应 CI tooling tests，但 Release x64 Zhuomian 场景编排、cross-run final evidence/run-selection 语义、完整 evidence metadata、Baseline/Enhanced 实机结果和 provisional 阈值校准尚未完成，因此 P0-07 仍为未完成；P0-08 已完成。
 - 产品正式实现仍未开始；现有 `spikes/`、测试参考模型和性能协议工具是可丢弃/可替换验证资产，不得直接视为 V0.1 生产实现。
 - WorkerW、真实背景 Blur 与 Packaging 均未成为已接受的唯一生产方案。

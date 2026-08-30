@@ -7,7 +7,7 @@
 - Specification and governance baseline merged.
 - Active `main` ruleset requires PRs and the strict `docs` check.
 - .NET solution, analyzer policy, Core contract and baseline test suite merged.
-- CI validates documentation, the performance-evidence contract and the generic process-sampler smoke test, then restores, builds, formats, tests and uploads TRX evidence with zero annotations.
+- CI validates documentation, the performance-evidence contract, the generic process-sampler smoke test and the deterministic per-run sample-summarizer self-test, then restores, builds, formats, tests and uploads TRX evidence with zero annotations.
 - Diagnostic field/privacy contract established.
 
 ## Phase 0B — In progress
@@ -158,7 +158,7 @@ See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foregroun
 
 Phase 0B exit conditions above remain open. The following work is allowed in parallel because it does not depend on unavailable attended hardware and does not advance the Phase 0B exit gate.
 
-### P0-07 performance tooling — evidence contract + generic sampler pass, product benchmark pending
+### P0-07 performance tooling — evidence contract + generic sampler + per-run summary pass, product benchmark pending
 
 The machine-readable evidence contract remains enforced by `scripts/performance/validate-performance-evidence.ps1` and its deterministic self-test:
 
@@ -181,12 +181,20 @@ A generic owned-process sampler is now added as separate tooling groundwork:
 - raw CSV does not persist executable/working-directory/home paths;
 - CI smoke-tests two short temporary `pwsh` runs plus failure paths and deletes all smoke data.
 
-This remains **protocol/tooling evidence only**. The hosted runner is not a Zhuomian Baseline/Enhanced performance machine, the shortened `pwsh` smoke test is not a product benchmark, no S1-S8 product scenario is measured and no provisional threshold is frozen.
+The deterministic per-run summarizer is also present:
+
+- `scripts/performance/summarize-process-samples.ps1` consumes contiguous `run-01.csv..run-NN.csv` sampler output and emits an intermediate `summarySchemaVersion: 1` JSON summary;
+- each run records sample count plus Average/P95/P99/max for root-process CPU, Private Bytes, Working Set, handle count and thread count;
+- P95/P99 use the explicit nearest-rank rule `ceil(p * N)` on ascending samples;
+- sampler-format validation covers exact headers, UTC timestamps, strictly increasing elapsed time, finite non-negative CPU/elapsed values, integer resource values and numeric ordering through `run-100.csv`;
+- CI uses synthetic temporary fixtures to verify the deterministic math and rejection paths; those fixtures are tooling evidence only and are deleted after the test.
+
+This remains **protocol/tooling evidence only**. The hosted runner is not a Zhuomian Baseline/Enhanced performance machine, the shortened `pwsh` smoke test and synthetic summarizer fixtures are not product benchmarks, no S1-S8 product scenario is measured and no provisional threshold is frozen.
 
 P0-07 remains incomplete. Still required:
 
 - bind the sampler to repeatable Release x64 Zhuomian S1-S8 scenario orchestration;
-- generate complete evidence metadata, per-metric Average/P95/P99/max summaries and run selection from raw samples;
+- freeze cross-run final evidence/run-selection semantics and assemble complete evidence metadata from validated raw samples/per-run summaries;
 - collect real raw measurements for applicable S1-S8 scenarios;
 - Baseline and Enhanced real-machine evidence;
 - same-protocol median/worst-run comparison;
