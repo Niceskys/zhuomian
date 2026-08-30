@@ -7,7 +7,7 @@
 - Specification and governance baseline merged.
 - Active `main` ruleset requires PRs and the strict `docs` check.
 - .NET solution, analyzer policy, Core contract and baseline test suite merged.
-- CI restores, builds, formats, tests and uploads TRX evidence with zero annotations.
+- CI validates documentation and the performance-evidence contract, then restores, builds, formats, tests and uploads TRX evidence with zero annotations.
 - Diagnostic field/privacy contract established.
 
 ## Phase 0B — In progress
@@ -153,3 +153,30 @@ P0-01 through P0-04 remain incomplete as a group. Still required:
 - production fallback Z-order maintenance and desktop-icon overlap handling beyond the validated visual candidate.
 
 See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foreground-classification.md), [the Desktop Hosting Spike](../spikes/DesktopHosting/README.md), [the Focus and Input Spike](../spikes/FocusAndInput/README.md), [the Multi-monitor/DPI Spike](../spikes/MultiMonitorDpi/README.md), [the Explorer Recovery Spike](../spikes/ExplorerRecovery/README.md), [the Foreground Classification Spike](../spikes/ForegroundClassification/README.md), [the Foreground Event Debounce Spike](../spikes/ForegroundEventDebounce/README.md), [the Enhanced Hosting Spike](../spikes/EnhancedHosting/README.md), [the Fallback Visual Usability Spike](../spikes/FallbackVisualUsability/README.md) and [the Platform Lifecycle Spike](../spikes/PlatformLifecycle/README.md).
+
+## Phase 0C — Web-safe groundwork only
+
+Phase 0B exit conditions above remain open. The following work is allowed in parallel because it does not depend on unavailable attended hardware and does not advance the Phase 0B exit gate.
+
+### P0-07 performance evidence contract — deterministic tooling pass, benchmark pending
+
+A dependency-free PowerShell evidence validator and self-test now establish the machine-readable result contract described in [PERFORMANCE_BUDGET.md](PERFORMANCE_BUDGET.md):
+
+- full 40-character commit SHA, scenario ID and UTC provenance are required;
+- Windows/App SDK/GPU driver, CPU/RAM/GPU and display DPI/refresh metadata are required;
+- only Release x64 evidence is accepted;
+- default 60s warm-up / 300s measure / 3-run deviations require an explicit reason;
+- raw result paths must be relative, exist beside the evidence set and avoid traversal/private home paths;
+- metrics require Average/P95/P99/max ordering, and frame presentation requires a bounded dropped-frame ratio or explicit non-applicability;
+- `CI` and `Exploratory` machine tiers cannot be marked eligible for threshold calibration;
+- CI runs one valid and six invalid temporary fixtures to verify required acceptance/rejection behavior.
+
+This is **protocol-tooling evidence only**. No Zhuomian performance scenario is measured by the hosted runner, no CPU/GPU/memory/frame budget is claimed, and no provisional threshold is frozen.
+
+P0-07 remains incomplete. Still required:
+
+- a repeatable Release x64 collection runner/sampling script;
+- real raw measurements for applicable S1-S8 scenarios;
+- Baseline and Enhanced real-machine evidence;
+- same-protocol median/worst-run comparison;
+- threshold calibration from reproducible measurements.

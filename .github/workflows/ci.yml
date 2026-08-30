@@ -25,6 +25,10 @@ jobs:
         shell: pwsh
         run: ./scripts/validate-docs.ps1
 
+      - name: Validate performance evidence contract
+        shell: pwsh
+        run: ./scripts/performance/test-performance-evidence-validator.ps1
+
       - name: Detect solution
         id: solution
         shell: pwsh

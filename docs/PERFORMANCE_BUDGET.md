@@ -1,6 +1,6 @@
 # Zhuomian 性能预算
 
-> 状态：测量协议已定义；数值门槛在 Phase 0 校准前均为 provisional。
+> 状态：测量协议与机器可校验的证据契约已定义；采样器、实机校准和数值冻结仍未完成，数值门槛均为 provisional。
 
 ## 1. 强制不变量
 
@@ -15,15 +15,44 @@
 
 每份性能结果必须包含：
 
-- commit SHA、Windows build、Windows App SDK 与 GPU driver；
+- commit SHA、采集 UTC 时间、Windows build、Windows App SDK 与 GPU driver；
 - CPU、内存、GPU、显示器数量/DPI/刷新率；
 - Release x64 构建和 packaging 模式；
 - 冷启动或 warm-up 条件；
 - 测量持续时间和重复次数；
-- Average、P95、P99、max 与 dropped-frame ratio；
-- 原始结果文件和采集命令。
+- 每个已报告数值指标的 Average、P95、P99 与 max；
+- 涉及 frame presentation 的场景必须报告 dropped-frame ratio；不涉及时必须给出不适用原因；
+- 中位运行与最差运行索引；
+- 原始结果文件和可复现的采集命令。
 
 默认协议：warm-up 60s、测量 300s、独立重复 3 次，报告中位运行与最差运行。Spike 可调整，但必须说明理由。
+
+### 2.1 机器可校验的证据契约
+
+P0-07 使用 `schemaVersion: 1` 的 JSON 证据文件。校验器位于 `scripts/performance/validate-performance-evidence.ps1`，确定性自测位于 `scripts/performance/test-performance-evidence-validator.ps1`。
+
+证据文件至少包含：
+
+- `commitSha`、`scenarioId`（S1-S8）、`collectedAtUtc`；
+- `machineTier`：`Baseline`、`Enhanced`、`Exploratory` 或 `CI`；
+- `eligibleForThresholdCalibration`；
+- `environment`：Windows build、Windows App SDK、GPU driver、CPU、RAM、GPU 与显示器 DPI/刷新率；
+- `build`：必须为 `Release`、`x64`，并记录 packaging mode；
+- `protocol`：warm-up、测量时长、重复次数、条件及必要的 deviation reason；
+- `collectionCommand` 与存在的相对 `rawResultFiles`；
+- `metrics[]` 的 name/unit/Average/P95/P99/max；
+- `framePresentation` 的 measured/dropped-frame ratio 或不适用原因；
+- `runSelection` 的 median/worst run。
+
+约束：
+
+- 只有真实 `Baseline` 或 `Enhanced` 机器证据可将 `eligibleForThresholdCalibration` 设为 `true`；
+- `CI` 或 `Exploratory` 结果可以验证工具链或做诊断，但不得冻结产品阈值；
+- 偏离默认 60s/300s/3 次协议必须写明原因；
+- 原始结果路径必须相对证据文件、真实存在、禁止路径穿越；
+- 可持久化命令与路径不得包含用户 home/private 路径。
+
+CI 只运行证据契约的确定性自测，不执行也不冒充真实性能基准。校验器通过只能证明“证据格式可复核”，不能证明 Zhuomian 达到任何性能预算。
 
 ## 3. 参考硬件档位
 
@@ -72,3 +101,13 @@ WinUI/packaging 基线可能要求调整内存门槛。调整只能依据可复�
 ## 8. 回归规则
 
 同一协议下任一关键指标退化 ≥10% 必须解释；越过硬门槛则阻断合并。不得用提高测量噪声、改变硬件或缩短采样规避回归。
+
+## 9. P0-07 剩余退出条件
+
+证据契约完成不等于 P0-07 完成。仍必须具备：
+
+- 可重复执行的 Release x64 采样脚本/runner；
+- 对适用固定场景生成真实原始结果；
+- Baseline 与 Enhanced 至少两档真实机器数据；
+- 同协议下的中位/最差运行比较；
+- 基于可复现数据冻结或修订 provisional 阈值。
