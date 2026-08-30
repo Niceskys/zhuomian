@@ -169,7 +169,7 @@ A dependency-free PowerShell evidence validator and self-test now establish the 
 - raw result paths must be relative, exist beside the evidence set and avoid traversal/private home paths;
 - metrics require Average/P95/P99/max ordering, and frame presentation requires a bounded dropped-frame ratio or explicit non-applicability;
 - `CI` and `Exploratory` machine tiers cannot be marked eligible for threshold calibration;
-- CI runs one valid and six invalid temporary fixtures to verify required acceptance/rejection behavior.
+- CI runs one valid and seven invalid temporary fixtures to verify required acceptance/rejection behavior, including non-UTC and non-ISO timestamp rejection.
 
 This is **protocol-tooling evidence only**. No Zhuomian performance scenario is measured by the hosted runner, no CPU/GPU/memory/frame budget is claimed, and no provisional threshold is frozen.
 
