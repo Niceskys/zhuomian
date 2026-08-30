@@ -147,12 +147,12 @@ namespace Zhuomian.Performance
                 return;
             }
 
-            _handle = IntPtr.Zero;
             if (!CloseHandle(handle))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to close performance-sampler Job Object.");
             }
 
+            _handle = IntPtr.Zero;
             GC.SuppressFinalize(this);
         }
 
@@ -169,7 +169,7 @@ namespace Zhuomian.Performance
 '@
 }
 
-function Close-OwnedJob {
+function Close-OwnedRun {
     param(
         [Parameter(Mandatory)]
         [Zhuomian.Performance.ProcessJob]$Job,
@@ -178,14 +178,33 @@ function Close-OwnedJob {
         [System.Diagnostics.Process]$Process,
 
         [Parameter(Mandatory)]
-        [bool]$ProcessStarted
+        [bool]$ProcessStarted,
+
+        [Parameter(Mandatory)]
+        [bool]$AssignedToJob
     )
 
-    $Job.Dispose()
+    if ($AssignedToJob) {
+        $Job.Dispose()
 
-    if ($ProcessStarted -and -not $Process.HasExited) {
-        if (-not $Process.WaitForExit(5000)) {
-            throw "Failed to terminate sampled process after closing its Job Object within 5 seconds."
+        if ($ProcessStarted -and -not $Process.HasExited) {
+            if (-not $Process.WaitForExit(5000)) {
+                throw "Failed to terminate sampled process after closing its Job Object within 5 seconds."
+            }
+        }
+
+        return
+    }
+
+    try {
+        $Job.Dispose()
+    }
+    finally {
+        if ($ProcessStarted -and -not $Process.HasExited) {
+            $Process.Kill($true)
+            if (-not $Process.WaitForExit(5000)) {
+                throw "Failed to terminate unassigned sampled process tree within 5 seconds."
+            }
         }
     }
 }
@@ -235,6 +254,7 @@ for ($run = 1; $run -le $Repetitions; $run++) {
     $process = $null
     $job = $null
     $processStarted = $false
+    $assignedToJob = $false
 
     try {
         $job = [Zhuomian.Performance.ProcessJob]::new()
@@ -258,6 +278,7 @@ for ($run = 1; $run -le $Repetitions; $run++) {
         $processStarted = $true
         $launchedProcessIds.Add($process.Id)
         $job.Assign($process)
+        $assignedToJob = $true
 
         if ($WarmupSeconds -gt 0) {
             if ($process.WaitForExit($WarmupSeconds * 1000)) {
@@ -331,7 +352,11 @@ for ($run = 1; $run -le $Repetitions; $run++) {
         if ($null -ne $job) {
             try {
                 if ($null -ne $process) {
-                    Close-OwnedJob -Job $job -Process $process -ProcessStarted $processStarted
+                    Close-OwnedRun `
+                        -Job $job `
+                        -Process $process `
+                        -ProcessStarted $processStarted `
+                        -AssignedToJob $assignedToJob
                 }
                 else {
                     $job.Dispose()
@@ -344,6 +369,13 @@ for ($run = 1; $run -le $Repetitions; $run++) {
             }
         }
         elseif ($null -ne $process) {
+            if ($processStarted -and -not $process.HasExited) {
+                $process.Kill($true)
+                if (-not $process.WaitForExit(5000)) {
+                    throw "Failed to terminate sampled process tree without a Job Object within 5 seconds."
+                }
+            }
+
             $process.Dispose()
         }
     }
