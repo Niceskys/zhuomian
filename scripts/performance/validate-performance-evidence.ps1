@@ -1,0 +1,283 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [string]$Path
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+function Get-RequiredProperty {
+    param(
+        [Parameter(Mandatory)]$Object,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Context
+    )
+
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        throw "$Context.$Name is required."
+    }
+
+    return $property.Value
+}
+
+function Get-RequiredString {
+    param(
+        [Parameter(Mandatory)]$Object,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Context
+    )
+
+    $value = Get-RequiredProperty -Object $Object -Name $Name -Context $Context
+    if ($value -isnot [string] -or [string]::IsNullOrWhiteSpace($value)) {
+        throw "$Context.$Name must be a non-empty string."
+    }
+
+    return $value
+}
+
+function Get-RequiredNumber {
+    param(
+        [Parameter(Mandatory)]$Object,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Context,
+        [double]$Minimum = 0
+    )
+
+    $value = Get-RequiredProperty -Object $Object -Name $Name -Context $Context
+    if ($value -isnot [ValueType] -or $value -is [bool]) {
+        throw "$Context.$Name must be numeric."
+    }
+
+    try {
+        $number = [double]$value
+    }
+    catch {
+        throw "$Context.$Name must be numeric."
+    }
+
+    if ([double]::IsNaN($number) -or [double]::IsInfinity($number) -or $number -lt $Minimum) {
+        throw "$Context.$Name must be a finite number >= $Minimum."
+    }
+
+    return $number
+}
+
+function Get-RequiredInteger {
+    param(
+        [Parameter(Mandatory)]$Object,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Context,
+        [long]$Minimum = 0
+    )
+
+    $number = Get-RequiredNumber -Object $Object -Name $Name -Context $Context -Minimum $Minimum
+    if ([math]::Floor($number) -ne $number) {
+        throw "$Context.$Name must be an integer."
+    }
+
+    return [long]$number
+}
+
+function Get-RequiredBoolean {
+    param(
+        [Parameter(Mandatory)]$Object,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Context
+    )
+
+    $value = Get-RequiredProperty -Object $Object -Name $Name -Context $Context
+    if ($value -isnot [bool]) {
+        throw "$Context.$Name must be a boolean."
+    }
+
+    return $value
+}
+
+function Get-RequiredArray {
+    param(
+        [Parameter(Mandatory)]$Object,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Context
+    )
+
+    $value = Get-RequiredProperty -Object $Object -Name $Name -Context $Context
+    $items = @($value)
+    if ($items.Count -eq 0) {
+        throw "$Context.$Name must contain at least one item."
+    }
+
+    return $items
+}
+
+function Test-ContainsPrivatePath {
+    param([Parameter(Mandatory)][string]$Value)
+
+    return $Value -match '(?i)([A-Z]:\\Users\\[^\\]+|/home/[^/]+|/Users/[^/]+)'
+}
+
+if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    throw "Performance evidence file not found: $Path"
+}
+
+$resolvedEvidencePath = (Resolve-Path -LiteralPath $Path).Path
+$evidenceDirectory = Split-Path -Parent $resolvedEvidencePath
+
+try {
+    $evidence = Get-Content -LiteralPath $resolvedEvidencePath -Raw | ConvertFrom-Json
+}
+catch {
+    throw "Performance evidence is not valid JSON: $($_.Exception.Message)"
+}
+
+$schemaVersion = Get-RequiredInteger -Object $evidence -Name 'schemaVersion' -Context 'evidence' -Minimum 1
+if ($schemaVersion -ne 1) {
+    throw "evidence.schemaVersion must be 1."
+}
+
+$commitSha = Get-RequiredString -Object $evidence -Name 'commitSha' -Context 'evidence'
+if ($commitSha -notmatch '^[0-9a-fA-F]{40}$') {
+    throw "evidence.commitSha must be a full 40-character Git SHA."
+}
+
+$scenarioId = Get-RequiredString -Object $evidence -Name 'scenarioId' -Context 'evidence'
+if ($scenarioId -notmatch '^S[1-8]$') {
+    throw "evidence.scenarioId must be one of S1 through S8."
+}
+
+$collectedAtUtc = Get-RequiredString -Object $evidence -Name 'collectedAtUtc' -Context 'evidence'
+$parsedTimestamp = [DateTimeOffset]::MinValue
+if (-not [DateTimeOffset]::TryParse(
+        $collectedAtUtc,
+        [Globalization.CultureInfo]::InvariantCulture,
+        [Globalization.DateTimeStyles]::AssumeUniversal,
+        [ref]$parsedTimestamp)) {
+    throw "evidence.collectedAtUtc must be an ISO-8601 timestamp."
+}
+
+$machineTier = Get-RequiredString -Object $evidence -Name 'machineTier' -Context 'evidence'
+$allowedMachineTiers = @('Baseline', 'Enhanced', 'Exploratory', 'CI')
+if ($machineTier -notin $allowedMachineTiers) {
+    throw "evidence.machineTier must be Baseline, Enhanced, Exploratory, or CI."
+}
+
+$eligibleForThresholdCalibration = Get-RequiredBoolean -Object $evidence -Name 'eligibleForThresholdCalibration' -Context 'evidence'
+if ($eligibleForThresholdCalibration -and $machineTier -notin @('Baseline', 'Enhanced')) {
+    throw "Only Baseline or Enhanced real-machine evidence may be eligible for threshold calibration."
+}
+
+$environment = Get-RequiredProperty -Object $evidence -Name 'environment' -Context 'evidence'
+Get-RequiredString -Object $environment -Name 'windowsBuild' -Context 'evidence.environment' | Out-Null
+Get-RequiredString -Object $environment -Name 'windowsAppSdkVersion' -Context 'evidence.environment' | Out-Null
+Get-RequiredString -Object $environment -Name 'gpuDriver' -Context 'evidence.environment' | Out-Null
+Get-RequiredString -Object $environment -Name 'cpu' -Context 'evidence.environment' | Out-Null
+Get-RequiredNumber -Object $environment -Name 'memoryGb' -Context 'evidence.environment' -Minimum 0.1 | Out-Null
+Get-RequiredString -Object $environment -Name 'gpu' -Context 'evidence.environment' | Out-Null
+
+$displays = @(Get-RequiredArray -Object $environment -Name 'displays' -Context 'evidence.environment')
+for ($index = 0; $index -lt $displays.Count; $index++) {
+    Get-RequiredNumber -Object $displays[$index] -Name 'dpi' -Context "evidence.environment.displays[$index]" -Minimum 1 | Out-Null
+    Get-RequiredNumber -Object $displays[$index] -Name 'refreshHz' -Context "evidence.environment.displays[$index]" -Minimum 1 | Out-Null
+}
+
+$build = Get-RequiredProperty -Object $evidence -Name 'build' -Context 'evidence'
+$configuration = Get-RequiredString -Object $build -Name 'configuration' -Context 'evidence.build'
+if ($configuration -ne 'Release') {
+    throw "evidence.build.configuration must be Release."
+}
+
+$architecture = Get-RequiredString -Object $build -Name 'architecture' -Context 'evidence.build'
+if ($architecture -ne 'x64') {
+    throw "evidence.build.architecture must be x64."
+}
+
+Get-RequiredString -Object $build -Name 'packagingMode' -Context 'evidence.build' | Out-Null
+
+$protocol = Get-RequiredProperty -Object $evidence -Name 'protocol' -Context 'evidence'
+$warmupSeconds = Get-RequiredInteger -Object $protocol -Name 'warmupSeconds' -Context 'evidence.protocol' -Minimum 0
+$measurementSeconds = Get-RequiredInteger -Object $protocol -Name 'measurementSeconds' -Context 'evidence.protocol' -Minimum 1
+$repetitions = Get-RequiredInteger -Object $protocol -Name 'repetitions' -Context 'evidence.protocol' -Minimum 1
+Get-RequiredString -Object $protocol -Name 'condition' -Context 'evidence.protocol' | Out-Null
+
+$deviationReason = $null
+$deviationProperty = $protocol.PSObject.Properties['deviationReason']
+if ($null -ne $deviationProperty -and $null -ne $deviationProperty.Value) {
+    if ($deviationProperty.Value -isnot [string]) {
+        throw "evidence.protocol.deviationReason must be a string or null."
+    }
+
+    $deviationReason = $deviationProperty.Value
+}
+
+$usesDefaultProtocol = $warmupSeconds -eq 60 -and $measurementSeconds -eq 300 -and $repetitions -eq 3
+if (-not $usesDefaultProtocol -and [string]::IsNullOrWhiteSpace($deviationReason)) {
+    throw "Non-default warm-up, measurement duration, or repetition count requires evidence.protocol.deviationReason."
+}
+
+$collectionCommand = Get-RequiredString -Object $evidence -Name 'collectionCommand' -Context 'evidence'
+if (Test-ContainsPrivatePath -Value $collectionCommand) {
+    throw "evidence.collectionCommand must not contain a durable user-home path."
+}
+
+$rawResultFiles = @(Get-RequiredArray -Object $evidence -Name 'rawResultFiles' -Context 'evidence')
+foreach ($rawResultFile in $rawResultFiles) {
+    if ($rawResultFile -isnot [string] -or [string]::IsNullOrWhiteSpace($rawResultFile)) {
+        throw "evidence.rawResultFiles entries must be non-empty strings."
+    }
+
+    if ([IO.Path]::IsPathRooted($rawResultFile) -or $rawResultFile -match '(^|[\\/])\.\.([\\/]|$)') {
+        throw "evidence.rawResultFiles entries must be repository-relative paths without traversal."
+    }
+
+    if (Test-ContainsPrivatePath -Value $rawResultFile) {
+        throw "evidence.rawResultFiles entries must not contain durable user-home paths."
+    }
+
+    $rawPath = Join-Path $evidenceDirectory $rawResultFile
+    if (-not (Test-Path -LiteralPath $rawPath -PathType Leaf)) {
+        throw "Raw performance result file is missing: $rawResultFile"
+    }
+}
+
+$metrics = @(Get-RequiredArray -Object $evidence -Name 'metrics' -Context 'evidence')
+for ($index = 0; $index -lt $metrics.Count; $index++) {
+    $context = "evidence.metrics[$index]"
+    Get-RequiredString -Object $metrics[$index] -Name 'name' -Context $context | Out-Null
+    Get-RequiredString -Object $metrics[$index] -Name 'unit' -Context $context | Out-Null
+    $average = Get-RequiredNumber -Object $metrics[$index] -Name 'average' -Context $context
+    $p95 = Get-RequiredNumber -Object $metrics[$index] -Name 'p95' -Context $context
+    $p99 = Get-RequiredNumber -Object $metrics[$index] -Name 'p99' -Context $context
+    $maximum = Get-RequiredNumber -Object $metrics[$index] -Name 'max' -Context $context
+
+    if ($p95 -gt $p99 -or $p99 -gt $maximum -or $average -gt $maximum) {
+        throw "$context must satisfy p95 <= p99 <= max and average <= max."
+    }
+}
+
+$framePresentation = Get-RequiredProperty -Object $evidence -Name 'framePresentation' -Context 'evidence'
+$frameMeasured = Get-RequiredBoolean -Object $framePresentation -Name 'measured' -Context 'evidence.framePresentation'
+if ($frameMeasured) {
+    $droppedFrameRatio = Get-RequiredNumber -Object $framePresentation -Name 'droppedFrameRatio' -Context 'evidence.framePresentation'
+    if ($droppedFrameRatio -gt 1) {
+        throw "evidence.framePresentation.droppedFrameRatio must be between 0 and 1."
+    }
+}
+else {
+    Get-RequiredString -Object $framePresentation -Name 'notApplicableReason' -Context 'evidence.framePresentation' | Out-Null
+}
+
+$runSelection = Get-RequiredProperty -Object $evidence -Name 'runSelection' -Context 'evidence'
+$medianRun = Get-RequiredInteger -Object $runSelection -Name 'medianRun' -Context 'evidence.runSelection' -Minimum 1
+$worstRun = Get-RequiredInteger -Object $runSelection -Name 'worstRun' -Context 'evidence.runSelection' -Minimum 1
+if ($medianRun -gt $repetitions -or $worstRun -gt $repetitions) {
+    throw "evidence.runSelection indices must be within evidence.protocol.repetitions."
+}
+
+[pscustomobject]@{
+    Valid = $true
+    Path = $resolvedEvidencePath
+    ScenarioId = $scenarioId
+    MachineTier = $machineTier
+    EligibleForThresholdCalibration = $eligibleForThresholdCalibration
+}
