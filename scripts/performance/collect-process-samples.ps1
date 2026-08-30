@@ -38,7 +38,7 @@ namespace Zhuomian.Performance
     public sealed class ProcessJob : IDisposable
     {
         private const uint JobObjectLimitKillOnJobClose = 0x00002000;
-        private const int JobObjectExtendedLimitInformation = 9;
+        private const int JobObjectExtendedLimitInformationClass = 9;
 
         private IntPtr _handle;
 
@@ -110,7 +110,7 @@ namespace Zhuomian.Performance
 
             if (!SetInformationJobObject(
                     _handle,
-                    JobObjectExtendedLimitInformation,
+                    JobObjectExtendedLimitInformationClass,
                     ref information,
                     (uint)Marshal.SizeOf<JobObjectExtendedLimitInformation>()))
             {
