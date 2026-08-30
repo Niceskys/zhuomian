@@ -52,12 +52,41 @@ pwsh ./scripts/performance/test-process-sampler.ps1
 
 CI uses two short temporary `pwsh` root runs plus rejection/cleanup cases to verify sampling, UTC formatting, monotonic elapsed time, resource fields, root cleanup and fail-closed behavior. A regression fixture also delays long enough for Job assignment, spawns a long-lived child, lets the root exit early, and requires the contained child to disappear after Job close. The shortened smoke protocol is **tooling evidence only**. It is not a Zhuomian performance run and cannot be used for threshold calibration.
 
+## Per-run process sample summary
+
+```powershell
+pwsh ./scripts/performance/summarize-process-samples.ps1 `
+  -InputDirectory <directory-containing-run-01.csv...run-NN.csv> `
+  -OutputPath <summary.json>
+```
+
+The summarizer is an intermediate deterministic tool for the generic sampler format. It requires contiguous `run-01.csv` through `run-NN.csv`, validates the expected CSV header, round-trip UTC timestamps, strictly increasing elapsed time, and finite non-negative numeric samples, then reports **per run**:
+
+- sample count;
+- Average;
+- P95;
+- P99;
+- max;
+
+for `cpuPercent`, `privateBytes`, `workingSetBytes`, `handleCount`, and `threadCount`.
+
+P95/P99 use the explicit **nearest-rank** rule: sort ascending and select rank `ceil(p * N)` using a one-based rank. The output uses `summarySchemaVersion: 1` and is intentionally **not** the final performance-evidence schema. It does not choose median/worst runs, populate hardware/build metadata, measure frames/GPU, decide threshold eligibility, or freeze any budget.
+
+### Summary self-test
+
+```powershell
+pwsh ./scripts/performance/test-process-sample-summarizer.ps1
+```
+
+CI uses synthetic temporary CSV fixtures to verify deterministic averages and nearest-rank percentiles plus rejection of run-number gaps, wrong headers, non-monotonic elapsed time and non-finite numeric data. These fixtures are mathematical/tooling evidence only and are deleted after the test.
+
 ## Still required for P0-07
 
 - bind the generic sampler to repeatable **Release x64 Zhuomian scenario orchestration** for applicable S1-S8 cases;
-- assemble complete evidence metadata and per-run summaries from the raw samples;
+- define and implement the cross-run policy that maps per-run summaries into final evidence `metrics[]` plus median/worst run selection;
+- assemble complete evidence metadata around validated raw samples and selected runs;
 - collect actual raw measurements on at least Baseline and Enhanced real machines;
 - compare median/worst runs under the same protocol;
 - calibrate and freeze or revise provisional thresholds from reproducible data.
 
-Do not interpret validator or sampler-smoke success as benchmark success.
+Do not interpret validator, sampler-smoke or summary-self-test success as benchmark success.
