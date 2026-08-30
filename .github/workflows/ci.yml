@@ -29,6 +29,10 @@ jobs:
         shell: pwsh
         run: ./scripts/performance/test-performance-evidence-validator.ps1
 
+      - name: Smoke-test performance sampler
+        shell: pwsh
+        run: ./scripts/performance/test-process-sampler.ps1
+
       - name: Detect solution
         id: solution
         shell: pwsh

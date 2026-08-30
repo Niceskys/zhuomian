@@ -1,6 +1,6 @@
 # Zhuomian 性能预算
 
-> 状态：测量协议与机器可校验的证据契约已定义；采样器、实机校准和数值冻结仍未完成，数值门槛均为 provisional。
+> 状态：测量协议、机器可校验的证据契约与通用进程采样器已定义；Release x64 Zhuomian 场景编排、实机校准和数值冻结仍未完成，数值门槛均为 provisional。
 
 ## 1. 强制不变量
 
@@ -53,7 +53,30 @@ P0-07 使用 `schemaVersion: 1` 的 JSON 证据文件。校验器位于 `scripts
 - 原始结果路径必须相对证据文件、真实存在、禁止路径穿越；
 - 可持久化命令与路径不得包含用户 home/private 路径。
 
-CI 只运行证据契约的确定性自测，不执行也不冒充真实性能基准。校验器通过只能证明“证据格式可复核”，不能证明 Zhuomian 达到任何性能预算。
+CI 运行证据契约的确定性自测，但不执行也不冒充真实性能基准。校验器通过只能证明“证据格式可复核”，不能证明 Zhuomian 达到任何性能预算。
+
+### 2.2 通用进程采样器
+
+`scripts/performance/collect-process-samples.ps1` 提供 P0-07 的原始进程资源采样基础。它直接启动并拥有一个目标子进程，每次 repetition 使用新的进程实例，默认参数与标准协议一致：60s warm-up、300s measurement、1000ms sample interval、3 repetitions。
+
+每个 `run-XX.csv` 只记录：
+
+- round-trip UTC timestamp；
+- monotonic elapsed milliseconds；
+- 按逻辑处理器数量归一化的进程 CPU percentage；
+- Private Bytes、Working Set；
+- handle count 与 thread count。
+
+采样器约束：
+
+- 参数通过 `ProcessStartInfo.ArgumentList` 逐项传递，不拼接 shell command string；
+- 输出目录必须为空，避免不同采样批次混合；
+- 目标在 warm-up/measurement 期间提前退出即判定该批次失败；
+- 每次 repetition 结束后必须终止并等待其拥有的 process tree；清理失败即失败；
+- raw CSV 不持久化可执行文件完整路径、working directory 或用户 home path；
+- 当前采样器只对**直接拥有且保持存活的目标进程**负责，不自动跟踪启动器退出后转移到另一个独立进程的 packaged/activation 模型。
+
+`scripts/performance/test-process-sampler.ps1` 在 CI 中使用临时 `pwsh` 子进程和缩短的显式参数做烟测，验证采样、UTC 格式、elapsed 单调性、资源字段、子进程清理以及 fail-closed 路径。该烟测是**工具链证据**，不是 Zhuomian 性能结果；它不得参与 Baseline/Enhanced 阈值校准。
 
 ## 3. 参考硬件档位
 
@@ -105,9 +128,10 @@ WinUI/packaging 基线可能要求调整内存门槛。调整只能依据可复�
 
 ## 9. P0-07 剩余退出条件
 
-证据契约完成不等于 P0-07 完成。仍必须具备：
+证据契约和通用采样器完成不等于 P0-07 完成。仍必须具备：
 
-- 可重复执行的 Release x64 采样脚本/runner；
+- 将采样器绑定到可重复执行的 **Release x64 Zhuomian S1-S8 场景编排**；
+- 从原始时间序列生成完整 evidence metadata、每项 Average/P95/P99/max 与 run selection；
 - 对适用固定场景生成真实原始结果；
 - Baseline 与 Enhanced 至少两档真实机器数据；
 - 同协议下的中位/最差运行比较；
