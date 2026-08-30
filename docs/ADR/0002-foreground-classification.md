@@ -39,7 +39,16 @@ Classification order is:
 
 Missing process information is never interpreted as desktop availability. Explorer process identity without exact Shell HWND identity remains external.
 
-Foreground change notification and debouncing remain implementation work. Production should prefer event-driven notification with bounded reconciliation and must not add an idle high-frequency polling loop.
+Foreground change notification uses an event-driven candidate with bounded reconciliation; raw event payloads are hints, not authoritative state. The Phase 0 debounce reference model is:
+
+- first hint after idle requests an immediate leading-edge reconciliation;
+- subsequent hints use a **50 ms provisional settle window**;
+- continuous bursts cannot postpone authoritative re-read beyond **100 ms provisional between reconciliation starts**;
+- every hint advances a generation; stale timer callbacks and stale classifier results are discarded;
+- reconciliation re-reads current platform state instead of trusting a delayed event HWND;
+- once pending work drains, no periodic timer or high-frequency polling remains active.
+
+The timing values remain provisional until measured against real Windows event delivery. The event source, dispatcher crossing and production integration remain implementation work.
 
 ## Evidence
 
@@ -47,16 +56,19 @@ The [Foreground Classification Spike](../../spikes/ForegroundClassification/READ
 
 The [Platform Lifecycle Spike](../../spikes/PlatformLifecycle/README.md) passes 5/5 automated runs against a real separate borderless process covering the primary monitor. All five transitions became foreground and classified as `Suspended`; the live default input desktop was accessible and named `Default`; WTS session notification registration and cleanup succeeded. Unlock/Desktop Ready ordering, Hover suppression after `Suspended`, and pointer/keyboard/animation/media release are deterministic lifecycle-policy assertions in this Spike, not proof that a production Hover dispatcher or live runtime-resource owners were exercised.
 
+The [Foreground Event Debounce reference-model Spike](../../spikes/ForegroundEventDebounce/README.md) adds six deterministic CI tests for leading-edge reconciliation, burst coalescing, the 100 ms starvation bound, stale result/timer generation rejection and zero idle polling work. This is executable policy evidence only; it does not install or measure a real Windows foreground event hook.
+
 ## Consequences
 
 - False positives favor blocking Hover rather than interrupting another application.
 - A desktop intent click may need a separate hit-test path when the exact foreground HWND is not the public Shell window.
 - Real full-screen classification now has repeated external-process evidence.
-- Real lock/UAC transitions, sleep/remote-session behavior, foreground event delivery/debounce and lifecycle integration with actual runtime owners remain required before this ADR becomes Accepted.
+- The debounce/coalescing policy now has a deterministic executable reference model, but Windows event delivery remains unvalidated.
+- Real lock/UAC transitions, sleep/remote-session behavior, real foreground callback delivery, dispatch/integration and lifecycle integration with actual runtime owners remain required before this ADR becomes Accepted.
 
 ## Validation and rollback
 
-Acceptance requires user-attended real lock/UAC lifecycle evidence, sleep/remote-session evidence, event-delivery/debounce testing, integrated no-external/disarmed-Hover behavior, and proof that real pointer/keyboard/animation/media ownership obeys suspension. The automated real full-screen classification criterion is satisfied; the Spike is disposable and can be removed without affecting production code.
+Acceptance requires user-attended real lock/UAC lifecycle evidence, sleep/remote-session evidence, real foreground event-delivery testing under the bounded reconciliation policy, integrated no-external/disarmed-Hover behavior, and proof that real pointer/keyboard/animation/media ownership obeys suspension. The automated real full-screen classification criterion and deterministic debounce-policy criterion are satisfied; the Spikes remain disposable and can be removed without affecting production code.
 
 ## References
 
