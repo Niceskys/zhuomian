@@ -46,6 +46,7 @@ P0-07 使用 `schemaVersion: 1` 的 JSON 证据文件。校验器位于 `scripts
 
 约束：
 
+- `collectedAtUtc` 必须是 JSON string，使用 `System.Text.Json` 接受的 extended ISO-8601 date/time profile，并显式以 `Z` 或 `+00:00` 表示 UTC；宽松日期文本不属于有效证据；
 - 只有真实 `Baseline` 或 `Enhanced` 机器证据可将 `eligibleForThresholdCalibration` 设为 `true`；
 - `CI` 或 `Exploratory` 结果可以验证工具链或做诊断，但不得冻结产品阈值；
 - 偏离默认 60s/300s/3 次协议必须写明原因；
