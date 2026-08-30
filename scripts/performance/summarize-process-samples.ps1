@@ -36,6 +36,24 @@ function Parse-FiniteDouble {
     return $parsed
 }
 
+function Parse-NonNegativeInteger {
+    param(
+        [Parameter(Mandatory)][string]$Value,
+        [Parameter(Mandatory)][string]$Context
+    )
+
+    $parsed = 0L
+    if (-not [long]::TryParse(
+            $Value,
+            [Globalization.NumberStyles]::Integer,
+            $culture,
+            [ref]$parsed) -or $parsed -lt 0) {
+        throw "$Context must be a non-negative integer."
+    }
+
+    return [double]$parsed
+}
+
 function Get-NearestRankPercentile {
     param(
         [Parameter(Mandatory)][double[]]$Values,
@@ -87,15 +105,34 @@ if (-not (Test-Path -LiteralPath $InputDirectory -PathType Container)) {
 }
 
 $resolvedInputDirectory = (Resolve-Path -LiteralPath $InputDirectory).Path
-$runFiles = @(Get-ChildItem -LiteralPath $resolvedInputDirectory -File -Filter 'run-*.csv' | Sort-Object Name)
-if ($runFiles.Count -eq 0) {
+$candidateFiles = @(Get-ChildItem -LiteralPath $resolvedInputDirectory -File -Filter 'run-*.csv')
+if ($candidateFiles.Count -eq 0) {
     throw 'No run-*.csv process sample files were found.'
 }
 
+$numberedRunFiles = [System.Collections.Generic.List[object]]::new()
+foreach ($candidateFile in $candidateFiles) {
+    if ($candidateFile.Name -notmatch '^run-(\d+)\.csv$') {
+        throw "Unexpected process sample filename: $($candidateFile.Name)."
+    }
+
+    $runNumber = [int]$Matches[1]
+    if ($runNumber -lt 1) {
+        throw "Process sample run numbers must start at 1: $($candidateFile.Name)."
+    }
+
+    $numberedRunFiles.Add([pscustomobject]@{
+            RunNumber = $runNumber
+            File = $candidateFile
+        })
+}
+
+$runFiles = @($numberedRunFiles | Sort-Object RunNumber)
 for ($index = 0; $index -lt $runFiles.Count; $index++) {
-    $expectedName = 'run-{0:D2}.csv' -f ($index + 1)
-    if ($runFiles[$index].Name -ne $expectedName) {
-        throw "Process sample files must be contiguous and named run-01.csv..run-NN.csv; expected $expectedName, found $($runFiles[$index].Name)."
+    $expectedNumber = $index + 1
+    $expectedName = 'run-{0:D2}.csv' -f $expectedNumber
+    if ($runFiles[$index].RunNumber -ne $expectedNumber -or $runFiles[$index].File.Name -ne $expectedName) {
+        throw "Process sample files must be contiguous and use sampler names run-01.csv..run-NN.csv; expected $expectedName, found $($runFiles[$index].File.Name)."
     }
 }
 
@@ -114,7 +151,7 @@ elseif (-not (Test-Path -LiteralPath $outputParent -PathType Container)) {
 $runSummaries = [System.Collections.Generic.List[object]]::new()
 
 for ($runIndex = 0; $runIndex -lt $runFiles.Count; $runIndex++) {
-    $runFile = $runFiles[$runIndex]
+    $runFile = $runFiles[$runIndex].File
     $firstLine = Get-Content -LiteralPath $runFile.FullName -TotalCount 1
     if ($firstLine -ne $expectedHeader) {
         throw "$($runFile.Name) has an unexpected CSV header."
@@ -152,10 +189,10 @@ for ($runIndex = 0; $runIndex -lt $runFiles.Count; $runIndex++) {
         }
 
         $cpuValues.Add((Parse-FiniteDouble -Value $row.cpuPercent -Context "$context cpuPercent"))
-        $privateBytesValues.Add((Parse-FiniteDouble -Value $row.privateBytes -Context "$context privateBytes"))
-        $workingSetValues.Add((Parse-FiniteDouble -Value $row.workingSetBytes -Context "$context workingSetBytes"))
-        $handleValues.Add((Parse-FiniteDouble -Value $row.handleCount -Context "$context handleCount"))
-        $threadValues.Add((Parse-FiniteDouble -Value $row.threadCount -Context "$context threadCount"))
+        $privateBytesValues.Add((Parse-NonNegativeInteger -Value $row.privateBytes -Context "$context privateBytes"))
+        $workingSetValues.Add((Parse-NonNegativeInteger -Value $row.workingSetBytes -Context "$context workingSetBytes"))
+        $handleValues.Add((Parse-NonNegativeInteger -Value $row.handleCount -Context "$context handleCount"))
+        $threadValues.Add((Parse-NonNegativeInteger -Value $row.threadCount -Context "$context threadCount"))
         $previousElapsed = $elapsed
     }
 
