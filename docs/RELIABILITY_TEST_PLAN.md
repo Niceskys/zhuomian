@@ -2,17 +2,22 @@
 
 ## 1. Phase 0 Minimum CI
 
-从首个解决方案出现开始，每个 PR 必须执行：
+从首个解决方案出现开始，每个 PR 的持续门禁必须至少执行：
 
-- restore/build；
-- unit tests；
-- deterministic interaction tests；
-- persistence/migration tests；
-- static analysis；
 - 文档结构与本地链接检查；
+- restore/build；
+- 当前仓库已有的 unit、model 与 deterministic interaction tests；
+- analyzer/code-style 检查，warning 不得被静默忽略；
 - 测试结果 artifact。
 
-当前仓库只有文档，因此 CI 先执行文档门禁；工程出现后同一 PR 必须扩展构建与测试，不等待 V0.3。
+专项能力一旦进入仓库，其对应测试必须在同一阶段加入门禁，而不是提前把“不存在的模块”视为已通过：
+
+- persistence/migration 出现后：migration fixture、原子保存、失败回滚和兼容性测试；
+- host/foreground/platform adapter 出现后：对应 integration 与故障路径测试；
+- UI 行为出现后：真实 UI automation、IME、Reduced Motion 与截图/录屏证据；
+- performance-sensitive 能力出现后：按性能协议生成可复核原始结果。
+
+当前仓库已经包含 .NET solution、Core/test 项目和多个 disposable Spike。现行 PR CI 会先验证文档，再 restore/build solution、执行 `dotnet format --verify-no-changes`、运行测试并上传 TRX。Persistence/migration 生产能力尚未进入仓库，因此其专项测试目前是**尚未适用**，不是“已通过”证据。
 
 ## 2. 确定性状态机测试
 
