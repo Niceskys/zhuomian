@@ -65,7 +65,17 @@ CI 运行证据契约的确定性自测，但不执行也不冒充真实性能�
 
 `scripts/performance/test-performance-run-selector.ps1` 在 CI 中验证两个严重度方向、奇数/偶数 run、nearest-rank 50%、并列规则及损坏 summary 拒绝路径。该工具只冻结跨 run 数学语义，不组装硬件/build metadata，也不产生真实性能成绩。
 
-### 2.3 通用进程采样器
+### 2.3 最终证据装配
+
+`scripts/performance/assemble-performance-evidence.ps1` 将 caller-supplied 的 provenance/environment/build/protocol/frame metadata 与现有 `summarySchemaVersion: 1`、`selectionSchemaVersion: 1` 记录装配为最终 `schemaVersion: 1` evidence JSON。它不自定义选择语义，而是重放 canonical summarizer/selector、比对规范化输出并固定以下链路：
+
+`raw samples -> per-run summary -> deterministic selection -> evidence assembly -> canonical validation`
+
+装配器从 summary runs 派生 `rawResultFiles`，从选中的 median run 复制全部 `metrics[]`，从 selection 复制 selector、median/worst run 和对应值；它检查 summary/selection schema 与文件名、run count、protocol repetitions、raw 文件存在性以及 median/worst 指标值的一致性。metadata 不得自行提供 assembler-owned 的 `rawResultFiles`、`metrics` 或 `runSelection` 字段；输出已存在时拒绝覆盖，并在发布前调用 canonical validator。临时 fixture 的 assembler self-test 会实际串联 summarizer、selector 和 validator。
+
+该步骤只建立 provenance/metadata linkage，不证明场景有效性、机器档位真实性、性能达标或阈值已校准。CI 只运行 synthetic/tooling fixtures。
+
+### 2.4 通用进程采样器
 
 `scripts/performance/collect-process-samples.ps1` 提供 P0-07 的原始进程资源采样基础。它直接启动并拥有一个目标子进程，每次 repetition 使用新的进程实例，默认参数与标准协议一致：60s warm-up、300s measurement、1000ms sample interval、3 repetitions。
 
@@ -142,7 +152,7 @@ WinUI/packaging 基线可能要求调整内存门槛。调整只能依据可复�
 证据契约和通用采样器完成不等于 P0-07 完成。仍必须具备：
 
 - 将采样器绑定到可重复执行的 **Release x64 Zhuomian S1-S8 场景编排**；
-- 从原始时间序列、单轮统计和 run selection 组装完整 evidence metadata；
+- 使用已校验的 raw samples、单轮统计、run selection 和 evidence assembly 链路生成实际场景证据；
 - 对适用固定场景生成真实原始结果；
 - Baseline 与 Enhanced 至少两档真实机器数据；
 - 同协议下的中位/最差运行比较；

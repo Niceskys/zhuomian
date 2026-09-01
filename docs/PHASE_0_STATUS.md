@@ -158,7 +158,7 @@ See [ADR-0001](ADR/0001-desktop-host-strategy.md), [ADR-0002](ADR/0002-foregroun
 
 Phase 0B exit conditions above remain open. The following work is allowed in parallel because it does not depend on unavailable attended hardware and does not advance the Phase 0B exit gate.
 
-### P0-07 performance tooling — contract + sampler + per-run summary + cross-run selection pass, product benchmark pending
+### P0-07 performance tooling — contract + sampler + per-run summary + cross-run selection + evidence assembly pass, product benchmark pending
 
 The machine-readable evidence contract remains enforced by `scripts/performance/validate-performance-evidence.ps1` and its deterministic self-test:
 
@@ -196,14 +196,21 @@ The deterministic cross-run selector is now present:
 - its `selectionSchemaVersion: 1` output preserves the complete ranking, selector/unit/policy and median/worst indices and values;
 - final evidence `metrics[]` is defined as the median-run metrics, and the validator cross-checks its selected statistic against `medianValue` plus the worst-value direction;
 - CI covers higher/lower-is-worse, odd/even counts, ties, missing/duplicate metrics, run gaps, unit mismatch and non-finite data;
-- this freezes tooling semantics only; it does not assemble final evidence or create benchmark claims.
+- this freezes tooling semantics only; it does not create benchmark claims.
+
+The deterministic final evidence assembler is now present:
+
+- `scripts/performance/assemble-performance-evidence.ps1` links the validated raw files, per-run summary, selection artifact and caller-supplied provenance/environment/build/protocol/frame metadata;
+- it copies raw-result paths from summary runs, median-run metrics from the selected summary run and selector/median/worst metadata from the selection record;
+- it rejects substituted or missing artifacts at assembly time, run-count/protocol mismatches and output overwrite, then invokes the canonical evidence validator before publishing;
+- `scripts/performance/test-performance-evidence-assembler.ps1` uses synthetic fixtures but executes the real summarizer, selector and validator, covering positive linkage plus provenance and overwrite failures;
+- this proves deterministic evidence assembly/tooling linkage only; it does not create benchmark claims.
 
 This remains **protocol/tooling evidence only**. The hosted runner is not a Zhuomian Baseline/Enhanced performance machine, the shortened `pwsh` smoke test and synthetic summary/selection fixtures are not product benchmarks, no S1-S8 product scenario is measured and no provisional threshold is frozen.
 
 P0-07 remains incomplete. Still required:
 
 - bind the sampler to repeatable Release x64 Zhuomian S1-S8 scenario orchestration;
-- assemble complete final evidence metadata from validated raw samples, per-run summaries and run selection;
 - collect real raw measurements for applicable S1-S8 scenarios;
 - Baseline and Enhanced real-machine evidence;
 - same-protocol median/worst-run comparison;

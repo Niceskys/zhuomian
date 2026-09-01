@@ -41,6 +41,10 @@ jobs:
         shell: pwsh
         run: ./scripts/performance/test-performance-run-selector.ps1
 
+      - name: Validate performance evidence assembly
+        shell: pwsh
+        run: ./scripts/performance/test-performance-evidence-assembler.ps1
+
       - name: Detect solution
         id: solution
         shell: pwsh
