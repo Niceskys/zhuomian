@@ -105,10 +105,29 @@ pwsh ./scripts/performance/test-performance-run-selector.ps1
 
 CI verifies both severity directions, odd/even nearest-rank selection, deterministic ties, selector metadata and malformed-summary rejection. Synthetic selection fixtures do not constitute performance results.
 
+## Final evidence assembly
+
+```powershell
+pwsh ./scripts/performance/assemble-performance-evidence.ps1 `
+  -SummaryPath <per-run-summary.json> `
+  -SelectionPath <run-selection.json> `
+  -MetadataPath <evidence-metadata.json> `
+  -OutputPath <evidence.json>
+```
+
+The assembler is the linkage layer between validated raw samples, the per-run summary and the deterministic run-selection record. It replays the canonical summarizer and selector and compares their normalized contracts, then derives `rawResultFiles` from the verified summary runs, copies all metrics from the selected median run, copies selector/median/worst metadata from the verified selection record, rejects missing or substituted artifacts at assembly time, refuses to overwrite an existing output and runs the canonical evidence validator before publishing the final JSON.
+
+`MetadataPath` supplies provenance, environment, build, protocol, collection-command and frame-presentation fields. It must not supply assembler-owned `rawResultFiles`, `metrics` or `runSelection` fields. The summary, raw artifacts and final evidence must share an evidence-relative working set; absolute, traversal and durable user-home paths are rejected.
+
+```powershell
+pwsh ./scripts/performance/test-performance-evidence-assembler.ps1
+```
+
+The self-test uses synthetic CSV fixtures, exercises the real summarizer and selector, verifies median/worst and raw-file linkage, covers provenance failures and overwrite protection, and deletes all temporary data. This proves tooling linkage only; it does not create Zhuomian benchmark results or threshold-calibration evidence.
+
 ## Still required for P0-07
 
 - bind the generic sampler to repeatable **Release x64 Zhuomian scenario orchestration** for applicable S1-S8 cases;
-- assemble complete evidence metadata around validated raw samples and selected runs;
 - collect actual raw measurements on at least Baseline and Enhanced real machines;
 - compare median/worst runs under the same protocol;
 - calibrate and freeze or revise provisional thresholds from reproducible data.
