@@ -1,94 +1,74 @@
 # Zhuomian 产品规范
 
-> 状态：Post-audit baseline v0.2
+> 状态：开发前规范基线 2026-10-12；产品能力待实现，证据状态见 [PHASE_0_STATUS.md](PHASE_0_STATUS.md)。
 
-## 1. 产品定义
+## 1. 产品定义与交付目标
 
-Zhuomian 是面向 Windows 的空间化桌面工作层。用户用多个 `Space` 按个人逻辑组织 `Item`，并从桌面快速打开它们。
+Zhuomian 是面向 Windows 的免费桌面资源组织工具。用户通过 Space 按个人逻辑组织应用、文件、文件夹和 HTTP(S) 链接，从桌面快速找到并打开它们。
 
-### Primary user
+目标是先完成真实可用、视觉成熟的内部测试版，再正式公开发布并完整开源。开源许可证与依赖兼容审计尚待决策；免费不等于仓库已具备开源授权。内部测试也必须满足安全、数据完整性和前台保护要求。
 
-需要长期管理大量应用、文件、文件夹和链接，同时重视桌面秩序、低干扰和现代视觉的 Windows 用户。
+用户负责需求决策与 Windows 实机验收；AI 负责架构、开发、文档、自动测试和问题排查。测试或环境不可用时必须报告限制，不能要求用户手写代码补齐。
 
-### Primary job
+初期 Windows 11 优先。支持范围必须由 Windows build、显示器/DPI、部署方式的真实证据确定；Spike 的局部通过不能当作生产能力。
 
-在不进入另一个复杂管理工具的前提下，从桌面按个人分类快速找到并打开常用对象。
+## 2. 核心对象与两种展开模式
 
-### Secondary jobs
+Space 是可命名、可创建、移动、缩放和删除的分类容器。每个 Space 可独立选择模式 A 或 B；默认新 Space 选择哪一模式尚待验收。既有 `ActivationMode.Hover/Click` 分别对应 A/B；本次不改代码或已存在配置。
 
-- 提供安静、现代、可调的桌面视觉。
-- 在资源允许时提供图片或视频背景。
-- 通过可选 Hover 和空间动画改善浏览体验。
+- **A：悬停原位展开。** 鼠标进入且通过安全门后，在原位置附近放大，内容响应式重排；离开有效区域后自动收回。触发延迟默认 **20ms**，逐 Space 可设 **0–120ms**。有效区域与收回延迟由交互规范约束并待实测校准。
+- **B：点击中央展开。** 点击标题或空白区域，优先让同一分类框从原位置连续移动并放大至其当前显示器中央；关闭反向返回。具体工作区定位规则和可记录降级见 [INTERACTION_SPEC.md](INTERACTION_SPEC.md)。不得把独立弹窗或淡入声称为连续移位动画。
 
-## 2. 核心对象
+Item 正式类型是 `ApplicationItem`、`FileItem`、`FolderItem`、`UrlItem`。Command、Script、Widget、插件不属于核心内测范围。
 
-`Space` 是可命名、可定位、可调整尺寸的分类容器。每个 Space 独立设置 `ActivationMode`，初期只支持 `Hover` 与 `Click`。
+## 3. 核心操作闭环
 
-初期正式 Item 类型为 `ApplicationItem`、`FileItem`、`FolderItem` 和 `UrlItem`。`CommandItem`、`ScriptItem`、Widget 和插件不属于 V0.1/V0.2。
+- 未展开 Space 的可见 Preview Item **单击直接打开**，不先展开、不需第二次点击。Hover、pointer-down 和布局变化必须按交互规范解决竞态。
+- 展开后支持 Space 内搜索、内容纵向滚动、可见 Item 点击和虚拟化浏览；外框不随内容滚动移动。
+- 日常模式允许外部资源拖入添加入口，拖入期间不自动展开 Space。编辑模式处理 Space 创建、重命名、移动、缩放、删除和布局修改。
+- 删除入口或 Space 不得删除用户源应用、文件、文件夹或外部背景文件；解绑、共享引用与垃圾回收见架构规范。
+- 添加和启动真实资源必须通过安全域校验；人工选择添加始终可用。应用发现优先 Windows 原生能力，允许复用许可证兼容的成熟开源实现，避免重造复杂扫描器。
+- 所有配置、入口、布局和外观必须安全持久化，具备备份、恢复与失败提示。
 
-Wallpaper 是辅助背景能力。静态图片优先；视频必须服从前台状态和资源生命周期。
+## 4. 预览与布局
 
-## 3. 核心用户行为
+默认预览容量根据 Item 数量及 Space 可用区域自动适配，允许用户覆盖配置。自动算法、最小/最大容量、尺寸策略和手动覆盖 UI 待原生验证；不能保证所有 Item 均挤进预览。自动适配不得覆盖用户显式保存的尺寸，容量不足时通过展开访问完整内容。
 
-### Preview direct launch
+V0.1 固定用户顺序；Pinned/Recently used/Frequently used 后续评估。Space 扩大或编辑 Resize 可以重新计算网格；单个图标 Hover 只改变视觉 transform，禁止整个 Grid reflow。
 
-未展开 Space 只显示 `PreviewCapacity` 范围内的 Item。用户单击其中可见 Item，应立即打开该 Item；不得先强制展开 Space 再点击一次。点击或 Hover Space 的空白区域才用于进入完整浏览。
+## 5. 视觉系统
 
-### Focused browsing
+V0.1 可用版包含统一主题继承、逐 Space 覆盖及待机/展开分别配置。继承次序、清除覆盖和材质降级见 [ARCHITECTURE.md](ARCHITECTURE.md)。范围包括基础模拟玻璃、透明度、颜色、圆角、阴影和图片背景；图片可用于全局背景或逐 Space/状态覆盖。
 
-Focused Space 提供虚拟化浏览、内容层纵向滚动、Space 内搜索、Item 邻域反馈和点击打开。Space 外框在内容滚动时保持稳定。
+- 默认静态模拟玻璃或实体材质；透明度不能破坏文字、图标与命中可读性。
+- 真实 Acrylic/SystemBackdrop 是可降级增强，不是成立条件；最多一个高成本展开 surface。
+- Reduced Motion、高对比度/实体材质和 Click-only 路径必须可完成核心操作。
+- “视觉成熟”要求真实截图/录屏证明文字、间距、图标、状态切换、滚动、搜索和错误状态一致，由用户实机验收；HTML 原型不能代替原生证据。
 
-### Foreground safety
+20ms 默认和 0–120ms 范围已确定；动画时长、曲线、放大倍率、收回延迟和外观默认数值仍待验证。
 
-当外部应用处于前台，Hover 只能显示轻微反馈，不能自动展开，也不得抢键盘焦点。用户点击露出的桌面区域后，才可短暂开启 Hover 意图门。全屏、锁屏或会话切换时进入 Suspended 行为。
+## 6. 前台和平台底线
 
-### Collapse
+外部应用前台时 Hover 不能自动展开或抢键盘；只有显式点击可见桌面产生短暂 Armed 门后才允许 A 展开。视觉展开不等于键盘焦点；搜索须显式激活。普通应用始终遮挡 Zhuomian；不得依赖 TopMost。
 
-默认离开自动收起，延时为 provisional 参数。搜索、拖动、上下文菜单等交互期间不得误收起。`Esc` 优先级由交互规范定义。
+必须维护 Explorer 恢复、数据完整性、备份、性能降级、安全边界和无闲置逐帧循环。跨显示器、混合 DPI、Win+D、桌面图标共存必须逐项实机验证。无证据的能力禁用或限制为工程验证用途，不能标为支持。
 
-## 4. 预览排序
+## 7. V0.1 核心内测版范围与验收
 
-最终目标顺序为 Pinned、Recently used、Frequently used、Remaining。V0.1 使用固定顺序，避免过早引入热数据写入和排序复杂度。
+V0.1 是真实 Windows 内测版，包含两种独立模式（B 可有明确标识且经用户验收的降级）、真实四类 Item、Space 编辑、外部拖入、搜索/滚动、自动预览及覆盖、基础外观、安全持久化和恢复。固定三框/假资源仅作为开发 fixture，不是可用版交付。
 
-## 5. 材质和动效规则
+最低验收：
 
-- Idle Space 默认使用高质量模拟玻璃或实体材质。
-- 真实 Acrylic/SystemBackdrop 只允许作为 Focused 增强，且必须可降级。
-- 同时至多一个高成本 Focused surface。
-- Item 放大只改变视觉 transform，不能造成 Grid reflow。
-- Reduced Motion 使用淡入、轻度缩放或即时状态替代大范围移动。
-- 可读性优先于透明度、模糊和视觉一致性。
+- 100 次外部前台/Disarmed Hover 路径，自动展开为 0；Suspended 不启动/展开。
+- 100 次 Preview 点击，二次点击和重复启动均为 0；包含 Hover 临界时序。
+- 确定性组合测试无双 Focus、过期事件或隐式键盘捕获；快速切换 500 次无卡死、幽灵窗口或无法返回。
+- 两种模式、编辑、添加、搜索、滚动、重启恢复和删除入口完成真实资源闭环；源文件完整。
+- 持久化故障注入、恢复、备份及 launch 安全负面测试通过。
+- Reduced Motion、Click-only、键盘/IME 路径可用；截图和录屏获实机验收。
+- 适用平台、性能、8 小时驻留与分发质量门槛见 [RELIABILITY_TEST_PLAN.md](RELIABILITY_TEST_PLAN.md)。未通过的安全/兼容门槛仍阻断相应能力。
 
-所有数值参数均为 provisional，必须由 Spike 和可用性测试校准。
+## 8. 后续与非目标
 
-## 6. V0.1 范围
+Dock、视频壁纸和 Space 视频背景均可选后续，暂不阻碍核心静态内测或公开版。自动更新、导入导出、高级布局/主题后续单独定义。
 
-- 三个固定 Space 和固定假 Item。
-- Click 与可选 Hover 激活。
-- Preview direct launch 的模拟行为。
-- 展开、返回和离开收起。
-- 外部前台存在时的 Hover gating。
-- 显式搜索入口的交互原型。
-- Item transform 邻域反馈。
-- 静态图片或纯色背景。
-
-V0.1 不包含真实应用扫描、通用持久化编辑器、视频壁纸、主题市场、任意命令、自动更新或正式发布。
-
-## 7. Non-goals
-
-- Windows Shell 全替换或 macOS 克隆。
-- AI 助手、AI 自动分类或通用脚本平台。
-- 云同步、账户、社区市场或信息面板。
-- 以 WorkerW 或真实 Blur 为产品成立条件。
-
-## 8. V0.1 量化验收
-
-以下阈值在 Phase 0 校准后冻结；冻结前为 provisional：
-
-- 100 次外部前台路径测试中，Hover 自动展开次数为 0。
-- 100 次 Preview Item 点击中，要求二次点击的次数为 0。
-- 自动化组合状态测试中，不允许出现两个 Focused Space。
-- 快速切换 500 次后，无卡死、幽灵窗口或无法返回状态。
-- 键盘输入仍归属外部应用，除非用户显式进入 Zhuomian 键盘模式。
-- Reduced Motion、键盘路径和 Click-only 模式均可完成核心任务。
-- 性能满足 [PERFORMANCE_BUDGET.md](PERFORMANCE_BUDGET.md) 的当期门槛。
+非目标：Shell 全替换、macOS 克隆、AI 分类、任意命令、云同步、账户/社区市场、Widget。Windows 10 不在初期正式支持承诺内。WorkerW 与真实 Blur 不得成为唯一实现依赖。

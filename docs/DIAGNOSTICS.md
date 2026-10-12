@@ -39,3 +39,9 @@ Each Spike records environment, version, selected strategy, transitions, failure
 ## Release behavior
 
 Debug overlays and verbose traces are disabled by default in Release builds. A future safe mode must be able to disable video, enhanced backdrop and animation without requiring configuration file edits.
+
+## Expansion and configuration diagnostics
+
+Future production events must report the A/B mode, actual B animation tier (B0/B1/B2), Reduced Motion selection, fallback reason, interrupted generation and material/asset fallback without serializing private configuration. Candidate stable reasons: `animation_degraded`, `preview_click_consumed`, `drop_rejected`, `layout_restore_failed`. These are specification fields, not an existing logging implementation.
+
+Safe mode for the core internal build must disable costly material/animation and invalid managed assets while preserving resource access, persistence and source-file safety; video controls apply only when video exists.

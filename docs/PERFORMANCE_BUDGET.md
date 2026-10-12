@@ -129,11 +129,11 @@ WinUI/packaging 基线可能要求调整内存门槛。调整只能依据可复�
 - S1：3 Space / 30 Item，静态背景，完全 Idle。
 - S2：8 Space / 200 Item，外部窗口前台，Hover 穿越。
 - S3：20 Space / 1000 Item，Focused 滚动和搜索。
-- S4：连续 Focus/Return 500 次。
+- S4：A 原位与 B 中央展开分别连续 Focus/Return 500 次，区分 B0/B1/B2、Reduced Motion、原生中断/返回。
 - S5：Explorer 重启 20 次。
 - S6：单屏与双屏混合 DPI；热插拔 20 次。
 - S7：1080p 与 4K 视频分别 Play/Pause/Stop/Release。
-- S8：Solid、Simulated glass、Enhanced backdrop 对比。
+- S8：Solid、Simulated glass（含透明度/阴影/图片和状态切换）、Enhanced backdrop 对比；未启用 Enhanced 必须明确标为尚未适用。
 
 ## 6. 多显示器增长预算
 
@@ -141,7 +141,7 @@ WinUI/packaging 基线可能要求调整内存门槛。调整只能依据可复�
 
 ## 7. 长期驻留
 
-至少运行 8 小时并执行周期性交互。Private bytes、handle、thread、GPU committed memory 和 decoder 数量不得呈持续单调增长。24 小时 soak 在 V0.3 release gate 前成为必需。
+至少运行 8 小时并执行周期性交互。Private bytes、handle、thread、GPU committed memory 和 decoder 数量不得呈持续单调增长。8 小时驻留为 V0.1 核心内测门槛；24 小时 soak 在 V0.3 公开发布前成为必需。
 
 ## 8. 回归规则
 
@@ -157,3 +157,11 @@ WinUI/packaging 基线可能要求调整内存门槛。调整只能依据可复�
 - Baseline 与 Enhanced 至少两档真实机器数据；
 - 同协议下的中位/最差运行比较；
 - 基于可复现数据冻结或修订 provisional 阈值。
+
+## 10. 静态核心与可选能力的适用性
+
+A 的 20ms 默认及 0–120ms 用户范围为产品确定要求，指触发等待，不是动画总时长或渲染响应达标值。测量输入→Intent→首帧→完成分段；动画时长/曲线/收回延迟、网格重排成本和 B 原生参数须实测。改变材质/降级级别必须单独记录，不能把 B2 的成绩声称为 B0 达标。
+
+沿用 S1–S8 schema 和工具，不在本次改校验器。静态核心需 S1–S6 与 S8 已实现基础能力的实机证据；S7 视频未实现时在阶段报告记录“尚未适用”，不能生成虚假通过 evidence JSON。P0-07 的静态适用范围和阈值校准仍未完成；S7 启用前独立过门槛。
+
+同协议比较基础/Space 覆盖/状态图片背景与 A/B 动效，核对 Item Hover 不触发全 Grid reflow、Space reflow 不持续 idle、资产缓存增长与动画取消资源释放。性能失败先减少材质/过渡，必要时明确 B 降级；不能取消 Preview 单击直开、前台保护或数据安全来换取成绩。

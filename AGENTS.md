@@ -12,7 +12,7 @@ Read, in order:
 4. `SECURITY.md`
 5. the relevant performance, reliability, roadmap and ADR documents
 
-If a request conflicts with them, stop implementation and identify the conflict. Do not quietly change user-visible behavior because an implementation is difficult.
+If a request conflicts with them, stop production implementation and identify the conflict. An explicitly authorized specification-only task may reconcile the conflict in a separate reviewable spec PR; it must preserve unresolved safety/platform gates and identify unconfirmed choices. Do not quietly change user-visible behavior because an implementation is difficult.
 
 ## Scope and PR size
 
@@ -54,3 +54,13 @@ If a change crosses more than two production modules or changes product behavior
 ## Definition of done
 
 Follow `docs/DEVELOPMENT_PLAN.md`, the PR template and all applicable quality gates. Documentation and implementation must agree before merge.
+
+## AI development and release scope
+
+- AI owns implementation, documentation, automated tests and diagnosis; the user owns product decisions and Windows acceptance, not handwritten code.
+- Use the E1–E5 incremental roadmap. Domain-only work can proceed without accepting a platform adapter. Controlled engineering packages gather evidence; they are not usable internal releases.
+- Per-Space Hover/Click means A in-place expansion / B centered expansion. Preview click races, drag suppression, safe return and theme inheritance require the updated specification tests before claiming completion.
+- Do not claim B0 continuous animation when only B1/B2 is available; record actual degradation, cause and evidence.
+- Windows 11 is first priority. Real display/DPI, Win+D, icon coexistence and session evidence must match support claims.
+- Free and future fully open source are product goals. Do not claim an existing open-source license or vendor/library compatibility without the release license/NOTICE audit.
+- Dock/video are optional follow-up. Existing CI, tests and Proposed ADRs remain; document changes do not close their gates.
