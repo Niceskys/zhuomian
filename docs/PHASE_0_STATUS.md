@@ -227,3 +227,7 @@ P0-07 remains incomplete. Still required:
 - Still unverified: real dual-monitor mixed DPI/hot-plug, Win+D integration, fallback icon-conflict/Z-order policy, WinUI/IME/accessibility, real foreground event delivery, lock/UAC/sleep/remote sessions, live resource release, packaging and real product performance.
 - B continuous translation/scale, A effective region/collapse timing, auto-preview algorithm, theme/state defaults, real launch/drag and data integrity are new implementation/acceptance work. No HTML or disposable Win32 result proves these complete.
 - No LICENSE currently exists. License selection, third-party compatibility and complete-source release remain public-release gates.
+
+### 2026-10-13 PR #25 consistency review
+
+The original PR head `494cfd0de8495aa8946440e1ed3e1cbcd2eddbd5` passed workflow run 38261143120; no manual rerun was requested. The follow-up documentation correction separates optional Enhanced enablement from mandatory Fallback acceptance, removes the E2/E4 performance dependency cycle, requires a working discovery provider, clarifies existing-external-foreground Preview clicks, and retains attended remote-session boundary safety gates. Historical evidence, ADR Proposed statuses and all open P0 risks remain unchanged. This is not new Windows product evidence.

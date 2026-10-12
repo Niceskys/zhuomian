@@ -93,7 +93,7 @@ AND no higher-priority event is pending
 
 - pointer-down 命中可见 Item 时固定 Item ID/操作目标并取消未提交 Hover timer；激活 on-click/pointer-up 验证操作成立后恰好一次交给 launcher。事件消费，不再触发 Space 激活。
 - 在有效点击序列结束/取消前，Hover 延时或布局变化不得把目标移走并改判成空白点击。pointer-down 已开始时禁止提交 Hover Focusing；若 Focusing 先发生，仍按同步命中结果支持一次 Item 点击，不能要求补点。
-- timer、命中快照、Focus token 均带 generation；外部前台、删除目标、Host lost、Suspended 或拖拽接管使过期操作无效。失效时反馈失败，不改为打开另一个 Item。
+- timer、命中快照、Focus token 均带 generation；点击序列期间新出现/身份改变的外部前台、删除目标、Host lost、Suspended 或拖拽接管使过期操作无效。开始点击时已有且未变化的 ExternalForeground 本身不能取消露出的 Preview Item 直接打开；它只阻止未经 Armed 的 Hover 自动展开。失效时反馈失败，不改为打开另一个 Item。
 - Hover 不产生 launch；双击的 OS 后续消息不能使同一已消费点击被再次执行。独立的重复单击是否去抖待验证，不能用长延迟破坏直接打开。
 
 ### 4.5 日常与编辑模式、拖入
@@ -135,7 +135,7 @@ Space 展开、编辑 Resize 或容量变化可重算 Grid，内容滚动保持�
 
 ## 7. 抢占与竞态
 
-- Focusing A 时激活 B：A 从当前视觉值平滑 Returning；B 在 A 释放主 Focus token 后才 Focusing。
+- Focusing Space X 时激活 Space Y：X 从当前视觉值平滑 Returning；Y 在 X 释放主 Focus token 后才 Focusing（X/Y 指容器，非模式 A/B）。
 - ExternalForeground 新出现或外部身份改变：取消未提交的 Hover/Intent；Focusing/Focused 安全 Returning；若失去安全渲染条件则直接安全 Idle。已 Armed 的同一外部前台下仅允许明确意图路径，不能借延迟旧事件放行。
 - Suspended 或 Host lost：清空延时事件、取消动画、释放输入捕获和键盘模式，逻辑回到安全 Idle。
 - Resume/Host restored：从 Idle/Disarmed/NoKeyboardCapture 开始。
