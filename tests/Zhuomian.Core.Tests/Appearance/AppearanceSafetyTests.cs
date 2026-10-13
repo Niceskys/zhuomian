@@ -8,8 +8,13 @@ public sealed class AppearanceSafetyTests
 {
     private static AppearanceConfiguration Decorated() => Config(new()
     {
-        Material = Set(SurfaceMaterial.SimulatedGlass), Tint = Set(White), Opacity = Set(0d),
-        CornerRadius = Set(20d), Shadow = Set(Shadow), Image = Set(Image), FallbackColor = Set(Red),
+        Material = Set(SurfaceMaterial.SimulatedGlass),
+        Tint = Set(White),
+        Opacity = Set(0d),
+        CornerRadius = Set(20d),
+        Shadow = Set(Shadow),
+        Image = Set(Image),
+        FallbackColor = Set(Red),
     });
     private static ImageAssessment Available(ResourceReference? reference = null, long encoded = 1000,
         int width = 10, int height = 10, long decoded = 400) => new(reference ?? Image.Reference!, ImageAvailability.Available, encoded, width, height, decoded);

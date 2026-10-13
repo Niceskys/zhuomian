@@ -157,7 +157,9 @@ public sealed class AppearanceValidationTests
     {
         var config = Config(new()
         {
-            CornerRadius = Set(1000d), Shadow = Set(new ShadowSpec(1, 1000, -1000, 1000)), Opacity = Set(1d),
+            CornerRadius = Set(1000d),
+            Shadow = Set(new ShadowSpec(1, 1000, -1000, 1000)),
+            Opacity = Set(1d),
         });
         var result = Resolve(config);
         Assert.Equal(1000, result.Effective.CornerRadius);

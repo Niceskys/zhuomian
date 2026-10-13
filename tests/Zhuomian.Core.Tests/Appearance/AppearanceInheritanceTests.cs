@@ -81,8 +81,13 @@ public sealed class AppearanceInheritanceTests
         var theme = new AppearanceLayers(Layer(1));
         var explicitValues = new AppearanceOverrides
         {
-            Material = Set(SurfaceMaterial.Solid), Tint = Set(Black), Opacity = Set(0d), CornerRadius = Set(0d),
-            Shadow = Set(ShadowSpec.None), Image = Set(ImageBackground.None), FallbackColor = Set(Black),
+            Material = Set(SurfaceMaterial.Solid),
+            Tint = Set(Black),
+            Opacity = Set(0d),
+            CornerRadius = Set(0d),
+            Shadow = Set(ShadowSpec.None),
+            Image = Set(ImageBackground.None),
+            FallbackColor = Set(Black),
         };
         var config = new AppearanceConfiguration(theme).WithSpace(A, new(explicitValues));
         var zero = Resolve(config);
@@ -97,9 +102,12 @@ public sealed class AppearanceInheritanceTests
         Assert.Equal(ImageBackground.None, zero.Inherited.Image);
         var reset = explicitValues with
         {
-            Material = PropertyOverride.Reset<SurfaceMaterial>(), Tint = PropertyOverride.Reset<RgbColor>(),
-            Opacity = PropertyOverride.Reset<double>(), CornerRadius = PropertyOverride.Reset<double>(),
-            Shadow = PropertyOverride.Reset<ShadowSpec>(), Image = PropertyOverride.Reset<ImageBackground>(),
+            Material = PropertyOverride.Reset<SurfaceMaterial>(),
+            Tint = PropertyOverride.Reset<RgbColor>(),
+            Opacity = PropertyOverride.Reset<double>(),
+            CornerRadius = PropertyOverride.Reset<double>(),
+            Shadow = PropertyOverride.Reset<ShadowSpec>(),
+            Image = PropertyOverride.Reset<ImageBackground>(),
             FallbackColor = PropertyOverride.Reset<RgbColor>(),
         };
         var cleared = config.WithSpace(A, new(reset));
