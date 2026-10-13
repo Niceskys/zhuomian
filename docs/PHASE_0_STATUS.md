@@ -231,3 +231,7 @@ P0-07 remains incomplete. Still required:
 ### 2026-10-13 PR #25 consistency review
 
 The original PR head `494cfd0de8495aa8946440e1ed3e1cbcd2eddbd5` passed workflow run 38261143120; no manual rerun was requested. The follow-up documentation correction separates optional Enhanced enablement from mandatory Fallback acceptance, removes the E2/E4 performance dependency cycle, requires a working discovery provider, clarifies existing-external-foreground Preview clicks, and retains attended remote-session boundary safety gates. Historical evidence, ADR Proposed statuses and all open P0 risks remain unchanged. This is not new Windows product evidence.
+
+### 2026-10-13 E2-1 implementation candidate
+
+New App/Windows adapter integrate E1 via a restricted native HWND/GDI fixture. Automated hidden-window tests and published EXE smoke belong to CI evidence only. [ADR-0005](ADR/0005-e2-native-engineering-host.md) remains Proposed; [run instructions](../src/Zhuomian.App/README.md) enumerate all unverified attended behavior. No historical evidence is attributed to this adapter; P0-01..07, real UI screenshots, icon coexistence, foreground lifecycle, Windows display coverage, packaging and performance acceptance remain open.

@@ -23,3 +23,7 @@ Zhuomian 是面向 Windows 的免费桌面资源组织工具，使用 Space 分�
 The defining product rule is simple: a visible preview Item launches directly, while Space Focus exists to browse the complete collection. Hover must never steal keyboard focus or expand while an external foreground application is in use unless the user has explicitly armed the visible desktop.
 
 每个 Space 独立选择：A 悬停在原位附近放大（默认等待 20ms，可设 0–120ms）；B 点击标题/空白后优先连续移位放大到当前显示器中央，关闭反向返回。B 动画降级须明确说明。可见预览 Item 单击直接打开，不能强制先展开。具体动画、收回和自动预览算法仍待原生实测。
+
+## E2-1 native engineering candidate
+
+A restricted Windows 11 x64, single-monitor Win32/GDI executable integrates the E1 Workspace/Interaction/Layout/Appearance contracts. See [run instructions and evidence boundaries](src/Zhuomian.App/README.md) and [Proposed ADR-0005](docs/ADR/0005-e2-native-engineering-host.md). The self-contained CI artifact is an engineering directory, not a daily-use release, installer, accepted WinUI framework or B0 animation. Real desktop/P0 gates remain open.

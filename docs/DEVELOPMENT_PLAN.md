@@ -105,3 +105,7 @@ AI 负责开发、文档、自动测试、诊断和交接；用户负责需求�
 - WorkerW、真实背景 Blur 与 Packaging 均未成为已接受的唯一生产方案。
 
 本次重排仅改变依赖顺序与交付范围；P0-01 至 P0-07 未因此关闭，ADR-0001/0002 保持 Proposed。当前已有 E1 领域控制器与 fake launcher 测试；没有真实 launcher、持久化或渲染。领域不变量已有适用阶段覆盖，真实平台/几何/资源生命周期 INV 仍待后续集成验证。
+
+### E2-1 engineering candidate increment
+
+Latest implementation adds an isolated Windows adapter and thin executable entry, backed by existing E1 contracts. [ADR-0005](ADR/0005-e2-native-engineering-host.md) and [engineering instructions](../src/Zhuomian.App/README.md) limit it to a single-monitor Windows 11 x64 candidate with instantaneous targets and Solid. Candidate implementation/CI proof does not satisfy the real UI/performance/platform Definition of Done or accept WinUI/host/packaging. Next E2-2 must implement native continuity/cancellation/hit synchronization and acquire attended evidence.

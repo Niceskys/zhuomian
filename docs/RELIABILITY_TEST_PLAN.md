@@ -139,3 +139,9 @@ PR 只接受可复核证据：命令、环境、退出码、结果 artifact、�
 ## 10. 内测与公开质量差异
 
 内测可以限制声明支持环境、保留记录清楚的视觉降级和非核心缺陷；不得保留已知数据丢失、任意执行、焦点劫持或不安全恢复。公开版还需 24 小时驻留、更完整声明兼容矩阵、分发/签名/升级回滚、开源许可与可重现构建。阈值未校准时记录 provisional，不以 CI tooling 通过冻结阈值。
+
+### E2-1 restricted adapter evidence
+
+The [Windows adapter and executable](../src/Zhuomian.App/README.md) add deterministic native-event mapping, same-tick safety-reconciliation/Preview precedence, fake launch once, external/unarmed Hover, generation/token rejection, HostLost cleanup, configuration rollback and accessibility degradation tests. Windows CI also executes actual **hidden** HWND style/MA_NOACTIVATE/foreground-preservation/repeated-creation/release and native configure rollback tests. The self-contained published win-x64 EXE executes a hidden native smoke and emits actual startup/resource-snapshot/shutdown diagnostics. Linux conditionally bypasses the native case; it cannot establish native evidence.
+
+Existing Core tests and the strict solution loop/exit-code regression remain unchanged. Publish and EXE smoke check native exit codes immediately; failed smoke cannot upload a usable engineering artifact. All canonical docs/performance-tool gates remain. GitHub's desktop is not the user's interactive desktop: physical pointer, actual rendering visibility, foreground input, Win+D, Explorer, icons, mixed DPI, UAC/session transitions and product cold/idle performance remain unverified. Proposed [ADR-0005](ADR/0005-e2-native-engineering-host.md) records this boundary; no P0 gate closes.
