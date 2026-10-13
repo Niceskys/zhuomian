@@ -13,8 +13,22 @@ $selected = @($trxFiles | Where-Object {
 if ($selected.Count -ne 1) { throw 'Expected exactly one persistence TRX.' }
 [xml]$trx = Get-Content -LiteralPath $selected[0].FullName -Raw
 $counters = $trx.TestRun.ResultSummary.Counters
-if ([int]$counters.failed -ne 0 -or [int]$counters.notExecuted -ne 0 -or [int]$counters.passed -ne [int]$counters.total -or [int]$counters.total -lt 85) {
+if ([int]$counters.failed -ne 0 -or [int]$counters.notExecuted -ne 0 -or [int]$counters.passed -ne [int]$counters.total -or [int]$counters.total -ne 98) {
     throw 'Persistence suite incomplete, failed or skipped.'
+}
+$baseline = [ordered]@{}
+foreach ($suite in @(@{ name = 'Zhuomian.Core.Tests'; count = 451 }, @{ name = 'Zhuomian.Launching.Windows.Tests'; count = 37 })) {
+    $matches = @($trxFiles | Where-Object {
+        [xml]$candidate = Get-Content -LiteralPath $_.FullName -Raw
+        @($candidate.TestRun.Results.UnitTestResult | Where-Object { $_.testName.StartsWith($suite.name + '.', [StringComparison]::Ordinal) }).Count -gt 0
+    })
+    if ($matches.Count -ne 1) { throw 'Expected exactly one original-suite TRX.' }
+    [xml]$original = Get-Content -LiteralPath $matches[0].FullName -Raw
+    $count = $original.TestRun.ResultSummary.Counters
+    if ([int]$count.total -ne $suite.count -or [int]$count.passed -ne $suite.count -or [int]$count.failed -ne 0 -or [int]$count.notExecuted -ne 0) {
+        throw 'Original test suite was reduced, skipped or failed.'
+    }
+    $baseline[$suite.name] = [int]$count.passed
 }
 $results = @($trx.TestRun.Results.UnitTestResult)
 $required = @(
@@ -28,7 +42,8 @@ $required = @(
     'ActualWindowsHardLinkedMainAndLockAreRejectedWithoutModifyingSource',
     'ActualWindowsLockedExternalResourcesAndIconsAreNotReadWrittenOrDeleted',
     'ActualSecondProcessOwnsLockAndCannotBeBypassedByAnotherStore',
-    'SymbolicLeafAndStorageRootNeverRedirectWritesToExternalData'
+    'SymbolicLeafAndStorageRootNeverRedirectWritesToExternalData',
+    'DanglingStorageRootLinkCannotCreateAnExternalTarget'
 )
 foreach ($name in $required) {
     $matching = @($results | Where-Object { $_.testName -match [regex]::Escape($name) })
@@ -53,6 +68,7 @@ $evidence = [ordered]@{
     passed = [int]$counters.passed
     failed = [int]$counters.failed
     skipped = [int]$counters.notExecuted
+    originalSuiteCounts = $baseline
     nativeAssertions = $required
     faultOutcomes = @($results | ForEach-Object { [ordered]@{ testName = $_.testName; outcome = $_.outcome } })
     fixtureOwnership = 'private generated temporary roots only'

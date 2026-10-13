@@ -43,11 +43,15 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
             foreach (string segment in Root[driveRoot.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
             {
                 current = Path.Combine(current, segment);
-                if (!Directory.Exists(current))
+                try
                 {
-                    if (File.Exists(current)) { throw new StorageException(StorageError.UnsafePath); }
-                    Directory.CreateDirectory(current);
+                    // Inspect the entry itself before creation; a dangling reparse entry must never create its target.
+                    var attributes = File.GetAttributes(current);
+                    if ((attributes & FileAttributes.ReparsePoint) != 0 || (attributes & FileAttributes.Directory) == 0)
+                    { throw new StorageException(StorageError.UnsafePath); }
                 }
+                catch (FileNotFoundException) { Directory.CreateDirectory(current); }
+                catch (DirectoryNotFoundException) { Directory.CreateDirectory(current); }
                 pins.Add(current);
             }
             return pins;

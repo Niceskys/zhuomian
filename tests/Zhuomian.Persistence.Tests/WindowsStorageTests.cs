@@ -38,6 +38,27 @@ public sealed class WindowsStorageTests
     }
 
     [Fact]
+    public void DanglingStorageRootLinkCannotCreateAnExternalTarget()
+    {
+        using var owned = new OwnedDirectory();
+        using var outside = new OwnedDirectory();
+        string missingTarget = Path.Combine(outside.Root, "missing");
+        Directory.Delete(owned.Root);
+        Directory.CreateSymbolicLink(owned.Root, missingTarget);
+        try
+        {
+            Assert.Equal(StorageError.UnsafePath, owned.Store().Save(Samples.Full()).Error);
+            Assert.False(Directory.Exists(missingTarget));
+        }
+        finally
+        {
+            if (OperatingSystem.IsWindows()) { Directory.Delete(owned.Root); }
+            else { System.IO.File.Delete(owned.Root); }
+            Directory.CreateDirectory(owned.Root);
+        }
+    }
+
+    [Fact]
     public void ActualWindowsJunctionCannotRedirectStorageIntoAnotherOwnedTarget()
     {
         if (!OperatingSystem.IsWindows()) { Assert.False(OperatingSystem.IsWindows()); return; }
