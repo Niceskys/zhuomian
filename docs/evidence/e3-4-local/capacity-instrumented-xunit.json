@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "attempts": 1000,
+  "committed": 256,
+  "refused": 744,
+  "quotaRelief": false,
+  "totalDiskBytes": 33770192896,
+  "availableDiskBytes": 31570640896,
+  "filesystem": "overlay",
+  "platform": "Debian GNU/Linux 13 (trixie)",
+  "milestones": [
+    {
+      "attempt": 256,
+      "committed": 256,
+      "refused": 0,
+      "elapsedMs": 15820.9532,
+      "saveMs": 39.7402,
+      "loadMs": 39.3117,
+      "reads": {
+        "SuccessfulReadFiles": 67585,
+        "SuccessfulReadBytes": 16443234,
+        "HistoryEnumerationEntries": 131072
+      },
+      "files": 514,
+      "bytes": 124950,
+      "historySnapshotBytes": 124706
+    },
+    {
+      "attempt": 257,
+      "committed": 256,
+      "refused": 1,
+      "elapsedMs": 15918.7765,
+      "saveMs": 34.7612,
+      "loadMs": 34.1483,
+      "reads": {
+        "SuccessfulReadFiles": 69126,
+        "SuccessfulReadBytes": 16818572,
+        "HistoryEnumerationEntries": 132352
+      },
+      "files": 514,
+      "bytes": 124950,
+      "historySnapshotBytes": 124706
+    },
+    {
+      "attempt": 512,
+      "committed": 256,
+      "refused": 256,
+      "elapsedMs": 28189.6151,
+      "saveMs": 27.9395,
+      "loadMs": 29.4597,
+      "reads": {
+        "SuccessfulReadFiles": 201223,
+        "SuccessfulReadBytes": 48993186,
+        "HistoryEnumerationEntries": 328704
+      },
+      "files": 514,
+      "bytes": 124950,
+      "historySnapshotBytes": 124706
+    },
+    {
+      "attempt": 1000,
+      "committed": 256,
+      "refused": 744,
+      "elapsedMs": 44810.6138,
+      "saveMs": 29.8078,
+      "loadMs": 31.0225,
+      "reads": {
+        "SuccessfulReadFiles": 453082,
+        "SuccessfulReadBytes": 110338002,
+        "HistoryEnumerationEntries": 704000
+      },
+      "files": 514,
+      "bytes": 124950,
+      "historySnapshotBytes": 124706
+    }
+  ],
+  "restoreMs": 48.1971,
+  "restoreError": "TooLarge",
+  "estimatedHistoryBytes": 108787780,
+  "scanMeasurement": "sum of retained history byte lengths per attempt; estimate, not actual device IO",
+  "reads": {
+    "SuccessfulReadFiles": 454880,
+    "SuccessfulReadBytes": 110775936,
+    "HistoryEnumerationEntries": 706048
+  },
+  "readMeasurement": "successful storage reads and wildcard enumeration entries; includes Load/Inventory/readback; not physical device IO",
+  "sourceAssetsUnchanged": true,
+  "physicalDiskFull": false,
+  "desktopAcceptance": false
+}
