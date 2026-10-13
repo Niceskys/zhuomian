@@ -23,7 +23,9 @@ internal sealed class CandidateScene
     }));
     internal static AppearanceResolution Resolve(Guid id, bool expanded, AppearanceEnvironment environment) =>
         AppearanceResolver.Resolve(id, expanded ? AppearanceState.Focused : AppearanceState.Idle, Theme,
-            new(Palette, 1), environment, new(false, false, false), new(false, false, false, 24, 0, 0, 0, 0));
+            new(Palette, 1), environment.HighContrast && !environment.ReducedMotion
+                ? new(true, true, true, environment.HighContrastPalette) : environment,
+            new(false, false, false), new(false, false, false, 24, 0, 0, 0, 0));
     internal static Rect Snap(LogicalRect bounds, double scale)
     {
         double left = Math.Round(bounds.X * scale), top = Math.Round(bounds.Y * scale);
