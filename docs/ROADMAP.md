@@ -1,96 +1,64 @@
-# Zhuomian Roadmap
+# Zhuomian 增量路线
 
-> 原则：每阶段交付可独立验证的增量，不形成 V0.2/V0.3 集成悬崖。
+> 2026-10-12：以真实 Windows 核心内测为目标。阶段名表达交付范围，不表示当前已实现；历史 Phase 0 证据、P0 编号和门禁继续有效。
 
-## Phase 0A — Governance foundation
+## 1. 旧阶段映射
 
-交付：规范基线、ADR 模板、Minimum CI、PR 模板、诊断字段约定和测试工程骨架。
+| 旧阶段 | 新归属 | 变化理由 |
+|---|---|---|
+| Phase 0A | 保留已完成治理/CI | 不重建有效成果 |
+| Phase 0B/0C/0D | 平台、材质、性能、部署门禁持续验证 | 未通过不关闭；可并行推进不依赖平台的领域工作 |
+| V0.1 固定三框/假 Item | E1/E2 工程 fixture | 假资源不是可用产品交付 |
+| V0.2A/B/C 真实资源/数据/发现 | E3/E4 → V0.1 核心内测 | 提前形成启动、编辑、保存、浏览闭环 |
+| V0.3A 平台 | E2/E5 集成 → V0.2 稳定内测 | 核心平台安全不能拖到发布前 |
+| V0.3B 视频 | V0.4 可选增强 | 不阻碍核心发布 |
+| V0.3C 发布 | V0.3 首次公开版 | 明确与内部测试质量区别 |
+| V0.4 基础自定义 | 基础外观提前 E4；高级功能仍 V0.4 | 成熟视觉是可用版要求 |
 
-退出：文档检查可执行；`main` Ruleset 已由管理员启用；首个测试在 CI 中运行。
+## 2. E1 — 可执行领域闭环
 
-## Phase 0B — Desktop and input feasibility
+交付：可注入时钟/调度的完整交互控制器、A/B 路由、Preview 竞态和拖入抑制测试；Space/Item 引用、配置契约和纯布局/外观继承规则。fake launcher 和假资源仅做 fixture。
 
-独立 Spike：
+退出：相关确定性不变量通过，旧安全/防抖测试保留；无 Windows hook、真实 launch 或持久化绕过。领域 PR 不依赖未完成 Windows Spike，也不接受生产宿主。
 
-- Desktop Host：Enhanced 与 Fallback。
-- Foreground classification。
-- NoActivate visual focus 与显式 keyboard mode。
-- Explorer restart。
-- per-monitor host、混合 DPI 和热插拔。
+## 3. E2 — 带门禁的原生安全集成
 
-退出：满足 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) P0-01 至 P0-04，并有 ADR。
+交付：在受控工程验证包中验证候选框架、Fallback host、真实前台事件、NoActivate/显式键盘、A 原位/B 中央动画、取消与恢复、Win+D、桌面图标冲突。模式 B 同时记录 B0 和必要降级证据。
 
-## Phase 0C — Rendering and performance feasibility
+退出：本阶段候选框架/宿主的输入、遮挡、取消和失败安全路径具备实机证据，模拟材质/动效与至少一种工程部署可重复运行；记录相关 ADR 的接受范围和剩余门禁。性能只测本阶段已存在的原生 fixture 与宿主/动画成本，不要求尚依赖 E4 搜索/滚动/图片的完整 S1–S6/S8 成绩，也不关闭 P0-07。后续 E3/E4 集成时继续验证新增能力，E5 才收敛完整静态产品基准与内测门禁。工程验证包不得作为用户日常内测应用发布。
 
-- Simulated glass 正式基线。
-- Focused enhanced backdrop 候选。
-- transform-only Item magnification。
-- Idle lifecycle 与可重复性能基准。
-- Play/Pause/Stop/Release 的最小媒体资源实验，不实现完整视频壁纸。
+P0-04 双屏/DPI 等仍开放时只允许限定配置验证包；禁用未验证能力不等于该门槛通过。公开支持及 V0.1 完整验收仍需相应实机矩阵。WorkerW/真实 Backdrop 可被明确拒绝或延后，不能牵连有效基础路径。
 
-退出：模拟玻璃在所有目标环境可用；增强材质可明确接受或拒绝；性能协议冻结。
+## 4. E3 — 真实资源与安全数据闭环
 
-## Phase 0D — Packaging and recovery
+交付：人工添加和受控打开四类资源、入口删除、失效反馈；Workspace revision、原子保存、last-known-good、备份、逐版本迁移和损坏隔离。先完成启动/持久化 ADR、威胁审查和负面测试，再接 UI。
 
-- packaged/unpackaged 比较。
-- framework-dependent/self-contained 比较。
-- 配置路径、日志、启动、更新、卸载和 host 兼容性。
-- 原子保存、revision、migration 与 last-known-good 原型。
+退出：真实 launch 安全门禁、数据故障注入、备份恢复均通过。发现 provider 可并行评估，但不能阻塞人工添加；不得省略安全校验。
 
-退出：Packaging 与 Persistence ADR 被接受；安装运行路径可重复。
+## 5. E4 — 可用编辑与成熟视觉
 
-## V0.1 — Interaction prototype
+交付：创建/命名/移动/缩放/删除 Space，日常拖入，搜索/虚拟化滚动，自动预览/覆盖；主题→Space→状态继承和模拟玻璃/颜色/透明度/圆角/阴影/图片背景；至少一个经过验证的最小可靠应用发现 provider（Windows 原生优先、许可兼容复用）。
 
-只交付三个固定 Space、假 Item、Preview direct launch、Focus/Return、Hover gating、显式搜索入口、Click-only/Reduced Motion 和静态背景。
+退出：真实资源完整流程及两种模式录屏/截图；Item Hover 不 reflow；拖入不展开；外观/图片安全与性能验证；provider 实际发现→选择添加→启动及去重/失效路径通过。候选评估报告不能代替发现能力交付，人工添加不依赖 provider 成功。具体默认模式、容量算法、动画/收回参数由实测确认。
 
-退出条件采用 [PRODUCT_SPEC.md](PRODUCT_SPEC.md) 的量化验收。任何一项核心误触、焦点或状态不变量失败均阻断。
+## 6. E5 → V0.1 — 核心 Windows 内测版
 
-## V0.2A — Safe real items
+集成 E1–E4，关闭适用 P0 门禁；完成 Windows 11、双屏混合 DPI/热插拔、Win+D、桌面图标共存、Explorer、锁屏/UAC/睡眠及远程会话边界的实机验证。即使不支持远程会话内使用，也必须验证进入/断开/返回时安全暂停、释放和恢复；完整远程使用矩阵可在 V0.2 扩展。其他未验证环境不得宣称支持，风险保留。
 
-- 手工添加已识别应用、文件、文件夹和 HTTP(S) URL。
-- 受控 launcher、安全确认和失效 Item。
-- 不提供任意 arguments 编辑器或自定义 scheme 默认执行。
+退出：PRODUCT_SPEC 的真实资源闭环和量化验收、适用安全/数据/平台/性能门禁、S1–S6/S8 静态产品性能实测与校准、8 小时驻留，以及用户对成熟视觉的验收。B 若降级须记录并获验收；不得宣称完整动画已通过。没有这些证据只能称工程验证包。
 
-退出：安全测试、参数测试和失败路径通过。
+## 7. V0.2 — 稳定内部使用
 
-## V0.2B — Durable workspace
+修复内测问题，扩大 Windows build/硬件/刷新率矩阵、远程会话覆盖、可访问性、恢复和诊断；验证安装/升级/卸载及配置兼容。现有高风险阻断未关不能进入公开版。
 
-- Workspace、Space、ItemStore 持久化。
-- 基础编辑、移动、Resize 和 Grid reflow。
-- migration、备份、损坏隔离和显示器拓扑恢复。
+## 8. V0.3 — 首次正式公开版与完整开源
 
-退出：故障注入无整体数据丢失；旧 snapshot 不能覆盖新 revision。
+发布门槛：24 小时 soak、支持矩阵、性能回归、安装/升级/回滚、发布签名门禁；许可证选择、全部拟公开源码/构建步骤、第三方依赖许可/NOTICE、隐私检查和可重现 artifact。无自动更新时不得宣称已有；启用前独立 ADR 与签名/反降级测试。
 
-## V0.2C — Discovery and browsing
+签名或兼容条件不具备应推迟正式发布，不以“开源免费”豁免。Dock、视频均不要求完成。
 
-- Start Menu 等最小可靠 Provider。
-- 去重与 provenance。
-- 虚拟化滚动和 Space 搜索。
+## 9. V0.4 — 可选增强
 
-退出：1000 Item 性能、重复来源和卸载失效测试通过。
+Dock、视频壁纸/Space 视频背景、高级布局、外观和导入导出按实际反馈选择。视频启用前必须通过资源释放、后台暂停、电池/GPU降级和 S7；导入启用前恶意配置/迁移测试。真实 Backdrop 或 WorkerW 若重启评估需其独立证据。
 
-## V0.3A — Daily-driver platform
-
-- 完整多显示器/DPI。
-- Explorer、睡眠、锁屏和崩溃恢复。
-- 诊断导出和安全模式。
-- 安装、升级和卸载验证。
-
-## V0.3B — Optional media
-
-只有静态桌面达到 Daily Driver 后才进入：视频 Wallpaper、Space 视频背景、播放策略、电池与 GPU 降级。
-
-## V0.3C — Release quality gate
-
-- 24 小时 soak。
-- 性能回归和兼容矩阵。
-- 签名、发布 artifact、升级/回滚。
-- Production CI 扩展。
-
-## V0.4 — Customization foundation
-
-高级外观、更多布局、导入导出和主题候选。是否进入由 V0.3 实际使用数据决定。
-
-## 延后且不承诺
-
-AI 功能、插件、云同步、社区、任意命令、Widget、Shader/Web 场景和 Windows 10 正式支持。
+不承诺：AI、插件、云同步、市场、任意命令、Widget、Web/Shader 场景、Windows 10。

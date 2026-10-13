@@ -2,7 +2,7 @@
 
 ## Current project stage
 
-The project is in Phase 0 specification and feasibility work. Product implementation should not begin until the applicable Phase 0 blockers are closed.
+The project is in Phase 0 specification and feasibility work. Independent domain work may proceed through E1; controlled engineering packages can validate E2 integration. A usable internal release and each enabled platform capability remain blocked until their applicable gates pass. See the [roadmap](docs/ROADMAP.md).
 
 ## Workflow
 
@@ -33,3 +33,5 @@ Repository administrators should configure a `main` ruleset with:
 - administrator bypass limited to emergency recovery.
 
 This repository file cannot prove those GitHub settings are enabled; verify them in repository settings.
+
+AI executes development, documentation, automated checks and diagnosis; the user decides requirements and performs Windows acceptance. Real-resource internal builds must precede formal public distribution. License selection and third-party compatibility remain public-release gates; no LICENSE is currently present.

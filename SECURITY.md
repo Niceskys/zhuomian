@@ -32,7 +32,7 @@ The normalized scheme is checked before launch. Unicode/display text must not hi
 
 ### Future CommandItem
 
-Out of scope for V0.1/V0.2. It requires a separate threat model, UI warning, permission model, import rules and audit trail.
+Out of scope for the core internal and first public releases. It requires a separate threat model, UI warning, permission model, import rules and audit trail.
 
 ## Import and persistence
 
@@ -41,6 +41,13 @@ Out of scope for V0.1/V0.2. It requires a separate threat model, UI warning, per
 - Invalid objects are quarantined; root validation failure falls back to last-known-good.
 - Managed assets have file type, size, pixel/duration and decoder resource limits.
 - Archive/path extraction must reject traversal and links escaping the managed asset root.
+
+## External drag, discovery and deletion
+
+- External drag adds validated resource references only; drop never launches, relocates or deletes the source. Unsupported/untrusted payloads fail closed.
+- Discovery provenance is retained, but provider/shortcut output is not trusted executable command text. Reused open-source components require license compatibility and dependency review before adoption.
+- Removing an entry/Space only changes owned configuration references. Managed-asset cleanup must verify ownership and remaining references; external source resources are never deleted by entry removal.
+- Basic images/glass are in the core scope and still subject to decoding/resource limits. Visual maturity does not justify disabling those limits.
 
 ## Media
 
@@ -60,3 +67,5 @@ Before automatic updates exist, the design must define:
 ## Security gates
 
 Real Item launch is blocked until launch-domain tests pass. Configuration import is blocked until migration and malicious-input tests pass. Automatic update work is blocked until its threat model and signature path are accepted by ADR.
+
+Internal testing does not waive launch, persistence, focus or import security gates. Public release additionally requires license/NOTICE and release-artifact integrity checks. Optional video and automatic updates stay disabled until their separate gates pass.

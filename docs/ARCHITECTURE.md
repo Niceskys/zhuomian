@@ -1,6 +1,6 @@
 # Zhuomian 架构规范
 
-> 状态：Phase 0 candidate。未经 Spike 与 ADR 接受的内容均不是生产承诺。
+> 状态：开发前规范基线 2026-10-12。未经 Spike 与 ADR 接受的平台实现均不是生产承诺；现有生产目录仅 Core 契约。
 
 ## 1. 架构原则
 
@@ -98,17 +98,21 @@ Space
   itemIds[]
   placement
   appearance
-  activationPolicy
-  layoutPolicy
+  activationPolicy    // A/Hover 或 B/Click；A hoverDelayMs 默认20、范围0–120
+  layoutPolicy        // 自动预览/显式容量覆盖；尺寸覆盖独立保留
 ```
 
-删除 Space 默认不删除仍被其他 Space 引用的 Item。删除 Item 必须从所有 Space 引用中解绑。加载时隔离 dangling reference 并记录诊断，不阻断整个 Workspace。
+删除 Space 只移除分类与引用，不删除用户源资源；仍被其他 Space 引用的 Item 保留。删除单个入口默认只解除当前 Space 引用；显式删除全局 Item 须确认并从所有 Space 解绑，仍不删除源文件。无引用 Item/managed asset 的回收须验证所有权、引用计数和备份恢复语义。加载时隔离 dangling reference 并记录诊断，不阻断整个 Workspace。
 
 ### 持久态与运行态
 
 允许持久化：用户配置、Space 布局、Item identity、策略和 schema/revision。
 
 禁止持久化：Hover、Focused、动画进度、Armed、KeyboardMode、临时搜索文本、指针捕获和媒体 decoder 状态。
+
+### 配置契约（字段草案，需 Persistence ADR 冻结）
+
+`activationPolicy` 持久化逐 Space 模式及 A 延迟；B 动画实际能力等级属于运行诊断，不伪造用户配置。全局主题、Space 覆盖、Idle/Focused 状态覆盖和预览自动/手动策略须有显式 unset/reset 语义。已有 Core `ActivationMode` 不因文档重构改名；未来若需 schema 变化必须迁移 fixture，不假定旧配置已经存在。
 
 ## 7. 保存与迁移
 
@@ -126,6 +130,12 @@ Application identity 优先来自可靠 provider identity，文件/文件夹保�
 
 用户复制进 Zhuomian 的图标、图片和视频由 managed asset store 所有；外部引用保持 external 状态，不因清理缓存删除用户源文件。所有资源引用必须定义创建、替换和垃圾回收语义。
 
+### 应用发现与添加边界
+
+按 [ADR-0003](ADR/0003-application-discovery-reuse.md) 评估 Windows 已注册应用、Start Menu/受控快捷方式与成熟开源 provider。具体 API 和依赖尚未选定，禁止无限磁盘扫描、自建复杂扫描框架或把发现结果当成可信命令。provider 输出规范化 identity、provenance、显示元数据及受控启动描述；去重规则须有测试。
+
+手工选择应用、文件、文件夹及 HTTP(S) 输入不依赖全量发现成功。快捷方式/外部 drag 先由添加服务校验，再进入 launcher 安全域；不拼接 command line，也不执行不受限脚本载荷。拖入和布局编辑使用独立事务，保存失败保留原数据并提示可重试。
+
 ## 9. 材质与媒体
 
 材质等级：
@@ -136,7 +146,13 @@ Application identity 优先来自可靠 provider identity，文件/文件夹保�
 
 材质策略同时考虑 Tint、Luminosity、Noise、对比保护和 fallback color。Enhanced 成本超预算或平台能力不足时自动降级。
 
-媒体状态机固定为 `Play → Pause → Stop → Release`，逆向恢复必须重新建立所需资源。Phase 0 只验证资源生命周期，不交付完整动态壁纸产品。
+核心外观继承顺序（同一属性逐层解析）：内置安全默认 → 全局主题公共值 → 全局主题当前状态值 → Space 公共覆盖 → Space 当前状态覆盖。清除覆盖恢复继承；unset 不等于透明度 0。继承完成后由可访问性/性能/平台策略施加最终降级，用户不能用局部覆盖绕过限制。
+
+支持基础模拟玻璃、透明度、颜色、圆角、阴影及图片背景；图片可作用于全局或 Space/状态。资产所有权、解码限额、缓存失效与备份引用须通过测试；具体默认数值待验收。
+
+动画控制器和布局引擎分离：Space bounds 变化可重排，Item 放大只 transform。模式 B 在所属 monitor host 内维护原位/目标/当前视觉值与 generation，不能把动画位置保存为编辑结果；每次取消释放回调与捕获。B0/B1/B2 选择须显式可诊断，不能静默用新窗口淡入冒充原框移动。具体 Composition/WinUI 原生方案需证据，不在此冻结。
+
+Dock 和视频均可选后续；未启用媒体时不创建 decoder，也不要求媒体试验作为静态核心的成立条件。媒体状态机固定为 `Play → Pause → Stop → Release`，逆向恢复必须重新建立所需资源。启用媒体前验证真实资源生命周期，不交付未经验证的动态壁纸；静态核心可将视频场景明确标记尚未适用。
 
 ## 10. Packaging
 
@@ -146,4 +162,4 @@ Phase 0 必须比较：
 - framework-dependent 与 self-contained；
 - Desktop Host、启动、恢复、更新、日志路径和卸载残留的影响。
 
-结论以 ADR 记录。Packaging 不是 V0.3 才处理的末端问题。
+结论以 ADR 记录；核心内测至少冻结并验证一种可重复安装/启动/卸载的交付方式，其他方式不得标为支持。Packaging 不是公开发布前才处理的末端问题。候选模块与框架未完成接受，不能复制 WinForms Spike 当作 WinUI 生产方案。

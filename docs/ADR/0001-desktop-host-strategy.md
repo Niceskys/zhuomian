@@ -60,7 +60,7 @@ Continue Phase 0B with two adapters behind `IDesktopHost`:
 - The fallback may not visually satisfy “between wallpaper and icons”; product presentation must be honest about this limitation.
 - Opaque fallback Space rectangles can cover desktop icons when they overlap. Production placement must avoid or explicitly communicate conflicts; the fallback may not claim invisible coexistence with icons.
 - Basic focus/input separation now has disposable Win32 evidence. WinUI/IME/accessibility integration still requires evidence before this ADR can become Accepted.
-- Abrupt Explorer recovery for the public fallback path has repeated evidence. Enhanced WorkerW invalidation and the remaining platform lifecycle matrix still require evidence before this ADR can become Accepted.
+- Abrupt Explorer recovery for the public fallback path has repeated evidence. The remaining fallback platform lifecycle matrix still requires evidence before the baseline can be accepted. Enhanced WorkerW invalidation is a separate enablement gate and is required if Enhanced hosting is selected; disabling Enhanced does not prove that gate passed.
 - Current-build WorkerW discovery and private activation produced no viable host; automatic fallback passed 20/20 runs. WorkerW remains optional and non-blocking.
 
 ## Validation and rollback
@@ -70,9 +70,13 @@ Evidence and commands are in [the Desktop Hosting Spike](../../spikes/DesktopHos
 - repeated NoActivate evidence;
 - real dual-monitor mixed-DPI and hot-plug evidence beyond the validated one-monitor host and deterministic mapping;
 - WinUI keyboard-mode, IME and accessibility evidence beyond the validated Win32 transition;
-- enhanced-host Explorer recovery and remaining lifecycle-matrix evidence beyond the validated abrupt fallback recovery;
+- remaining fallback lifecycle-matrix evidence beyond the validated abrupt fallback recovery; enhanced-host Explorer recovery is additionally required before Enhanced is enabled;
 - production Z-order maintenance and icon-overlap handling beyond the validated fallback visual-usability candidate, and, if WorkerW is ever enabled, valid cross-build attachment/DPI evidence;
 - no TopMost dependency.
+
+### 2026-10-13 scope clarification
+
+Under the [incremental delivery proposal](0004-incremental-delivery-gates.md), baseline and optional Enhanced acceptance must be recorded separately. A baseline acceptance can only follow the full applicable Fallback focus, DPI, recovery, Z-order/icon and lifecycle evidence above; it does not authorize WorkerW. Enhanced may remain disabled/Proposed without blocking a validated Fallback product. This clarification changes neither historical evidence nor the current Proposed status; no gate is closed here.
 
 The Spike is disposable and can be removed without affecting production code.
 

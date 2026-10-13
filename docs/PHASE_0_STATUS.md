@@ -1,13 +1,14 @@
 # Phase 0 status
 
-> Updated: 2026-08-30
+> Specification/status reconciliation: 2026-10-12. Historical Windows evidence below is preserved; no new Windows run or gate closure in this documentation PR.
+> Original evidence/status baseline: 2026-08-30.
 
 ## Phase 0A — Complete
 
 - Specification and governance baseline merged.
 - Active `main` ruleset requires PRs and the strict `docs` check.
 - .NET solution, analyzer policy, Core contract and baseline test suite merged.
-- CI validates documentation, the performance-evidence contract, the generic process-sampler smoke test, the deterministic per-run sample summarizer and cross-run selector, then restores, builds, formats, tests and uploads TRX evidence with zero annotations.
+- CI validates documentation, the performance-evidence contract, the generic process-sampler smoke test, the deterministic per-run sample summarizer and cross-run selector, plus the final evidence assembler self-test, then restores, builds, formats, tests and uploads TRX evidence with zero annotations.
 - Diagnostic field/privacy contract established.
 
 ## Phase 0B — In progress
@@ -215,3 +216,18 @@ P0-07 remains incomplete. Still required:
 - Baseline and Enhanced real-machine evidence;
 - same-protocol median/worst-run comparison;
 - threshold calibration from reproducible measurements.
+
+## 2026-10-12 — Development-preparation reconciliation
+
+- Current main audited: `6882cef42b4c0c564825a051993b7e97b7c9e817`. `src/` contains Core interaction enums/snapshot/safety predicates only. No production App, full interaction controller, desktop host, launcher, persistence, discovery, editor or renderer exists.
+- Core safety and debounce reference-model tests are retained. They do not cover all target INV, Preview/Hover race, A/B native animations or real-resource workflows.
+- P0-01..P0-07 remain incomplete; P0-08 governance/tooling remains established. Historical ruleset statements above are recorded evidence, not a fresh repository-settings verification.
+- ADR-0001/0002 stay Proposed. ADR-0003/0004 are new Proposed decisions; no platform acceptance has been inferred from a documentation change.
+- The [new roadmap](ROADMAP.md) allows independent domain work and controlled engineering integration, then gates the real Windows internal build. A restricted engineering package is not an internal daily-use release.
+- Still unverified: real dual-monitor mixed DPI/hot-plug, Win+D integration, fallback icon-conflict/Z-order policy, WinUI/IME/accessibility, real foreground event delivery, lock/UAC/sleep/remote sessions, live resource release, packaging and real product performance.
+- B continuous translation/scale, A effective region/collapse timing, auto-preview algorithm, theme/state defaults, real launch/drag and data integrity are new implementation/acceptance work. No HTML or disposable Win32 result proves these complete.
+- No LICENSE currently exists. License selection, third-party compatibility and complete-source release remain public-release gates.
+
+### 2026-10-13 PR #25 consistency review
+
+The original PR head `494cfd0de8495aa8946440e1ed3e1cbcd2eddbd5` passed workflow run 38261143120; no manual rerun was requested. The follow-up documentation correction separates optional Enhanced enablement from mandatory Fallback acceptance, removes the E2/E4 performance dependency cycle, requires a working discovery provider, clarifies existing-external-foreground Preview clicks, and retains attended remote-session boundary safety gates. Historical evidence, ADR Proposed statuses and all open P0 risks remain unchanged. This is not new Windows product evidence.
