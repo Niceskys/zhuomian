@@ -42,9 +42,9 @@ internal sealed class CandidateWindow : IDisposable
     internal CandidateWindow(Action<string> log, IInteractionClock? clock = null)
     {
         _log = log; _clock = clock ?? new Clock(); Input = new(_clock, _scheduler);
-        _events = (_, _, _, _, _, _, _) =>
+        _events = (_, eventId, _, _, _, _, _) =>
         {
-            if (_disposed || !_started || _signalPending) { return; }
+            if (_disposed || !_started || _signalPending || eventId is not (3 or 0x16 or 0x20)) { return; }
             _signalPending = true;
             _owner.BeginInvoke(DispatcherPriority.Send, new Action(() =>
             {
@@ -136,8 +136,9 @@ internal sealed class CandidateWindow : IDisposable
         if (availability == DesktopAvailability.Suspended) { _down = null; }
         // Conservative independent candidate: always HWND_BOTTOM. It may be hidden by Shell.
         // No attempt to claim the wallpaper/icon band or duplicate #31's raising strategy.
-        if (_visible) { ShowWindow(Window, availability == DesktopAvailability.Suspended ? 0 : 4); }
-        if (!SetWindowPos(Window, 1, 0, 0, 0, 0, 0x13)) { throw new InvalidOperationException("zorder_failed"); }
+        uint placement = 0x13;
+        if (_visible) { placement |= availability == DesktopAvailability.Suspended ? 0x80u : 0x40u; }
+        if (!SetWindowPos(Window, 1, 0, 0, 0, 0, placement)) { throw new InvalidOperationException("zorder_failed"); }
     }
     internal void Refresh(AppearanceEnvironment? hiddenEnvironment = null)
     {
@@ -175,7 +176,7 @@ internal sealed class CandidateWindow : IDisposable
             {
                 var b = space.Bounds; int diameter = (int)Math.Round(space.Appearance.Effective.CornerRadius * Scale * 2);
                 nint part = CreateRoundRectRgn((int)Math.Round(b.Left * Scale), (int)Math.Round(b.Top * Scale),
-                    (int)Math.Round(b.Right * Scale) + 1, (int)Math.Round(b.Bottom * Scale) + 1, diameter, diameter);
+                    (int)Math.Round(b.Right * Scale), (int)Math.Round(b.Bottom * Scale), diameter, diameter);
                 if (part == 0) { throw new InvalidOperationException("region_part_failed"); }
                 try { if (CombineRgn(region, region, part, 2) == 0) { throw new InvalidOperationException("region_combine_failed"); } }
                 finally { DeleteObject(part); }

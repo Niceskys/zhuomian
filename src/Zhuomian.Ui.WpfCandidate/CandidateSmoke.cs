@@ -23,6 +23,7 @@ internal static class CandidateSmoke
             long style = (long)GetWindowLongPtrW(hwnd, -20);
             Require((style & 0x08000080) == 0x08000080 && (style & 8) == 0, "styles");
             Require(SendMessageW(hwnd, 0x21, 0, 0) == 3, "mouseactivate");
+            Require(SendMessageW(hwnd, 0x87, 0, 0) == 0, "no_dialog_keyboard_request");
             Require(window.HookCount == 1 && window.SessionRegistered, "native_ownership");
             Require(window.Surface.Scene!.Spaces.Length == 2, "two_spaces");
             string a = EngineeringFixture.HoverId.ToString("D"), b = EngineeringFixture.ClickId.ToString("D");
