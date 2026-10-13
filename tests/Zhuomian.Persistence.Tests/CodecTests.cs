@@ -144,6 +144,7 @@ public sealed class CodecTests
     [InlineData("name")]
     [InlineData("activationPolicy")]
     [InlineData("capacityOverride")]
+    [InlineData("itemIds")]
     public void SingleBadSpaceKeepsOtherSpacesAndRemovedRecords(string field)
     {
         var result = WorkspaceCodec.Decode(Samples.Mutate(r => r["payload"]!["spaces"]![0]![field] = field == "name" ? "invalid\nname" : "invalid"));

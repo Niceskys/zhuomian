@@ -92,18 +92,22 @@ public static class WorkspaceCodec
         {
             using var doc = JsonDocument.Parse(bytes, new() { MaxDepth = PersistenceLimits.MaxDepth });
             var root = doc.RootElement;
-            ValidateTree(root);
-            if (root.ValueKind != JsonValueKind.Object) { throw new StorageException(StorageError.InvalidStructure); }
-            bool unknown = HasUnknown(root, "formatVersion", "sha256", "payload");
+            if (root.ValueKind != JsonValueKind.Object)
+            { ValidateTree(root); throw new StorageException(StorageError.InvalidStructure); }
+            ValidateHeader(root);
             int format = root.GetProperty("formatVersion").GetInt32();
             if (format != CurrentFormatVersion) { return Failure(StorageError.UnsupportedVersion); }
             var payload = root.GetProperty("payload");
+            ValidateHeader(payload);
+            int schema = payload.GetProperty("schemaVersion").GetInt32();
+            if (schema != Workspace.CurrentSchemaVersion) { return Failure(StorageError.UnsupportedVersion); }
+            // Unknown version headers are protected before interpreting their future fields as v1 corruption.
+            ValidateTree(root);
+            bool unknown = HasUnknown(root, "formatVersion", "sha256", "payload");
             string digest = Text(root, "sha256");
             string actual = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload.GetRawText())));
             if (!StringComparer.Ordinal.Equals(actual, digest)) { return Failure(StorageError.IntegrityFailure); }
             unknown |= HasUnknown(payload, "id", "schemaVersion", "revision", "spaces", "removedSpaces", "items", "removedItems");
-            int schema = payload.GetProperty("schemaVersion").GetInt32();
-            if (schema != Workspace.CurrentSchemaVersion) { return Failure(StorageError.UnsupportedVersion); }
             var quarantine = ImmutableArray.CreateBuilder<QuarantinedObject>();
             long referenceCount = 0;
             foreach (string collection in new[] { "spaces", "removedSpaces" })
@@ -269,6 +273,8 @@ public static class WorkspaceCodec
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException)
             { quarantine.Add(new(collection, index, QuarantineReason.InvalidObject, data.GetRawText())); }
+            catch (StorageException e) when (e.Error == StorageError.InvalidStructure)
+            { quarantine.Add(new(collection, index, QuarantineReason.InvalidObject, data.GetRawText())); }
             index++;
         }
         return spaces;
@@ -310,6 +316,18 @@ public static class WorkspaceCodec
         if (data.ValueKind != JsonValueKind.Object) { throw new ArgumentException("Object required."); }
         return data.EnumerateObject().Any(p => !fields.Contains(p.Name, StringComparer.Ordinal));
     }
+    private static void ValidateHeader(JsonElement data)
+    {
+        if (data.ValueKind != JsonValueKind.Object) { throw new StorageException(StorageError.InvalidStructure); }
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var property in data.EnumerateObject())
+        {
+            if (!names.Add(property.Name)) { throw new StorageException(StorageError.InvalidStructure); }
+            if (names.Count > PersistenceLimits.MaxProperties || property.Name.Length > PersistenceLimits.MaxStringLength)
+            { throw new StorageException(StorageError.TooLarge); }
+        }
+    }
+
     private static void ValidateTree(JsonElement data)
     {
         switch (data.ValueKind)

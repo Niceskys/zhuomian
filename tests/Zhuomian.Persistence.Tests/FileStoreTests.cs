@@ -191,6 +191,26 @@ public sealed class FileStoreTests
         Assert.Equal(bytes, System.IO.File.ReadAllBytes(owned.Main));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FutureVersionFieldsCannotBeMisclassifiedAsV1CorruptionAndDowngraded(bool domainSchema)
+    {
+        using var owned = new OwnedDirectory();
+        Assert.True(owned.Store().Save(Samples.Full()).Succeeded);
+        byte[] future = Samples.Mutate(r =>
+        {
+            if (domainSchema) { r["payload"]!["schemaVersion"] = 2; }
+            else { r["formatVersion"] = 2; }
+            r["payload"]!["futureObject"] = new JsonObject { ["$type"] = "future schema field" };
+        });
+        System.IO.File.WriteAllBytes(owned.Main, future);
+        Assert.Equal(RecoveryState.UnsupportedVersion, owned.Store().Load().State);
+        Assert.Equal(RecoveryState.UnsupportedVersion, owned.Store().Restore().State);
+        Assert.Equal(future, System.IO.File.ReadAllBytes(owned.Main));
+        Assert.Empty(Directory.GetFiles(owned.Root, "evidence-*.json"));
+    }
+
     [Fact]
     public void FailedRestoreKeepsExactDamagedMainAndAllBackupAssets()
     {
