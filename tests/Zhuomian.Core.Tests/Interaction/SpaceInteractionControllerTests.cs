@@ -609,6 +609,12 @@ public sealed class SpaceInteractionControllerTests
         Assert.Equal("A", h.Controller.FocusOwner);
         h.Click("B", "item-1", 2);
         Assert.Single(h.Launcher.Calls);
+        // Both safety observations were current at this batch boundary; processing the first
+        // must not make the second (HostLost) disappear as if it were an old async result.
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.ExternalInput, Generation: current),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.HostLost, Generation: current));
+        Assert.False(h.Controller.HostAvailable);
+        Assert.Null(h.Controller.FocusOwner);
     }
 
     [Fact]

@@ -18,7 +18,7 @@
 
 `FocusOwner` 在 Focusing、Focused 和 Returning 期间最多一个。切换时旧 Space 进入 Returning；adapter 从当前视觉值开始返回，完成后回传 `TransitionCompleted` 和该 Space 的 `TransitionToken`，才允许新 Space Focusing。重复关闭保留返回 token，快速切换保留最新请求；旧回调不能结束新转换。没有 adapter 完成事件时控制器安全等待，不伪造动画完成或 B0/B1/B2 证据。
 
-Hover/视觉 Focus 不捕获键盘。显式 `SearchActivate` 成功后发放 `KeyboardToken`；后续 TextInput/ImeStarted/ImeEnded 必须携带同一 token 和 Space ID。返回、抢占、退出键盘或新搜索会话会使旧 token 失效。IME 中 Esc 返回 `EscapeUnhandled` 交给 IME；组成结束后 Esc 依次关闭菜单/模态、取消捕获/拖拽、清搜索/退出键盘、返回 Space，每次一层。模态确认以 ModalOpened/ModalClosed 表达，不实现确认 UI。
+Hover/视觉 Focus 不捕获键盘。显式 `SearchActivate` 成功后发放 `KeyboardToken`；后续 TextInput/ImeStarted/ImeEnded 必须携带同一 token 和 Space ID。返回、抢占、退出键盘或新搜索会话会使旧 token 失效。没有更高优先级菜单/模态/拖拽层时，IME 中 Esc 返回 `EscapeUnhandled` 交给 IME；组成结束后 Esc 依次关闭菜单/模态、取消捕获/拖拽、清搜索/退出键盘、返回 Space，每次一层。模态确认以 ModalOpened/ModalClosed 表达，不实现确认 UI。
 
 ExternalForeground 下已存在且未改变的前台不阻断 Preview 单击；未经 Armed 的 A Hover/显式辅助展开仍被阻止，B 显式点击可用。VisibleDesktopClick 的 Armed 为 2000ms provisional，在成功 Focusing、外部输入/身份变更、暂停和 HostLost 时取消。暂停和丢失宿主直接清理为 Idle/Disarmed/NoKeyboardCapture；恢复不重播旧状态。外部前台变更优先安全返回。
 

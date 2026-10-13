@@ -122,12 +122,15 @@ public sealed class SpaceInteractionController
             {
                 var batch = _queue.OrderBy(q => Priority(q.Event.Kind)).ThenBy(q => q.Sequence).ToArray();
                 _queue.Clear();
+                long batchEpoch = _epoch;
                 _itemClickTick = _click?.ItemId is not null || batch.Any(q =>
                     q.Epoch == _epoch && q.Event.Kind == SpaceInteractionEventKind.PointerDown &&
                     q.Event.ItemId is not null);
                 foreach (var q in batch)
                 {
-                    if (q.Epoch == _epoch || (IsSafety(q.Event.Kind) && q.Event.Generation is null))
+                    if (IsSafety(q.Event.Kind)
+                        ? q.Event.Generation is null || q.Epoch == batchEpoch
+                        : q.Epoch == _epoch)
                     {
                         Handle(q.Event);
                     }
