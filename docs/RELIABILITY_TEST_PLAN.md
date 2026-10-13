@@ -22,7 +22,7 @@
 - UI 行为出现后：真实 UI automation、IME、Reduced Motion 与截图/录屏证据；
 - performance-sensitive 能力出现后：按性能协议生成可复核原始结果。
 
-当前仓库已经包含 .NET solution、Core/test 项目和多个 disposable Spike。现行 PR CI 会先验证文档、性能证据契约、通用进程采样器、per-run 样本统计器、跨 run 选择器和最终 evidence 装配器，再 restore/build solution、执行 `dotnet format --verify-no-changes`、运行测试并上传 TRX。性能契约自测只证明校验工具可执行；采样器 smoke test 只使用临时 `pwsh` 子进程和缩短参数验证采样/清理/fail-closed 行为；统计器与选择器自测只使用临时合成数据验证数学计算、选择语义与格式拒绝路径。这些 tooling tests 都**不产生 Zhuomian 基准或阈值校准证据**。Persistence/migration 生产能力尚未进入仓库，因此其专项测试目前是**尚未适用**，不是“已通过”证据。
+当前仓库已经包含 .NET solution、Core/test 项目和多个 disposable Spike。现行 PR CI 会先验证文档、性能证据契约、通用进程采样器、per-run 样本统计器、跨 run 选择器和最终 evidence 装配器，再 restore/build solution、执行 `dotnet format --verify-no-changes`、运行测试并上传 TRX。性能契约自测只证明校验工具可执行；采样器 smoke test 只使用临时 `pwsh` 子进程和缩短参数验证采样/清理/fail-closed 行为；统计器与选择器自测只使用临时合成数据验证数学计算、选择语义与格式拒绝路径。这些 tooling tests 都**不产生 Zhuomian 基准或阈值校准证据**。E3-2 [Persistence 候选模块](../src/Zhuomian.Persistence/README.md) 已增加真实文件事务、恢复、故障注入与迁移框架专项测试；[实际运行证据](E3_2_PERSISTENCE_EVIDENCE.md) 分开记录云端 Linux、Windows runner 与尚待 Windows 11/设备实机门禁。当前只有磁盘 v1，不伪造旧版迁移。
 
 ### .NET 原生命令失败传播
 
@@ -94,7 +94,7 @@ TRX 上传继续使用 `always()` 和原有 solution 条件，并保留 `if-no-f
 
 ## 7. 阶段质量门槛
 
-门禁对应能力和支持范围，不因进入内测而豁免安全/焦点/数据要求。现有测试包括 Core 领域/防抖模型及 E3-1 的启动负面、故障和 Windows 私有文件系统/自有进程夹具测试（[支持矩阵与证据](E3_1_LAUNCH_EVIDENCE.md)）；尚不存在或未启用的真实用户启动、UI、持久化等专项能力不是已通过。
+门禁对应能力和支持范围，不因进入内测而豁免安全/焦点/数据要求。现有测试包括 Core 领域/防抖模型及 E3-1 的启动负面、故障和 Windows 私有文件系统/自有进程夹具测试（[支持矩阵与证据](E3_1_LAUNCH_EVIDENCE.md)）；E3-2 持久化专项实现与证据单独记录；尚未启用的真实用户启动、UI、完整布局持久化或断电级保证不是已通过。
 
 ### Phase 0
 

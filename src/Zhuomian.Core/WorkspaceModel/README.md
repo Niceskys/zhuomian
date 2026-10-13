@@ -52,3 +52,5 @@ Persistence 只消费不可变快照和 revision，自身负责保存竞争、�
 `WorkspaceTests`、`ResourceIdentityTests`、`InteractionCompatibilityTests` 覆盖 CRUD/ID 冲突、共享/解绑/显式全局移除、排序/跨 Space 移动、损坏引用保留、边界/原子失败/overflow、逐 Space 策略、资源保留、规范身份去重和既有控制器的 0/20/120ms、Preview 稳定 ID、删除失效事件兼容。既有 110 项测试文件原样保留。
 
 E1-3 [纯布局引擎](../Layout/README.md) 通过只读 Workspace 投影计算 Grid/容量，并用独立 typed placement 候选计算恢复边界；没有修改本模块 schema。后续独立 PR：E1-4 外观继承；E2 原生门禁集成；E3 Launcher/安全持久化与恢复。没有真实 Windows 产品、启动/保存、动画/布局性能或实机验收证据；P0、启动和数据门禁均未被关闭。
+
+E3-2 现由独立 [Persistence 模块](../../Zhuomian.Persistence/README.md) 消费本模型，领域代码/schema 保持不变。未知/损坏数据以私有隔离证据保留并拒绝有损保存；[磁盘与原生验证证据](../../../docs/E3_2_PERSISTENCE_EVIDENCE.md) 不等于完整 UI 布局或启动许可。
