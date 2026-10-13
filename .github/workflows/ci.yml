@@ -98,6 +98,23 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $($solution.FullName) (exit $LASTEXITCODE)." }
           }
 
+      - name: Verify native persistence evidence
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/persistence/collect-persistence-evidence.ps1 `
+            -ResultsDirectory "$env:RUNNER_TEMP/test-results" `
+            -OutputPath "$env:RUNNER_TEMP/persistence-platform.json" `
+            -CommitSha '${{ github.sha }}'
+
+      - name: Upload persistence platform and fault evidence
+        if: always() && steps.solution.outputs.found == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: persistence-platform
+          path: '${{ runner.temp }}/persistence-platform.json'
+          if-no-files-found: error
+
       - name: Upload controlled launch platform metadata
         if: always() && steps.solution.outputs.found == 'true'
         uses: actions/upload-artifact@v7

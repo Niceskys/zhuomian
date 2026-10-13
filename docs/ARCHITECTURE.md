@@ -1,6 +1,6 @@
 # Zhuomian 架构规范
 
-> 状态：开发前规范基线 2026-10-12。未经 Spike 与 ADR 接受的平台实现均不是生产承诺；现有目录包含 Core 领域模块与 E3-1 受控 Windows 启动候选适配器；[实际启动范围](E3_1_LAUNCH_EVIDENCE.md) 不等于四类用户资源已支持。
+> 状态：开发前规范基线 2026-10-12。未经 Spike 与 ADR 接受的平台实现均不是生产承诺；现有目录包含 Core 领域模块与 E3-1 受控 Windows 启动候选适配器；[实际启动范围](E3_1_LAUNCH_EVIDENCE.md) 不等于四类用户资源已支持。E3-2 另有 [独立 Workspace Persistence 候选](../src/Zhuomian.Persistence/README.md)，仅消费当前领域快照；[数据证据与未决门禁](E3_2_PERSISTENCE_EVIDENCE.md) 不代表完整 UI 布局或断电级保证。
 
 ## 1. 架构原则
 

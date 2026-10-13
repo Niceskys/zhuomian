@@ -104,4 +104,4 @@ AI 负责开发、文档、自动测试、诊断和交接；用户负责需求�
 - E1-4 已有独立 Appearance/Theme 领域候选配置、五级逐属性继承和最终安全降级（[接口与限制](../src/Zhuomian.Core/Appearance/README.md)），没有挂入 Workspace schema、图片解码或 renderer；默认视觉数值、真实可读性与性能仍待平台集成及实机验收。
 - WorkerW、真实背景 Blur 与 Packaging 均未成为已接受的唯一生产方案。
 
-本次重排仅改变依赖顺序与交付范围；P0-01 至 P0-07 未因此关闭，ADR-0001/0002 保持 Proposed。当前已有 E1 领域控制器与 fake launcher 测试，以及 E3-1 受控启动服务、Windows 原生资源检查和自有夹具 OS 提交路径（[范围与证据](E3_1_LAUNCH_EVIDENCE.md)）。用户应用目录默认为空，File/Folder/URL 关联执行仍禁用；没有持久化或渲染。领域不变量已有适用阶段覆盖，真实平台/几何/资源生命周期 INV 仍待后续集成验证。
+本次重排仅改变依赖顺序与交付范围；P0-01 至 P0-07 未因此关闭，ADR-0001/0002 保持 Proposed。当前已有 E1 领域控制器与 fake launcher 测试，以及 E3-1 受控启动服务、Windows 原生资源检查和自有夹具 OS 提交路径（[范围与证据](E3_1_LAUNCH_EVIDENCE.md)）。用户应用目录默认为空，File/Folder/URL 关联执行仍禁用；另有 E3-2 [独立持久化模块](../src/Zhuomian.Persistence/README.md) 与原子事务/恢复测试（[证据与限制](E3_2_PERSISTENCE_EVIDENCE.md)），没有 UI 接入或渲染。领域不变量已有适用阶段覆盖，真实平台/几何/资源生命周期 INV 仍待后续集成验证。
