@@ -27,3 +27,7 @@ The defining product rule is simple: a visible preview Item launches directly, w
 ## E2-1 native engineering candidate
 
 A restricted Windows 11 x64, single-monitor Win32/GDI executable integrates the E1 Workspace/Interaction/Layout/Appearance contracts. See [run instructions and evidence boundaries](src/Zhuomian.App/README.md) and [Proposed ADR-0005](docs/ADR/0005-e2-native-engineering-host.md). The self-contained CI artifact is an engineering directory, not a daily-use release, installer, accepted WinUI framework or B0 animation. Real desktop/P0 gates remain open.
+
+## E2-3 isolated UI candidate
+
+An independent WPF HWND tests modern Solid/radius/text/icon drawing using the existing E1/E2 motion contracts. See [candidate instructions](src/Zhuomian.Ui.WpfCandidate/README.md) and [Proposed ADR-0007](docs/ADR/0007-e2-wpf-rendering-candidate.md). It does not replace the E2-2 Fallback host or accept a production framework. Offscreen WPF renders are not desktop screenshots; real Windows 11 UI/platform/performance acceptance remains deferred.
