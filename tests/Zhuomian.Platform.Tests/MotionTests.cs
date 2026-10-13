@@ -144,6 +144,23 @@ public sealed class MotionTests
         Assert.Equal(240, d.VisualBounds[B].Y + d.VisualBounds[B].Height / 2);
     }
     [Fact]
+    public void ReducedMotionChangeDoesNotMovePinnedPreviewAndCancelReleasesCoreGesture()
+    {
+        var clock = new Clock(); var d = new SpaceDispatcher(clock, new()); Click(d, B);
+        d.RenderTargets(Monitor, true); clock.NowMilliseconds = 80; d.RenderTargets(Monitor, true);
+        var current = d.VisualBounds[B]; var item = new SurfaceHit(B, EngineeringFixture.ItemId.ToString("D"));
+        d.DispatchPointer(PointerAction.Down, item);
+        Assert.Empty(d.RenderTargets(Monitor, false)); Assert.Equal(current, d.VisualBounds[B]);
+        Assert.False(d.HasActiveAnimation);
+        clock.NowMilliseconds = 1000; d.DispatchPointer(PointerAction.Up, item);
+        d.Complete(Assert.Single(d.RenderTargets(Monitor, false)));
+        Assert.Equal(1, d.FakeLaunchCount); Assert.False(d.HasActiveAnimation);
+        d.DispatchPointer(PointerAction.Down, item); d.DispatchPointer(PointerAction.Cancel);
+        d.DispatchPointer(PointerAction.Up, item); Assert.Equal(1, d.FakeLaunchCount);
+        Click(d, B, close: true); d.Complete(Assert.Single(d.RenderTargets(Monitor, false)));
+        Click(d, B); Assert.Equal(SpaceVisualState.Focusing, d.Controller.GetState(B).VisualState);
+    }
+    [Fact]
     public void ReducedMotionAndSuspensionCancelFramesAndHostLossRejectsGeneration()
     {
         var clock = new Clock(); var d = new SpaceDispatcher(clock, new()); Click(d, B);

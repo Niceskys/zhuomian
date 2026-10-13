@@ -177,6 +177,9 @@ public sealed class SpaceDispatcher : IInteractionLauncher
             var completion = new VisualCompletion(id, Controller.InputGeneration, state.TransitionToken);
             if (!allowMotion || !Controller.HostAvailable || Controller.Availability == DesktopAvailability.Suspended)
             {
+                // Accessibility changes must not move a pinned click. No frame timer runs while held;
+                // complete the nonanimated endpoint on release. Safety resets have already gone Idle.
+                if (paused && Controller.HostAvailable && Controller.Availability != DesktopAvailability.Suspended) { continue; }
                 _motions.Remove(id);
                 _visual[id] = plan.TargetBounds;
                 completions.Add(completion);
