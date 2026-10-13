@@ -17,3 +17,4 @@ Use four-digit sequential names such as `0001-desktop-host-strategy.md` and star
 - [ADR-0002: Foreground classification strategy](0002-foreground-classification.md) — Proposed
 - [ADR-0003: Application discovery reuse boundary](0003-application-discovery-reuse.md) — Proposed
 - [ADR-0004: Incremental delivery gates](0004-incremental-delivery-gates.md) — Proposed
+- [ADR-0005: Controlled resource launch](0005-controlled-resource-launch.md) — Proposed
