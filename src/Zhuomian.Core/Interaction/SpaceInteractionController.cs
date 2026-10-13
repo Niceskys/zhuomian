@@ -220,12 +220,13 @@ public sealed class SpaceInteractionController
                 break;
             case SpaceInteractionEventKind.DragEnd:
                 _dragActive = false;
-                // Drop, reject and cancellation all require a fresh enter before Hover can restart.
-                foreach (var space in _spaces.Values) { space.Inside = false; }
+                // Fresh enter is required for a new Hover expansion, not for resuming collapse.
+                ResumeAfterDrag();
                 break;
             case SpaceInteractionEventKind.PointerEnter when s is not null:
-                if (!InputBlocked)
+                if (Safe)
                 {
+                    // Track region membership during suppression without expanding the Space.
                     s.Inside = true;
                     Cancel(ref s.CollapseToken);
                     if (s.State is SpaceVisualState.Idle or SpaceVisualState.Hover && CanHover(s))
@@ -243,7 +244,8 @@ public sealed class SpaceInteractionController
                 ScheduleCollapse(e.SpaceId!, s);
                 break;
             case SpaceInteractionEventKind.PointerDown when s is not null:
-                if (!InputBlocked && s.State != SpaceVisualState.Returning && e.GestureId > _lastGestureId)
+                if (!InputBlocked && (s.State != SpaceVisualState.Returning ||
+                    (s.Policy.Mode == ActivationMode.Click && e.ItemId is null)) && e.GestureId > _lastGestureId)
                 {
                     _lastGestureId = e.GestureId;
                     CancelClick();
@@ -347,11 +349,13 @@ public sealed class SpaceInteractionController
                 break;
             case SpaceInteractionEventKind.SpaceRemoved when s is not null:
                 if (_click?.SpaceId == e.SpaceId) { CancelClick(); }
-                if (FocusOwner == e.SpaceId) { ResetSpace(s); FocusOwner = null; ResetKeyboard(); }
+                bool releasedOwner = FocusOwner == e.SpaceId;
+                if (releasedOwner) { ResetSpace(s); FocusOwner = null; ResetKeyboard(); }
                 if (_pendingFocus == e.SpaceId) { _pendingFocus = null; }
                 Cancel(ref s.HoverToken);
                 Cancel(ref s.CollapseToken);
                 _spaces.Remove(e.SpaceId!);
+                if (releasedOwner) { ActivatePendingFocus(); }
                 break;
             case SpaceInteractionEventKind.Deadline:
                 HandleDeadline(e.Token);
@@ -431,7 +435,12 @@ public sealed class SpaceInteractionController
         if (!Safe || InputBlocked || _itemClickTick || _click is not null) { return; }
         if (FocusOwner == id)
         {
-            if (_spaces[id].State == SpaceVisualState.Returning) { _pendingFocus = id; _pendingHover = fromHover; }
+            if (_spaces[id].State == SpaceVisualState.Returning)
+            {
+                CancelHoverAndCollapse();
+                // Reverse from the adapter's current visual value; never wait for Idle first.
+                StartFocus(id);
+            }
             return;
         }
 
@@ -444,7 +453,13 @@ public sealed class SpaceInteractionController
             return;
         }
 
+        StartFocus(id);
+    }
+
+    private void StartFocus(string id)
+    {
         _pendingFocus = null;
+        _pendingHover = false;
         FocusOwner = id;
         var s = _spaces[id];
         s.State = SpaceVisualState.Focusing;
@@ -480,14 +495,36 @@ public sealed class SpaceInteractionController
         {
             ResetSpace(s);
             FocusOwner = null;
-            string? pending = _pendingFocus;
-            _pendingFocus = null;
-            if (pending is not null && _spaces.TryGetValue(pending, out var next) &&
-                (!_pendingHover || (next.Inside && CanHover(next))))
+            ActivatePendingFocus();
+        }
+    }
+
+    private void ActivatePendingFocus()
+    {
+        string? pending = _pendingFocus;
+        bool fromHover = _pendingHover;
+        _pendingFocus = null;
+        _pendingHover = false;
+        // A released token either transfers to the latest still-valid request or cancels it.
+        // Nothing waits for a completion from a Space that has already been removed.
+        if (pending is not null && _spaces.TryGetValue(pending, out var next) &&
+            (!fromHover || (next.Inside && CanHover(next))))
+        {
+            RequestFocus(pending, fromHover);
+        }
+    }
+
+    private void ResumeAfterDrag()
+    {
+        foreach (var s in _spaces.Values)
+        {
+            if (s.State is SpaceVisualState.Idle or SpaceVisualState.Hover or SpaceVisualState.Intent)
             {
-                RequestFocus(pending, _pendingHover);
+                s.Inside = false;
             }
         }
+
+        if (FocusOwner is { } owner) { ScheduleCollapse(owner, _spaces[owner]); }
     }
 
     private bool CanCollapse(SpaceRuntime s) => Safe && !_dragActive && !_imeActive && !_modalOpen && _click is null &&
@@ -580,8 +617,8 @@ public sealed class SpaceInteractionController
             foreach (var s in _spaces.Values)
             {
                 s.Activities &= ~(InteractionActivity.Dragging | InteractionActivity.PointerCaptured);
-                s.Inside = false;
             }
+            ResumeAfterDrag();
         }
         else if (_imeActive)
         {

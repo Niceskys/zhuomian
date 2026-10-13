@@ -462,17 +462,280 @@ public sealed class SpaceInteractionControllerTests
     }
 
     [Fact]
-    public void DragKeepsExistingFocusStableButSafetyStillPreempts()
+    public void DragKeepsFocusStableReentryCancelsResumedCollapseAndSafetyStillPreempts()
     {
         var h = new Harness();
         h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A")); h.Advance(20); h.Complete("A");
         h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnter), new SpaceInteractionEvent(SpaceInteractionEventKind.PointerLeave, "A"));
         h.Advance(200);
         Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
-        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnd)); h.Advance(200);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnd));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        h.Advance(200);
         Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
         h.External();
         Assert.Equal(SpaceVisualState.Returning, h.State().VisualState);
+    }
+
+    [Theory]
+    [InlineData(SpaceInteractionEventKind.DragEnd)]
+    [InlineData(SpaceInteractionEventKind.Escape)]
+    public void DragExitResumesFocusedHoverCollapseWithFreshDeadline(SpaceInteractionEventKind end)
+    {
+        var h = new Harness();
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        h.Advance(20); h.Complete("A");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerLeave, "A"));
+        long stale = h.Scheduler.Scheduled[^1].Token;
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnter));
+        h.Advance(200);
+        h.Send(new SpaceInteractionEvent(end));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.Deadline, Token: stale));
+        Assert.False(h.Controller.DragActive);
+        Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
+        h.Advance(29);
+        Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
+        h.Advance(1);
+        Assert.Equal(SpaceVisualState.Returning, h.State().VisualState);
+        h.Complete("A");
+        Assert.Null(h.Controller.FocusOwner);
+        Assert.Equal(SpaceVisualState.Idle, h.State().VisualState);
+        Assert.Empty(h.Launcher.Calls);
+    }
+
+    [Theory]
+    [InlineData(SpaceInteractionEventKind.DragEnd)]
+    [InlineData(SpaceInteractionEventKind.Escape)]
+    public void LeaveDuringExternalDragResumesCollapseButReentryDuringDragKeepsFocus(SpaceInteractionEventKind end)
+    {
+        var h = new Harness();
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        h.Advance(20); h.Complete("A");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnter),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.PointerLeave, "A"));
+        h.Advance(100);
+        h.Send(new SpaceInteractionEvent(end));
+        h.Advance(30);
+        Assert.Equal(SpaceVisualState.Returning, h.State().VisualState);
+        h.Complete("A");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        h.Advance(20); h.Complete("A");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnter),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.PointerLeave, "A"));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        h.Send(new SpaceInteractionEvent(end));
+        h.Advance(100);
+        Assert.True(h.State().PointerInside);
+        Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerLeave, "A"));
+        h.Advance(30);
+        Assert.Equal(SpaceVisualState.Returning, h.State().VisualState);
+    }
+
+    [Theory]
+    [InlineData(InteractionActivity.Searching)]
+    [InlineData(InteractionActivity.Scrolling)]
+    [InlineData(InteractionActivity.ContextMenuOpen)]
+    [InlineData(InteractionActivity.Dragging)]
+    [InlineData(InteractionActivity.PointerCaptured)]
+    public void DragEndDoesNotCollapseUntilRemainingActivityEnds(InteractionActivity activity)
+    {
+        var h = new Harness();
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        h.Advance(20); h.Complete("A");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.ActivityChanged, "A", Activities: activity));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnter),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.PointerLeave, "A"));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnd));
+        h.Advance(100);
+        Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
+        Assert.Equal(activity, h.State().Activities);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.ActivityChanged, "A"));
+        h.Advance(30);
+        Assert.Equal(SpaceVisualState.Returning, h.State().VisualState);
+    }
+
+    [Theory]
+    [InlineData(SpaceInteractionEventKind.DragEnd)]
+    [InlineData(SpaceInteractionEventKind.Escape)]
+    public void DragExitPreservesSearchAndImeUntilExplicitlyReleased(SpaceInteractionEventKind end)
+    {
+        var h = new Harness();
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        h.Advance(20); h.Complete("A");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.SearchActivate, "A"));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.TextInput, "A", Text: "query"),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.ImeStarted, "A"));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnter),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.PointerLeave, "A"));
+        h.Send(new SpaceInteractionEvent(end));
+        h.Advance(100);
+        Assert.False(h.Controller.DragActive);
+        Assert.True(h.Controller.ImeActive);
+        Assert.Equal("query", h.Controller.SearchText);
+        Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.ImeEnded, "A"));
+        h.Advance(100);
+        Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.Escape));
+        Assert.Equal("", h.Controller.SearchText);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.Escape));
+        h.Advance(30);
+        Assert.Equal(SpaceVisualState.Returning, h.State().VisualState);
+    }
+
+    [Fact]
+    public void EscClosesMenuBeforeDragAndResumesCollapseOnlyAfterBothLayersEnd()
+    {
+        var h = new Harness();
+        h.Expand("A"); h.Complete("A");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnter),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.ActivityChanged, "A", Activities: InteractionActivity.ContextMenuOpen));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.Escape));
+        Assert.True(h.Controller.DragActive);
+        Assert.Equal(InteractionActivity.None, h.State().Activities);
+        h.Advance(100);
+        Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.Escape));
+        Assert.False(h.Controller.DragActive);
+        h.Advance(30);
+        Assert.Equal(SpaceVisualState.Returning, h.State().VisualState);
+    }
+
+    [Fact]
+    public void ModalStillSuppressesResumedCollapseAfterDragEnd()
+    {
+        var h = new Harness();
+        h.Expand("A"); h.Complete("A");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnter),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.ModalOpened));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnd));
+        h.Advance(100);
+        Assert.True(h.Controller.ModalOpen);
+        Assert.Equal(SpaceVisualState.Focused, h.State().VisualState);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.ModalClosed));
+        h.Advance(30);
+        Assert.Equal(SpaceVisualState.Returning, h.State().VisualState);
+    }
+
+    [Fact]
+    public void WaitingFocusBlockedAtOwnerRemovalIsCancelledAndCannotResurrect()
+    {
+        var h = new Harness();
+        h.Expand("B"); h.Expand("C");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.ModalOpened));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.SpaceRemoved, "B"));
+        Assert.Null(h.Controller.FocusOwner);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.ModalClosed));
+        h.Advance(100);
+        Assert.Null(h.Controller.FocusOwner);
+        Assert.Equal(SpaceVisualState.Idle, h.State("C").VisualState);
+        h.Expand("C");
+        Assert.Equal("C", h.Controller.FocusOwner); // Only a new explicit request can activate it.
+    }
+
+    [Fact]
+    public void WaitingHoverRequestIsCancelledIfPointerLeftBeforeOwnerRemoval()
+    {
+        var h = new Harness();
+        h.Expand("B"); h.Complete("B");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        h.Advance(20);
+        Assert.Equal(SpaceVisualState.Returning, h.State("B").VisualState);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerLeave, "A"));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.SpaceRemoved, "B"));
+        h.Advance(100);
+        Assert.Null(h.Controller.FocusOwner);
+        Assert.Equal(SpaceVisualState.Idle, h.State().VisualState);
+    }
+
+    [Fact]
+    public void RemovingReturningOwnerImmediatelyFulfillsLatestWaitingFocus()
+    {
+        var h = new Harness();
+        h.Expand("B"); h.Complete("B"); h.Expand("C");
+        long obsolete = h.State("B").TransitionToken;
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.SpaceRemoved, "B"));
+        Assert.Equal("C", h.Controller.FocusOwner);
+        Assert.Equal(SpaceVisualState.Focusing, h.State("C").VisualState);
+        long token = h.State("C").TransitionToken;
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.TransitionCompleted, "B", Token: obsolete));
+        Assert.Equal(token, h.State("C").TransitionToken);
+        h.Complete("C");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.Close, "C")); h.Complete("C");
+        Assert.Null(h.Controller.FocusOwner);
+        h.Advance(100);
+        Assert.Null(h.Controller.FocusOwner);
+    }
+
+    [Theory]
+    [InlineData(SpaceInteractionEventKind.HostLost)]
+    [InlineData(SpaceInteractionEventKind.AvailabilityChanged)]
+    public void RemovingOwnerDoesNotReviveWaitingFocusAfterSafetyPreemption(SpaceInteractionEventKind safety)
+    {
+        var h = new Harness();
+        h.Expand("B"); h.Expand("C");
+        h.Send(new SpaceInteractionEvent(safety, Availability: DesktopAvailability.Suspended),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.SpaceRemoved, "B"));
+        Assert.Null(h.Controller.FocusOwner);
+        Assert.Equal(SpaceVisualState.Idle, h.State("C").VisualState);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.HostRestored));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.AvailabilityChanged));
+        Assert.Null(h.Controller.FocusOwner);
+    }
+
+    [Fact]
+    public void RemovingWaitingTargetCancelsRequestBeforeOwnerIsRemoved()
+    {
+        var h = new Harness();
+        h.Expand("B"); h.Expand("C");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.SpaceRemoved, "C"),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.SpaceRemoved, "B"));
+        Assert.Null(h.Controller.FocusOwner);
+        h.Expand("A"); h.Complete("A");
+        Assert.Equal("A", h.Controller.FocusOwner);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SameSpaceReactivationReversesReturnWithoutIdleOrReleasingOwnership(bool physicalClick)
+    {
+        var h = new Harness();
+        h.Expand("B"); h.Complete("B");
+        h.Expand("C"); // B is returning and C is queued.
+        long obsolete = h.State("B").TransitionToken;
+        if (physicalClick) { h.Click("B", null); }
+        else { h.Expand("B"); }
+        Assert.Equal("B", h.Controller.FocusOwner);
+        Assert.Equal(SpaceVisualState.Focusing, h.State("B").VisualState);
+        long current = h.State("B").TransitionToken;
+        Assert.NotEqual(obsolete, current);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.TransitionCompleted, "B", Token: obsolete));
+        Assert.Equal(SpaceVisualState.Focusing, h.State("B").VisualState);
+        Assert.Equal(current, h.State("B").TransitionToken);
+        h.Complete("B");
+        Assert.Equal(SpaceVisualState.Focused, h.State("B").VisualState);
+        Assert.Equal(SpaceVisualState.Idle, h.State("C").VisualState);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.Close, "B")); h.Complete("B");
+        Assert.Null(h.Controller.FocusOwner); // C was superseded, not left waiting.
+    }
+
+    [Fact]
+    public void ReversedReturnStillHonorsHostLossAndOldCompletionsCannotRestoreIt()
+    {
+        var h = new Harness();
+        h.Expand("B"); h.Complete("B");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.Close, "B"));
+        long oldReturn = h.State("B").TransitionToken;
+        h.Expand("B");
+        Assert.Equal(SpaceVisualState.Focusing, h.State("B").VisualState);
+        long newFocus = h.State("B").TransitionToken;
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.HostLost));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.TransitionCompleted, "B", Token: oldReturn),
+            new SpaceInteractionEvent(SpaceInteractionEventKind.TransitionCompleted, "B", Token: newFocus));
+        Assert.Null(h.Controller.FocusOwner);
+        Assert.Equal(SpaceVisualState.Idle, h.State("B").VisualState);
     }
 
     [Fact]

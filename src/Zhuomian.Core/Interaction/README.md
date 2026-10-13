@@ -16,17 +16,19 @@
 
 ## Focus、返回与键盘
 
-`FocusOwner` 在 Focusing、Focused 和 Returning 期间最多一个。切换时旧 Space 进入 Returning；adapter 从当前视觉值开始返回，完成后回传 `TransitionCompleted` 和该 Space 的 `TransitionToken`，才允许新 Space Focusing。重复关闭保留返回 token，快速切换保留最新请求；旧回调不能结束新转换。没有 adapter 完成事件时控制器安全等待，不伪造动画完成或 B0/B1/B2 证据。
+`FocusOwner` 在 Focusing、Focused 和 Returning 期间最多一个。切换时旧 Space 进入 Returning；adapter 从当前视觉值开始返回，完成后回传 `TransitionCompleted` 和该 Space 的 `TransitionToken`，才允许新 Space Focusing。重复关闭保留返回 token，快速切换保留最新请求；旧回调不能结束新转换。同一 Space 在 Returning 中再次显式展开（含 B 标题/空白的有效点击）立即保持原所有者并切回 Focusing，换发 TransitionToken，取消旧返回轨迹和被替代的待切换请求，不先经过 Idle。adapter 必须从当时当前视觉值反向过渡，不使用原位/动画起点重启。没有 adapter 完成事件时控制器安全等待，不伪造动画完成或 B0/B1/B2 证据。
+
+若当前所有者被 SpaceRemoved 删除，控制器先释放其 token，再即时处理最新等待请求：目标存在且当前输入/安全门允许则 Focusing；目标删除、Hover 指针已离开或活动/安全状态阻止时取消请求。两种结果均消费等待请求，不依赖已删除 Space 的完成回调，也不在活动结束/恢复后自动复活。
 
 Hover/视觉 Focus 不捕获键盘。显式 `SearchActivate` 成功后发放 `KeyboardToken`；后续 TextInput/ImeStarted/ImeEnded 必须携带同一 token 和 Space ID。返回、抢占、退出键盘或新搜索会话会使旧 token 失效。没有更高优先级菜单/模态/拖拽层时，IME 中 Esc 返回 `EscapeUnhandled` 交给 IME；组成结束后 Esc 依次关闭菜单/模态、取消捕获/拖拽、清搜索/退出键盘、返回 Space，每次一层。模态确认以 ModalOpened/ModalClosed 表达，不实现确认 UI。
 
 ExternalForeground 下已存在且未改变的前台不阻断 Preview 单击；未经 Armed 的 A Hover/显式辅助展开仍被阻止，B 显式点击可用。VisibleDesktopClick 的 Armed 为 2000ms provisional，在成功 Focusing、外部输入/身份变更、暂停和 HostLost 时取消。暂停和丢失宿主直接清理为 Idle/Disarmed/NoKeyboardCapture；恢复不重播旧状态。外部前台变更优先安全返回。
 
-DragEnter 取消 Hover、点击和待切换意图，冻结自动展开和收回；已展开逻辑保持稳定，安全抢占仍优先。DragEnd（drop/reject/cancel）以及 Esc 取消都要求新的 PointerEnter 才能重新计时 Hover，不复活旧 timer。本模块不接收拖入载荷，不创建入口或执行保存。ActivityChanged 的 Dragging/PointerCaptured 表达未来布局事务的安全抑制，仅清除领域活动标志，事务回滚由未来编辑模块负责。
+DragEnter 取消 Hover、点击和待切换意图，冻结自动展开和收回；已展开逻辑保持稳定，安全抢占仍优先。DragEnd（drop/reject/cancel）以及 Esc 取消都要求新的 PointerEnter 才能重新计时新的 Hover 展开，不复活旧 timer；已有 Focus 的 Auto Collapse 则立即按最新有效区域成员状态重新判定，指针已离开且无搜索/IME/菜单/模态/捕获等抑制时创建新的收回 deadline。拖入中仍跟踪 PointerEnter/Leave，但不提交展开；指针在区域内时保持展开。Esc 仍一次只清一层，其他活动存在时不得收回。本模块不接收拖入载荷，不创建入口或执行保存。ActivityChanged 的 Dragging/PointerCaptured 表达未来布局事务的安全抑制，仅清除领域活动标志，事务回滚由未来编辑模块负责。
 
 ## 验证与边界
 
-`SpaceInteractionControllerTests` 使用 fake clock、fake scheduler、fake launcher；包含 0/20/120ms、过期/提前 timer、Hover 临界点击、目标取消/删除、布局改变、双击/重复消息、launch 失败/重入、Armed、前台身份、Suspended/HostLost、500 次切换、活动标志、搜索/IME token、Esc 分层和三个固定种子的 9000 步组合序列。旧安全契约和防抖参考模型测试保留不改。
+`SpaceInteractionControllerTests` 使用 fake clock、fake scheduler、fake launcher；包含 0/20/120ms、过期/提前 timer、Hover 临界点击、目标取消/删除、布局改变、双击/重复消息、launch 失败/重入、Armed、前台身份、Suspended/HostLost、500 次切换、活动标志、搜索/IME token、Esc 分层和三个固定种子的 9000 步组合序列。旧安全契约和防抖参考模型测试保留不改。追加拖入结束/取消的收回恢复与活动抑制、删除所有者的等待请求兑现/取消、Returning 同 Space 反向请求及旧 token 回调回归测试。原“拖入结束后仍保持展开”的测试补充重新进入有效区域事件，保留其全部断言；离开区域路径另由回归测试严格要求收回，未保留错误的永久展开假设。
 
 | 不变量 | 本阶段证据/适用范围 |
 |---|---|
