@@ -146,7 +146,7 @@ public sealed class CodecTests
     [InlineData("capacityOverride")]
     public void SingleBadSpaceKeepsOtherSpacesAndRemovedRecords(string field)
     {
-        var result = WorkspaceCodec.Decode(Samples.Mutate(r => r["payload"]!["spaces"]![0]![field] = "invalid"));
+        var result = WorkspaceCodec.Decode(Samples.Mutate(r => r["payload"]!["spaces"]![0]![field] = field == "name" ? "invalid\nname" : "invalid"));
         Assert.Equal(RecoveryState.PartiallyQuarantined, result.State);
         Assert.Single(result.Workspace!.Spaces);
         Assert.Single(result.Workspace.RemovedSpaces);
