@@ -81,3 +81,32 @@ jobs:
           name: test-results
           path: '${{ runner.temp }}/test-results/*.trx'
           if-no-files-found: error
+
+      - name: Publish native engineering executable
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'e2-1-engineering'
+          dotnet publish src/Zhuomian.App --configuration Release --runtime win-x64 --self-contained true --output $output
+          if ($LASTEXITCODE -ne 0) { throw "Native engineering publish failed (exit $LASTEXITCODE)." }
+          $exe = Join-Path $output 'Zhuomian.App.exe'
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Published EXE missing.' }
+          Copy-Item src/Zhuomian.App/Start-Engineering.cmd, src/Zhuomian.App/README.md -Destination $output
+          Copy-Item docs/ADR/0005-e2-native-engineering-host.md -Destination $output
+          $readme = Get-Content (Join-Path $output 'README.md') -Raw
+          $readme = $readme.Replace('../../docs/ADR/0005-e2-native-engineering-host.md', '0005-e2-native-engineering-host.md')
+          $readme = $readme.Replace('../../scripts/performance/README.md', 'https://github.com/Niceskys/zhuomian/blob/feature/e2-1-native-fallback-host/scripts/performance/README.md')
+          Set-Content (Join-Path $output 'README.md') -Value $readme
+          & $exe --native-smoke 2>&1 | Tee-Object -FilePath (Join-Path $output 'ci-native-smoke.log')
+          if ($LASTEXITCODE -ne 0) { throw "Published EXE native smoke failed (exit $LASTEXITCODE)." }
+          "commit=${{ github.event.pull_request.head.sha || github.sha }}" | Set-Content (Join-Path $output 'BUILD.txt')
+          "CI hidden window only; attended desktop and product performance UNVERIFIED." | Add-Content (Join-Path $output 'BUILD.txt')
+          Get-ChildItem -LiteralPath $output -File | Sort-Object Name | ForEach-Object {
+            "$( (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash )  $($_.Name)"
+          } | Set-Content (Join-Path $output 'SHA256SUMS.txt')
+
+      - name: Upload native engineering candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2-1-windows-x64-engineering
+          path: '${{ runner.temp }}/e2-1-engineering/'
+          if-no-files-found: error
