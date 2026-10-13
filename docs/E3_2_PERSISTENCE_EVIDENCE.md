@@ -8,9 +8,9 @@ Baseline main: b8bfeff169663fc9958edb701213efb5793d1059 (PR #34 squash merge con
 
 ## Evidence status
 
-Local cloud: Debian 13 x64, SDK 9.0.318. Final full xUnit: **451 Core + 37 Launching.Windows + 98 Persistence = 586**, zero failures/skips. Full solution restore/Release build (EnableWindowsTargeting=true) and complete format verification pass, exit 0 and build zero warnings/errors. Six Windows-only native assertions use explicit unsupported-platform branches locally; Linux counts do not certify those native operations. Local Markdown link check and git diff --check pass.
+Local cloud: Debian 13 x64, SDK 9.0.318. Final full xUnit: **451 Core + 37 Launching.Windows + 103 Persistence = 591**, zero failures/skips. Full solution restore/Release build (EnableWindowsTargeting=true) and complete format verification pass, exit 0 and build zero warnings/errors. Seven Windows-only native assertions use explicit unsupported-platform branches locally; Linux counts do not certify those native operations. Local Markdown link check and git diff --check pass.
 
-Real Windows gates passed in [run 38400180664](https://github.com/Niceskys/zhuomian/actions/runs/38400180664), documented below. All original PowerShell documentation, performance tooling, exit-code propagation, restore/Release/complete format/all xUnit gates are retained. The collector additionally validates exact original 451/37 and new 98 test counts, zero skipped/failed, NTFS and required native assertions. No existing source/test assertion is deleted, skipped or modified.
+Real Windows gates passed in [run 38404265282](https://github.com/Niceskys/zhuomian/actions/runs/38404265282), documented below. All original PowerShell documentation, performance tooling, exit-code propagation, restore/Release/complete format/all xUnit gates are retained. The collector additionally validates exact original 451/37 and new 103 test counts, zero skipped/failed, NTFS and required native assertions. No existing source/test assertion is deleted, skipped or modified.
 
 
 ## Residual production gates
@@ -32,7 +32,7 @@ Real Windows gates passed in [run 38400180664](https://github.com/Niceskys/zhuom
 
 A final root guard additionally inspects dangling directory reparse entries before creating any directory, with an explicit no-external-target-creation test. The evidence collector now enforces exact existing suite counts (451/37) and 98 persistence cases, zero skipped/failed. Its successful final Windows run is recorded below.
 
-## Final 98-case Windows gate
+## Historical 98-case Windows gate
 
 [Run 38400180664](https://github.com/Niceskys/zhuomian/actions/runs/38400180664) succeeded 2026-10-13 12:51:55 UTC. Immutable code head **c952d5075597f9447035d8304010cb1e22fe97ef**, PR merge test SHA **a59fb81e55487adf9250af7558dc0fbed2d01fc7**. All original quality gates passed; **451 + 37 + 98 = 586** xUnit, zero failures/skips, Release build zero warnings/errors. Real Windows Server 2025 build 10.0.26100.0, SDK 9.0.318, X64, NTFS. The collector strictly verified all three complete suites and required disk/atomic/restore/reparse/ACL/cross-process/external-source checks.
 
@@ -44,6 +44,16 @@ Passed data gates: v1 full round-trip, shared/order/removed records, unknown-dat
 
 ## Post-submission ambiguity protection
 
-A further contract review found that post-replacement read denial cannot justify reporting NotCommitted. StorageResult now exposes CommitState.Unknown when OS submission returned an error and readback is blocked. An owned Windows fixture holds the new main exclusively after Replace, verifies Unknown, releases the obstruction, then verifies the saved revision and an identical Unchanged retry. Local persistence count is 102 with zero failures/skips; the new complete Windows gate is pending below. Malformed single-Space itemIds type is also isolated with raw evidence; global parse budgets and root collection validation still reject whole documents. This is additional outcome accuracy, not a relaxation of existing atomic/recovery assertions.
+A further contract review found that post-replacement read denial cannot justify reporting NotCommitted. StorageResult now exposes CommitState.Unknown when OS submission returned an error and readback is blocked. An owned Windows fixture holds the new main exclusively after Replace, verifies Unknown, releases the obstruction, then verifies the saved revision and an identical Unchanged retry. Local persistence count is 103 with zero failures/skips; the complete Windows gate passed below. Malformed single-Space itemIds type is also isolated with raw evidence; global parse budgets and root collection validation still reject whole documents. This is additional outcome accuracy, not a relaxation of existing atomic/recovery assertions.
 
 Known format/domain version headers are now checked before applying v1 field semantics: a future schema containing a field v1 forbids must remain UnsupportedVersion, not be misclassified as recoverable v1 corruption and downgraded by Restore. Both disk and domain version cases preserve exact source bytes in negative tests. File-byte, JSON-depth and duplicate/header structural budgets still apply before any returned model.
+
+## Final implementation gate: 103 new tests
+
+[Run 38404265282](https://github.com/Niceskys/zhuomian/actions/runs/38404265282) passed at 2026-10-13 13:24:07 UTC. Immutable implementation head **ddebd6eee8a5a5b15af79147f75bd1373a0c0ac9**, PR merge test SHA **d44524548a5e22c394990f058d8ea5a7d50b3e5a**. **All original docs/performance tooling/native-exit-propagation/restore/Release/complete-format gates passed; 451 Core + 37 Launching.Windows + 103 Persistence = 591**, zero failed/skipped, build zero warnings/errors. Environment remains Windows Server 2025 build 10.0.26100.0, SDK 9.0.318, X64, NTFS.
+
+The final tests include real post-Replace read obstruction and Unknown commit recovery, isolated malformed Space reference arrays, future disk/domain header protection before v1 semantics, and refusal of invalid UTF-16 paths before JSON can silently substitute characters. All native assertions execute on the actual Windows runner. The collector requires exact original/new counts and validates the named native cases from real TRX.
+
+Uploaded [final implementation TRX](https://github.com/Niceskys/zhuomian/actions/runs/38404265282/artifacts/11816881972), [persistence environment/fault outcomes](https://github.com/Niceskys/zhuomian/actions/runs/38404265282/artifacts/11817056971), [launch metadata](https://github.com/Niceskys/zhuomian/actions/runs/38404265282/artifacts/11816996891). Job logs/API verified all steps, counts, metadata and artifact identities. Artifact payload downloads remain unavailable in this environment (earlier 403), so no local Windows payload-inspection claim is made. Final PR head/full CI is linked in Draft PR #35 after the documentation-only evidence commit.
+
+Main rechecked at b8bfeff169663fc9958edb701213efb5793d1059; original C# and test bodies remain unchanged. No E2 branch modification/dependency/merge; no E3-1 permission expansion; no user-source resource access or deletion. The private evidence store has no automatic cleanup, and failed temporary files can accumulate: aggregate disk retention/export/ownership handling remains a daily-use integration gate rather than an implied garbage-collection permission. Seven native cases take unsupported-platform assertions on Linux; local 591 passes are not a substitute for Windows evidence. Windows 11, physical disk-full/power-cut/device guarantees, real old-release migrations and lossless unknown-data editing remain open exactly as listed above.
