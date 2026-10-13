@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -248,7 +249,8 @@ public sealed class WindowsLaunchTests
         if (!OperatingSystem.IsWindows()) { Assert.False(OperatingSystem.IsWindows()); return; }
         using var fixture = new TemporaryResources();
         var info = new FileInfo(fixture.File);
-        string original = info.GetAccessControl(AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access);
+        var originalSecurity = info.GetAccessControl(AccessControlSections.Access);
+        string original = originalSecurity.GetSecurityDescriptorSddlForm(AccessControlSections.Access);
         var restricted = info.GetAccessControl();
         using var identity = WindowsIdentity.GetCurrent();
         restricted.AddAccessRule(new FileSystemAccessRule(identity.User!, FileSystemRights.ReadData, AccessControlType.Deny));
@@ -267,7 +269,10 @@ public sealed class WindowsLaunchTests
             restored.SetSecurityDescriptorSddlForm(original, AccessControlSections.Access);
             info.SetAccessControl(restored);
         }
-        Assert.Equal(original, info.GetAccessControl(AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access));
+        var currentSecurity = info.GetAccessControl(AccessControlSections.Access);
+        // SetNamedSecurityInfo may add the AI control flag; compare exact ACL bytes and protection instead of SDDL formatting.
+        Assert.Equal(DaclBytes(originalSecurity), DaclBytes(currentSecurity));
+        Assert.Equal(originalSecurity.AreAccessRulesProtected, currentSecurity.AreAccessRulesProtected);
         Assert.Equal("source", File.ReadAllText(fixture.File));
     }
 
@@ -299,6 +304,16 @@ public sealed class WindowsLaunchTests
         Assert.Equal(nameof(ResolvedLaunchTarget), target.ToString());
         var approved = new ApprovedApplication(App, Source, new(@"C:\private\name.exe"), new string('A', 64));
         Assert.Equal(nameof(ApprovedApplication), approved.ToString());
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static byte[] DaclBytes(FileSecurity security)
+    {
+        var descriptor = new RawSecurityDescriptor(security.GetSecurityDescriptorBinaryForm(), 0);
+        var acl = descriptor.DiscretionaryAcl!;
+        byte[] bytes = new byte[acl.BinaryLength];
+        acl.GetBinaryForm(bytes, 0);
+        return bytes;
     }
 
     private sealed class Clock : IInteractionClock { public long NowMilliseconds => 0; }
