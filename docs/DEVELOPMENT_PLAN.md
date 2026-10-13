@@ -101,6 +101,7 @@ AI 负责开发、文档、自动测试、诊断和交接；用户负责需求�
 - 仍未满足 Phase 0B 退出条件：真实双显示器混合 DPI/热插拔、用户参与的锁屏/UAC/睡眠/远程会话、真实前台事件投递与调度集成（防抖策略已有确定性参考模型）、真实生命周期资源释放、增强宿主剩余恢复路径与 Fallback 图标冲突/Z-order 生产策略仍待验证。
 - P0-05（材质）和 P0-06（Packaging）仍未完成验证；P0-07 已建立机器可校验的性能证据契约、通用进程资源采样器、确定性的 per-run Average/P95/P99/max 统计器、显式 cross-run median/worst 选择器、最终 evidence metadata 装配器及对应 CI tooling tests，但 Release x64 Zhuomian 场景编排、Baseline/Enhanced 实机结果和 provisional 阈值校准尚未完成，因此 P0-07 仍为未完成；P0-08 已完成。
 - 已开始 E1 Space 领域交互控制器及确定性测试（[调用契约与范围](../src/Zhuomian.Core/Interaction/README.md)）；现有 `spikes/`、测试参考模型和性能协议工具是可丢弃/可替换验证资产，不得直接视为 V0.1 核心内测实现。
+- E1-4 已有独立 Appearance/Theme 领域候选配置、五级逐属性继承和最终安全降级（[接口与限制](../src/Zhuomian.Core/Appearance/README.md)），没有挂入 Workspace schema、图片解码或 renderer；默认视觉数值、真实可读性与性能仍待平台集成及实机验收。
 - WorkerW、真实背景 Blur 与 Packaging 均未成为已接受的唯一生产方案。
 
 本次重排仅改变依赖顺序与交付范围；P0-01 至 P0-07 未因此关闭，ADR-0001/0002 保持 Proposed。当前已有 E1 领域控制器与 fake launcher 测试；没有真实 launcher、持久化或渲染。领域不变量已有适用阶段覆盖，真实平台/几何/资源生命周期 INV 仍待后续集成验证。
