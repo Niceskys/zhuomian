@@ -20,3 +20,5 @@ Use four-digit sequential names such as `0001-desktop-host-strategy.md` and star
 - [ADR-0008: Controlled resource launch](0008-controlled-resource-launch.md) — Proposed
 
 - [ADR-0009: Workspace persistence](0009-workspace-persistence.md) — Proposed
+
+- [ADR-0010: Conservative storage lifecycle](0010-storage-lifecycle.md) — Proposed

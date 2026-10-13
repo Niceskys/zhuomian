@@ -6,7 +6,7 @@ using Zhuomian.Core.WorkspaceModel;
 namespace Zhuomian.Persistence;
 
 /// <summary>Synchronous bounded transactions. OS lock serializes cooperating processes; diagnostics contain enum codes only.</summary>
-public sealed class WorkspaceFileStore : IWorkspaceStore
+public sealed partial class WorkspaceFileStore : IWorkspaceStore
 {
     private const string MainFile = "workspace.json";
     private readonly PhysicalStorage _storage;

@@ -8,10 +8,11 @@ public enum StorageError
     None, NotFound, Busy, AccessDenied, IoFailure, DiskFull, UnsafePath, TooLarge,
     InvalidJson, IntegrityFailure, InvalidStructure, UnsupportedVersion, MigrationFailed,
     StaleRevision, RevisionConflict, WorkspaceConflict, ReadOnly, RecoveryRequired, RevisionOverflow,
+    MaintenanceDisabled, AuthorizationRequired, StalePlan,
 }
 
 public enum RecoveryState { Normal, BackupRecovered, PartiallyQuarantined, Unrecoverable, UnsupportedVersion, NotFound }
-public enum StorageOperation { Load, Save, Backup, Restore }
+public enum StorageOperation { Load, Save, Backup, Restore, Inventory, Plan, ValidatePlan, Apply, ExportPlan, ValidateExport, Export }
 public enum CommitState { NotCommitted, Committed, Unchanged, Unknown }
 public enum QuarantineReason { InvalidObject, DuplicateIdentity, UnsupportedKind, DanglingReference, UnknownField }
 

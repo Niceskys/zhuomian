@@ -15,7 +15,8 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
     private static string ValidateRoot(string root)
     {
         if (!Path.IsPathFullyQualified(root) || root.Contains("..", StringComparison.Ordinal) ||
-            (OperatingSystem.IsWindows() && (root.StartsWith("\\\\", StringComparison.Ordinal) || root.Length > 240)))
+            (OperatingSystem.IsWindows() && (root.StartsWith("\\\\", StringComparison.Ordinal) || root.Length > 240 ||
+                root.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries).Any(segment => segment.EndsWith('.') || segment.EndsWith(' ')))))
         { throw new ArgumentException("Invalid controlled storage root."); }
         return Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
     }
@@ -26,7 +27,7 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
         return Path.Combine(Root, name);
     }
 
-    internal IDisposable PinRoot()
+    internal IDisposable PinRoot(bool createMissing = true)
     {
         var pins = new DirectoryPins();
         try
@@ -50,8 +51,8 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
                     if ((attributes & FileAttributes.ReparsePoint) != 0 || (attributes & FileAttributes.Directory) == 0)
                     { throw new StorageException(StorageError.UnsafePath); }
                 }
-                catch (FileNotFoundException) { Directory.CreateDirectory(current); }
-                catch (DirectoryNotFoundException) { Directory.CreateDirectory(current); }
+                catch (FileNotFoundException) when (createMissing) { Directory.CreateDirectory(current); }
+                catch (DirectoryNotFoundException) when (createMissing) { Directory.CreateDirectory(current); }
                 pins.Add(current);
             }
             return pins;
@@ -91,6 +92,24 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
             }
             return memory.ToArray();
         }
+    }
+
+    // Keep handles open through the whole inventory: NTFS denies replacement/write sharing.
+    internal (long Length, string Identity, byte[]? Bytes) Capture(string name, bool read, long remainingBytes, List<FileStream> held)
+    {
+        string path = PathFor(name);
+        FileStream stream;
+        if (OperatingSystem.IsWindows()) { stream = new(NativeStorage.Open(path, false, 0x80000000, 1, 3), FileAccess.Read); }
+        else { CheckLeaf(path); stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read); }
+        held.Add(stream);
+        long length = stream.Length;
+        string identity = OperatingSystem.IsWindows() ? NativeStorage.Identity(stream.SafeFileHandle) :
+            File.GetCreationTimeUtc(path).Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (!read || length > PersistenceLimits.MaxFileBytes || length > remainingBytes) { return (length, identity, null); }
+        byte[] bytes = new byte[checked((int)length)];
+        stream.ReadExactly(bytes);
+        if (stream.Length != length) { throw new StorageException(StorageError.StalePlan); }
+        return (length, identity, bytes);
     }
 
     internal bool Exists(string name)
@@ -191,6 +210,12 @@ internal static partial class NativeStorage
             return handle;
         }
         catch { handle.Dispose(); throw; }
+    }
+
+    internal static string Identity(SafeFileHandle handle)
+    {
+        if (!GetFileInformationByHandle(handle, out var info)) { throw new Win32Exception(Marshal.GetLastPInvokeError()); }
+        return $"{info.VolumeSerial:X8}:{info.IndexHigh:X8}:{info.IndexLow:X8}:{info.WriteHigh:X8}:{info.WriteLow:X8}";
     }
 
     [LibraryImport("kernel32.dll", EntryPoint = "CreateFileW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
