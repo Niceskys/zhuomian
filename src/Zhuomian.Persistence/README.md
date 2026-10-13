@@ -25,3 +25,22 @@ Before publishing, a complete immutable prepared-GUID.json reservation burns the
 Load prefers valid main, otherwise selects the highest valid fully understood backup, ignoring corrupted backups, and returns BackupRecovered/read-only with the primary failure. It never promotes a partially decoded backup. Conflicting Workspace IDs fail closed. Restore atomically promotes a fully understood backup with revision above valid main, backup and reservation high-water marks; exact old main goes to a unique evidence-GUID.json, including corrupt bytes. Prepared records are not automatically loaded as user data. A corrupt reservation prevents mutation because its historic high-water mark is unknown. All backups, evidence, reservations, failed temp and source assets remain. No automatic garbage collection or TTL exists.
 
 Flush(true)/WriteThrough request Windows cache/device flush; NTFS replacement supplies same-volume namespace atomicity under the tested API. .NET exposes no portable directory fsync, and this code does not claim directory metadata durability, guaranteed device cache honesty, or absolute power-loss protection. Actual Windows runner evidence and remaining Windows 11/device/power-loss gates are in [E3-2 evidence](../../docs/E3_2_PERSISTENCE_EVIDENCE.md).
+
+## E3-3 lifecycle engineering API
+
+WorkspaceFileStore also implements IStorageLifecycle. [Support/evidence](../../docs/E3_3_STORAGE_LIFECYCLE_EVIDENCE.md) and [Proposed ADR-0010](../../docs/ADR/0010-storage-lifecycle.md) define the conservative boundary. This changes no disk format, Save/Restore reservation semantics or launch permissions.
+
+```csharp
+var store = WorkspaceFileStore.CreateDefault(); // Windows fixed NTFS root only
+StorageInventory inventory = store.Inventory();
+RetentionPlan plan = store.DryRun();
+StorageResult fresh = store.ValidatePlan(plan); // reacquires mutex; not a mutation lease
+StorageResult refused = store.Apply(plan, explicitlyAuthorized: true); // MaintenanceDisabled
+BackupExportPlan export = store.PlanBackupExport(); // validated source v1/schema1 + SHA256
+StorageResult sourceStillFresh = store.ValidateExport(export);
+StorageResult exportRefused = store.Export(export, explicitlyAuthorized: true); // MaintenanceDisabled
+```
+
+Inspect Error/IsComplete/TotalsComplete before using observed health. Entry IDs are random per scan, not filenames. Per-family remaining budget, aggregate inventory read budget, revision ranges and logical backup generations are redacted diagnostics; high-water revision never replaces prepared evidence. Unknown/unsafe/unreadable/corrupt/partial files block plans and remain untouched. Scan holds NTFS file handles and checks the namespace again; missing directories are never created, but the coordination lock may be created in an existing root.
+
+Every entry has CanDelete=false and zero reclaim. Apply and external Export are unconditionally disabled and perform no filesystem calls; false authorization returns AuthorizationRequired. Plans are immutable and tied to one store instance, invalid after restart or any relevant state/identity change. No caller-supplied/configurable destination path exists. Export SHA256 is for explicit local review only, never logs/telemetry. No background maintenance, resource or managed-asset access, cloud upload or UI is added. **The 256-file quota is not relieved** and daily-use integration remains blocked on a proved retention/compaction/export policy.
