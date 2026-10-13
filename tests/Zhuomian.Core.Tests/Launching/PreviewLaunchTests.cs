@@ -125,6 +125,8 @@ public sealed class PreviewLaunchTests
         rig.Adapter.Pin(rig.Fixture.Service.Prepare(LaunchFixture.Space, LaunchFixture.ItemId, 0));
         rig.Adapter.Pin(rig.Fixture.Service.Prepare(LaunchFixture.Space, LaunchFixture.ItemId, 0));
         Assert.False(rig.Adapter.TryLaunch(Rig.Item));
+        rig.Adapter.Pin(rig.Fixture.Service.Prepare(LaunchFixture.Space, LaunchFixture.ItemId, 0));
+        Assert.False(rig.Adapter.TryLaunch(Rig.Item)); // Ambiguity cannot be reset by another pin.
         Assert.Equal(0, rig.Fixture.Executor.Calls);
         rig.Adapter.Cancel();
         Assert.Equal(LaunchStatus.Cancelled, rig.Adapter.LastResult.Status);

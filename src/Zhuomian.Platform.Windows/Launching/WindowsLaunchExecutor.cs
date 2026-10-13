@@ -14,11 +14,11 @@ public sealed class WindowsLaunchExecutor : ILaunchExecutor
         // Only this adapter's private, pinned lease can reach CreateProcess. Injected descriptions are not permissions.
         if (lease is not WindowsResourceLease || lease.Target.Kind != LaunchTargetKind.Application)
         { return new(LaunchStatus.Unsupported, LaunchReason.UnreviewedAssociation); }
-        var verified = lease.Revalidate();
-        if (verified.Status != LaunchStatus.Accepted) { return verified; }
-        if (cancellationToken.IsCancellationRequested) { return new(LaunchStatus.Cancelled, LaunchReason.RequestCancelled); }
         try
         {
+            var verified = lease.Revalidate();
+            if (verified.Status != LaunchStatus.Accepted) { return verified; }
+            if (cancellationToken.IsCancellationRequested) { return new(LaunchStatus.Cancelled, LaunchReason.RequestCancelled); }
             var start = new ProcessStartInfo
             {
                 FileName = lease.Target.Target,
@@ -31,6 +31,7 @@ public sealed class WindowsLaunchExecutor : ILaunchExecutor
             return process is null ? new(LaunchStatus.OperatingSystemFailure, LaunchReason.ExecutorFailure) :
                 new(LaunchStatus.SubmittedToOperatingSystem);
         }
+        catch (OperationCanceledException) { return new(LaunchStatus.Cancelled, LaunchReason.RequestCancelled); }
         catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or IOException or UnauthorizedAccessException)
         { return new(LaunchStatus.OperatingSystemFailure, LaunchReason.ExecutorFailure); }
         // Process wrapper/handles disposed. User application is never killed on cancellation after submission.

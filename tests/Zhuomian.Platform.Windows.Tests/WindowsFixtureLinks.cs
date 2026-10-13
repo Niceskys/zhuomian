@@ -26,6 +26,19 @@ internal static partial class WindowsFixtureLinks
         if (!CreateHardLink(path, target, 0)) { throw new Win32Exception(Marshal.GetLastPInvokeError()); }
     }
 
+    internal static void RemoveJunction(string path)
+    {
+        // Undo exactly the owned fixture tag before normal directory removal. Do not traverse the target.
+        byte[] buffer = new byte[8];
+        BitConverter.GetBytes(0xA0000003u).CopyTo(buffer, 0);
+        using (var handle = CreateFile(path, 0x40000000, 7, 0, 3, 0x02200000, 0))
+        {
+            if (handle.IsInvalid || !DeviceIoControl(handle, 0x000900AC, buffer, (uint)buffer.Length, 0, 0, out _, 0))
+            { throw new Win32Exception(Marshal.GetLastPInvokeError()); }
+        }
+        Directory.Delete(path);
+    }
+
     internal static void Junction(string path, string target)
     {
         Directory.CreateDirectory(path);

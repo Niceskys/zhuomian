@@ -218,10 +218,15 @@ public sealed class WindowsLaunchTests
         using var fixture = new TemporaryResources();
         string link = Path.Combine(fixture.Root, "junction");
         WindowsFixtureLinks.Junction(link, fixture.RealFolder);
-        var file = new FileItem(Guid.NewGuid(), new("fixture"), new(Path.Combine(link, "data.txt")));
-        var folder = new FolderItem(Guid.NewGuid(), new("fixture"), new(link));
-        Assert.Equal(LaunchStatus.Denied, new WindowsLaunchResolver().Resolve(file, default).Result.Status);
-        Assert.Equal(LaunchStatus.Denied, new WindowsLaunchResolver().Resolve(folder, default).Result.Status);
+        try
+        {
+            var file = new FileItem(Guid.NewGuid(), new("fixture"), new(Path.Combine(link, "data.txt")));
+            var folder = new FolderItem(Guid.NewGuid(), new("fixture"), new(link));
+            Assert.Equal(LaunchStatus.Denied, new WindowsLaunchResolver().Resolve(file, default).Result.Status);
+            Assert.Equal(LaunchStatus.Denied, new WindowsLaunchResolver().Resolve(folder, default).Result.Status);
+        }
+        finally { WindowsFixtureLinks.RemoveJunction(link); }
+        Assert.False(Directory.Exists(link));
         Assert.Equal("source", File.ReadAllText(fixture.File));
     }
 
@@ -243,7 +248,7 @@ public sealed class WindowsLaunchTests
         if (!OperatingSystem.IsWindows()) { Assert.False(OperatingSystem.IsWindows()); return; }
         using var fixture = new TemporaryResources();
         var info = new FileInfo(fixture.File);
-        var original = info.GetAccessControl();
+        string original = info.GetAccessControl(AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access);
         var restricted = info.GetAccessControl();
         using var identity = WindowsIdentity.GetCurrent();
         restricted.AddAccessRule(new FileSystemAccessRule(identity.User!, FileSystemRights.ReadData, AccessControlType.Deny));
@@ -255,7 +260,14 @@ public sealed class WindowsLaunchTests
             Assert.Equal(new(LaunchStatus.MissingOrInaccessible, LaunchReason.ResourceUnavailable), result);
             Assert.DoesNotContain(fixture.Root, result.ToString(), StringComparison.Ordinal);
         }
-        finally { info.SetAccessControl(original); }
+        finally
+        {
+            // An unchanged FileSecurity has no modified sections: SetAccessControl(originalObject) is a no-op.
+            var restored = new FileSecurity();
+            restored.SetSecurityDescriptorSddlForm(original, AccessControlSections.Access);
+            info.SetAccessControl(restored);
+        }
+        Assert.Equal(original, info.GetAccessControl(AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access));
         Assert.Equal("source", File.ReadAllText(fixture.File));
     }
 
@@ -266,6 +278,18 @@ public sealed class WindowsLaunchTests
         Assert.Equal(OperatingSystem.IsWindows() ? LaunchStatus.Denied : LaunchStatus.Unsupported, resolver.Resolve(Item, default).Result.Status);
         var file = new FileItem(Guid.NewGuid(), new("fixture"), new(@"\\unreachable\share\data.txt"));
         Assert.Equal(LaunchStatus.Denied, resolver.Resolve(file, default).Result.Status);
+    }
+
+    [Fact]
+    public void MarkedDownloadIsDeniedEvenWhenItsDeploymentDigestMatches()
+    {
+        if (!OperatingSystem.IsWindows()) { Assert.False(OperatingSystem.IsWindows()); return; }
+        using var fixture = new TemporaryResources();
+        string marker = fixture.Executable + ":Zone.Identifier";
+        File.WriteAllText(marker, "[ZoneTransfer]\nZoneId=3\n");
+        var result = Approved(fixture.Executable).Resolve(Item, default).Result;
+        Assert.Equal(new(LaunchStatus.Denied, LaunchReason.UnsafeTarget), result);
+        Assert.Equal("[ZoneTransfer]\nZoneId=3\n", File.ReadAllText(marker));
     }
 
     [Fact]

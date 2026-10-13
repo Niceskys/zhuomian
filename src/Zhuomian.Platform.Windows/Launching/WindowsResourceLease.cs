@@ -26,7 +26,8 @@ internal sealed class WindowsResourceLease : ILaunchLease
         try
         {
             string root = path.Value[..3];
-            if (new DriveInfo(root).DriveType != DriveType.Fixed) { throw new UnsafeResourceException(); }
+            var drive = new DriveInfo(root);
+            if (drive.DriveType != DriveType.Fixed || !drive.DriveFormat.Equals("NTFS", StringComparison.OrdinalIgnoreCase)) { throw new UnsafeResourceException(); }
             _parents.Add(Open(root, directory: true));
             string[] segments = path.Value[3..].Split('\\', StringSplitOptions.RemoveEmptyEntries);
             if (segments.Length == 0) { throw new UnsafeResourceException(); }
@@ -38,6 +39,7 @@ internal sealed class WindowsResourceLease : ILaunchLease
                 _parents.Add(Open(current, directory: true));
             }
             _leaf = Open(path.Value, directory);
+            if (expectedDigest is not null && HasZoneIdentifier(path.Value)) { throw new UnsafeResourceException(); }
             var info = Information(_leaf);
             string identity = Identity(info);
             if (expectedIdentity is not null && expectedIdentity != identity) { throw new ReplacedResourceException(); }
@@ -75,6 +77,16 @@ internal sealed class WindowsResourceLease : ILaunchLease
         catch { handle.Dispose(); throw; }
     }
 
+    private static bool HasZoneIdentifier(string path)
+    {
+        // Direct CreateProcess must not become an alternate path for marked downloads/SmartScreen.
+        // Refuse any MOTW stream; never read, clear or reinterpret its zone value.
+        using var stream = NativeFiles.CreateFile(path + ":Zone.Identifier", 0, 1, 0, 3, 0x00200000, 0);
+        if (!stream.IsInvalid) { return true; }
+        int error = Marshal.GetLastPInvokeError();
+        return error == 2 ? false : throw new Win32Exception(error);
+    }
+
     private static NativeFiles.FileInformation Information(SafeFileHandle handle) =>
         NativeFiles.GetFileInformationByHandle(handle, out var info) ? info : throw new Win32Exception(Marshal.GetLastPInvokeError());
 
@@ -106,6 +118,8 @@ internal sealed class WindowsResourceLease : ILaunchLease
             {
                 if ((Information(parent).Attributes & (uint)FileAttributes.ReparsePoint) != 0) { return new(LaunchStatus.Denied, LaunchReason.UnsafeTarget); }
             }
+            if (_expectedDigest is not null && HasZoneIdentifier(Target.Target))
+            { return new(LaunchStatus.Denied, LaunchReason.UnsafeTarget); }
             if (Identity(Information(_leaf)) != Target.ResourceIdentity ||
                 (_expectedDigest is not null && !DigestMatches(_leaf, _expectedDigest, _cancellationToken)))
             { return new(LaunchStatus.Denied, LaunchReason.ResourceReplaced); }

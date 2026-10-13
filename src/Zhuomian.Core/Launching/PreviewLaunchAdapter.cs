@@ -12,6 +12,7 @@ public sealed class PreviewLaunchAdapter : IInteractionLauncher
 {
     private readonly ItemLaunchService _service;
     private LaunchRequest? _request;
+    private bool _requiresReset;
     private Workspace? _workspace;
     private SpaceInteractionController? _controller;
     public LaunchResult LastResult { get; private set; } = new(LaunchStatus.Denied, LaunchReason.InvalidReference);
@@ -25,9 +26,10 @@ public sealed class PreviewLaunchAdapter : IInteractionLauncher
     public void Pin(LaunchAdmission admission)
     {
         // A second unconsumed pin is ambiguous with the string-only E1 boundary: fail closed.
-        if (_request is not null)
+        if (_request is not null || _requiresReset)
         {
             _request = null;
+            _requiresReset = true;
             LastResult = new(LaunchStatus.Denied, LaunchReason.StaleContext);
             return;
         }
@@ -38,6 +40,7 @@ public sealed class PreviewLaunchAdapter : IInteractionLauncher
     public void Cancel()
     {
         _request = null;
+        _requiresReset = false;
         LastResult = new(LaunchStatus.Cancelled, LaunchReason.RequestCancelled);
     }
 
