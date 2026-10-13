@@ -72,6 +72,7 @@ public static class PersistenceLimits
     public const int MaxStringLength = 32768;
     public const int MaxArrayElements = 20000;
     public const int MaxItems = 10000;
+    public const int MaxTotalReferences = 100000;
     public const int MaxSpaces = 1024;
     public const int MaxProperties = 64;
     public const int MaxObjectBytes = 128 * 1024;

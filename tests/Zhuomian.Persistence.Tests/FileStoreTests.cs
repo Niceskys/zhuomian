@@ -295,6 +295,27 @@ public sealed class FileStoreTests
     }
 
     [Fact]
+    public void SnapshotStringsAreBoundedBeforeDtoSerializationOrAnyDiskMutation()
+    {
+        using var owned = new OwnedDirectory();
+        var snapshot = Samples.Full().RenameSpace(Samples.SpaceA, new string('x', PersistenceLimits.MaxStringLength + 1));
+        Assert.Equal(StorageError.TooLarge, owned.Store().Save(snapshot).Error);
+        Assert.False(System.IO.File.Exists(owned.Main));
+        Assert.Empty(Directory.GetFiles(owned.Root, "*.json"));
+    }
+
+    [Fact]
+    public void AggregateSerializationLimitStopsLargeValidSnapshotBeforeCreatingFiles()
+    {
+        using var owned = new OwnedDirectory();
+        string display = new('x', 10000);
+        var items = Enumerable.Range(0, 1000).Select(i => new FileItem(Guid.NewGuid(), new(display), new(@"C:\fixtures\large-" + i + ".txt")));
+        var snapshot = Workspace.FromSnapshot(Guid.NewGuid(), 1, 1, ItemStore.FromSnapshot(items, []), []);
+        Assert.Equal(StorageError.TooLarge, owned.Store().Save(snapshot).Error);
+        Assert.Empty(Directory.GetFiles(owned.Root, "*.json"));
+    }
+
+    [Fact]
     public void ConflictingBackupsAtEqualRevisionCannotBeChosenArbitrarily()
     {
         using var owned = new OwnedDirectory();

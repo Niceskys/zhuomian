@@ -157,10 +157,14 @@ public sealed class WindowsStorageTests
         try
         {
             directory.SetAccessControl(denied);
+            var applied = directory.GetAccessControl(AccessControlSections.Access);
             var result = owned.Store().Save(Samples.Full().RenameSpace(Samples.SpaceA, "Next"));
             Assert.Equal(StorageError.AccessDenied, result.Error);
             Assert.Equal(before, System.IO.File.ReadAllBytes(owned.Main));
-            Assert.Equal(denied.GetSecurityDescriptorSddlForm(AccessControlSections.Access), directory.GetAccessControl(AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access));
+            var after = directory.GetAccessControl(AccessControlSections.Access);
+            Assert.Equal(applied.GetSecurityDescriptorSddlForm(AccessControlSections.Access), after.GetSecurityDescriptorSddlForm(AccessControlSections.Access));
+            Assert.Equal(DaclBytes(applied), DaclBytes(after));
+            Assert.Equal(applied.AreAccessRulesProtected, after.AreAccessRulesProtected);
         }
         finally
         {
@@ -168,7 +172,20 @@ public sealed class WindowsStorageTests
             restored.SetSecurityDescriptorSddlForm(sddl, AccessControlSections.Access);
             directory.SetAccessControl(restored);
         }
+        var restoredSecurity = directory.GetAccessControl(AccessControlSections.Access);
+        Assert.Equal(DaclBytes(original), DaclBytes(restoredSecurity));
+        Assert.Equal(original.AreAccessRulesProtected, restoredSecurity.AreAccessRulesProtected);
         Assert.True(owned.Store().Save(Samples.Full().RenameSpace(Samples.SpaceA, "Next")).Succeeded);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static byte[] DaclBytes(DirectorySecurity security)
+    {
+        var descriptor = new RawSecurityDescriptor(security.GetSecurityDescriptorBinaryForm(), 0);
+        var acl = descriptor.DiscretionaryAcl!;
+        byte[] bytes = new byte[acl.BinaryLength];
+        acl.GetBinaryForm(bytes, 0);
+        return bytes;
     }
 
     private sealed class RenameAttempt(string root) : IStorageFaultInjector

@@ -21,19 +21,68 @@ public static class WorkspaceCodec
     public static byte[] Encode(Workspace workspace)
     {
         ArgumentNullException.ThrowIfNull(workspace);
+        ValidateSnapshot(workspace);
         var payload = new WorkspaceDto(workspace.Id, workspace.SchemaVersion, workspace.Revision,
             workspace.Spaces.Values.OrderBy(s => s.Id).Select(SpaceData).ToArray(),
             workspace.RemovedSpaces.Values.OrderBy(s => s.Id).Select(SpaceData).ToArray(),
             workspace.ItemStore.Items.Values.OrderBy(i => i.Id).Select(ItemData).ToArray(),
             workspace.ItemStore.RemovedItems.Values.OrderBy(i => i.Id).Select(ItemData).ToArray());
-        byte[] payloadBytes = JsonSerializer.SerializeToUtf8Bytes(payload, Options);
+        byte[] payloadBytes = SerializeBounded(payload);
         using var document = JsonDocument.Parse(payloadBytes);
-        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(new EnvelopeDto(CurrentFormatVersion,
-            Convert.ToHexString(SHA256.HashData(payloadBytes)), document.RootElement), Options);
+        byte[] bytes = SerializeBounded(new EnvelopeDto(CurrentFormatVersion,
+            Convert.ToHexString(SHA256.HashData(payloadBytes)), document.RootElement));
         if (bytes.Length > PersistenceLimits.MaxFileBytes) { throw new StorageException(StorageError.TooLarge); }
         var check = Decode(bytes);
         if (check.Error != StorageError.None || check.IsReadOnly) { throw new StorageException(check.Error == StorageError.None ? StorageError.ReadOnly : check.Error); }
         return bytes;
+    }
+
+    private static byte[] SerializeBounded<T>(T value)
+    {
+        using var stream = new LimitedStream();
+        JsonSerializer.Serialize(stream, value, Options);
+        return stream.ToArray();
+    }
+    private sealed class LimitedStream : MemoryStream
+    {
+        private void Ensure(int count)
+        {
+            if (Length + count > PersistenceLimits.MaxFileBytes) { throw new StorageException(StorageError.TooLarge); }
+        }
+        public override void Write(byte[] buffer, int offset, int count) { Ensure(count); base.Write(buffer, offset, count); }
+        public override void Write(ReadOnlySpan<byte> buffer) { Ensure(buffer.Length); base.Write(buffer); }
+        public override void WriteByte(byte value) { Ensure(1); base.WriteByte(value); }
+    }
+    private static void ValidateSnapshot(Workspace workspace)
+    {
+        if (workspace.ItemStore.Items.Count + workspace.ItemStore.RemovedItems.Count > PersistenceLimits.MaxItems ||
+            workspace.Spaces.Count + workspace.RemovedSpaces.Count > PersistenceLimits.MaxSpaces)
+        { throw new StorageException(StorageError.TooLarge); }
+        long references = 0;
+        foreach (var space in workspace.Spaces.Values.Concat(workspace.RemovedSpaces.Values))
+        {
+            CheckText(space.Name);
+            references += space.ItemIds.Length;
+            if (space.ItemIds.Length > PersistenceLimits.MaxArrayElements || references > PersistenceLimits.MaxTotalReferences)
+            { throw new StorageException(StorageError.TooLarge); }
+        }
+        foreach (var item in workspace.ItemStore.Items.Values.Concat(workspace.ItemStore.RemovedItems.Values))
+        {
+            CheckText(item.Metadata.DisplayName);
+            if (item.Metadata.Icon is ExternalResourceReference external) { CheckText(external.Path.Value); }
+            switch (item)
+            {
+                case ApplicationItem app:
+                    CheckText(app.Identity.ProviderId); CheckText(app.Identity.ApplicationId); CheckText(app.Provenance.SourceId); break;
+                case FileItem file: CheckText(file.Path.Value); CheckText(file.StableFileIdentity); break;
+                case FolderItem folder: CheckText(folder.Path.Value); CheckText(folder.StableFileIdentity); break;
+                case UrlItem url: CheckText(url.Destination.Value); break;
+            }
+        }
+    }
+    private static void CheckText(string? text)
+    {
+        if (text?.Length > PersistenceLimits.MaxStringLength) { throw new StorageException(StorageError.TooLarge); }
     }
 
     public static RecoveryResult Decode(ReadOnlyMemory<byte> bytes)
@@ -56,6 +105,16 @@ public static class WorkspaceCodec
             int schema = payload.GetProperty("schemaVersion").GetInt32();
             if (schema != Workspace.CurrentSchemaVersion) { return Failure(StorageError.UnsupportedVersion); }
             var quarantine = ImmutableArray.CreateBuilder<QuarantinedObject>();
+            long referenceCount = 0;
+            foreach (string collection in new[] { "spaces", "removedSpaces" })
+            {
+                foreach (var space in Array(payload, collection, PersistenceLimits.MaxSpaces).EnumerateArray())
+                {
+                    if (space.ValueKind == JsonValueKind.Object && space.TryGetProperty("itemIds", out var references) && references.ValueKind == JsonValueKind.Array)
+                    { referenceCount += references.GetArrayLength(); }
+                }
+            }
+            if (referenceCount > PersistenceLimits.MaxTotalReferences) { throw new StorageException(StorageError.TooLarge); }
             if (Array(payload, "items", PersistenceLimits.MaxItems).GetArrayLength() + Array(payload, "removedItems", PersistenceLimits.MaxItems).GetArrayLength() > PersistenceLimits.MaxItems ||
                 Array(payload, "spaces", PersistenceLimits.MaxSpaces).GetArrayLength() + Array(payload, "removedSpaces", PersistenceLimits.MaxSpaces).GetArrayLength() > PersistenceLimits.MaxSpaces)
             { throw new StorageException(StorageError.TooLarge); }
@@ -138,7 +197,11 @@ public static class WorkspaceCodec
                 if (iconData.ValueKind != JsonValueKind.Null)
                 {
                     unknown |= HasUnknown(iconData, "kind", "path", "assetId");
-                    icon = Text(iconData, "kind") switch
+                    string iconKind = Text(iconData, "kind");
+                    string incompatibleField = iconKind == "managed" ? "path" : "assetId";
+                    if (iconData.TryGetProperty(incompatibleField, out var incompatibleIcon) && incompatibleIcon.ValueKind != JsonValueKind.Null)
+                    { throw new ArgumentException("Conflicting icon fields."); }
+                    icon = iconKind switch
                     {
                         "external" => new ExternalResourceReference(new WindowsPath(Text(iconData, "path"))),
                         "managed" => new ManagedAssetReference(iconData.GetProperty("assetId").GetGuid()),
