@@ -65,6 +65,38 @@ public sealed class SpaceInteractionControllerTests
     }
 
     [Theory]
+    [InlineData("ordinary")]
+    [InlineData("external")]
+    [InlineData("pending")]
+    [InlineData("preview")]
+    [InlineData("drag")]
+    public void ReturningHoverReentryUsesExistingTokenWithSafetyAndInputPrecedence(string scenario)
+    {
+        var h = new Harness();
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A")); h.Advance(20); h.Complete("A");
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerLeave, "A")); h.Advance(30);
+        long oldToken = h.State().TransitionToken;
+        switch (scenario)
+        {
+            case "external": h.External(); break;
+            case "pending": h.Expand("B"); break;
+            case "preview": h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerDown, "B", "item", 1)); break;
+            case "drag": h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.DragEnter)); break;
+        }
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        Assert.Equal(scenario == "ordinary" ? SpaceVisualState.Focusing : SpaceVisualState.Returning, h.State().VisualState);
+        if (scenario == "ordinary")
+        {
+            Assert.NotEqual(oldToken, h.State().TransitionToken);
+            h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.TransitionCompleted, "A", Token: oldToken));
+            Assert.Equal(SpaceVisualState.Focusing, h.State().VisualState);
+        }
+        if (scenario == "pending") { h.Complete("A"); Assert.Equal("B", h.Controller.FocusOwner); }
+        Assert.Equal(KeyboardMode.NoKeyboardCapture, h.Controller.KeyboardMode);
+        Assert.Empty(h.Launcher.Calls);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(20)]
     [InlineData(120)]

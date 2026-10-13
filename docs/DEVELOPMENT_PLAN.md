@@ -109,3 +109,7 @@ AI 负责开发、文档、自动测试、诊断和交接；用户负责需求�
 ### E2-1 engineering candidate increment
 
 Latest implementation adds an isolated Windows adapter and thin executable entry, backed by existing E1 contracts. [ADR-0005](ADR/0005-e2-native-engineering-host.md) and [engineering instructions](../src/Zhuomian.App/README.md) limit it to a single-monitor Windows 11 x64 candidate with instantaneous targets and Solid. Candidate implementation/CI proof does not satisfy the real UI/performance/platform Definition of Done or accept WinUI/host/packaging. Next E2-2 must implement native continuity/cancellation/hit synchronization and acquire attended evidence.
+
+### E2-2 cloud engineering increment
+
+[E2-2 motion proposal](ADR/0006-e2-native-motion.md) adds current-frame A/B interpolation, reversal, token/generation ownership and shared native geometry. Full deterministic tests and Windows hidden HWND tests are engineering evidence only. [Artifact and future acceptance checklist](../src/Zhuomian.App/README.md) keep Win+D, icon coexistence, actual pointer/visible smoothness, same-protocol performance and attended lifecycle evidence open. Lack of user hardware defers acceptance, not cloud development. E3/E4 remain out of scope; no P0/E2 exit gate closes.

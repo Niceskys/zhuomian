@@ -85,16 +85,18 @@ jobs:
       - name: Publish native engineering executable
         shell: pwsh
         run: |
-          $output = Join-Path $env:RUNNER_TEMP 'e2-1-engineering'
+          $output = Join-Path $env:RUNNER_TEMP 'e2-2-engineering'
           dotnet publish src/Zhuomian.App --configuration Release --runtime win-x64 --self-contained true --output $output
           if ($LASTEXITCODE -ne 0) { throw "Native engineering publish failed (exit $LASTEXITCODE)." }
           $exe = Join-Path $output 'Zhuomian.App.exe'
           if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Published EXE missing.' }
           Copy-Item src/Zhuomian.App/Start-Engineering.cmd, src/Zhuomian.App/README.md -Destination $output
           Copy-Item docs/ADR/0005-e2-native-engineering-host.md -Destination $output
+          Copy-Item docs/ADR/0006-e2-native-motion.md -Destination $output
           $readme = Get-Content (Join-Path $output 'README.md') -Raw
           $readme = $readme.Replace('../../docs/ADR/0005-e2-native-engineering-host.md', '0005-e2-native-engineering-host.md')
-          $readme = $readme.Replace('../../scripts/performance/README.md', 'https://github.com/Niceskys/zhuomian/blob/feature/e2-1-native-fallback-host/scripts/performance/README.md')
+          $readme = $readme.Replace('../../docs/ADR/0006-e2-native-motion.md', '0006-e2-native-motion.md')
+          $readme = $readme.Replace('../../scripts/performance/README.md', 'https://github.com/Niceskys/zhuomian/blob/feature/e2-2-native-transitions/scripts/performance/README.md')
           Set-Content (Join-Path $output 'README.md') -Value $readme
           & $exe --native-smoke 2>&1 | Tee-Object -FilePath (Join-Path $output 'ci-native-smoke.log')
           if ($LASTEXITCODE -ne 0) { throw "Published EXE native smoke failed (exit $LASTEXITCODE)." }
@@ -107,6 +109,6 @@ jobs:
       - name: Upload native engineering candidate
         uses: actions/upload-artifact@v7
         with:
-          name: e2-1-windows-x64-engineering
-          path: '${{ runner.temp }}/e2-1-engineering/'
+          name: e2-2-windows-x64-engineering
+          path: '${{ runner.temp }}/e2-2-engineering/'
           if-no-files-found: error
