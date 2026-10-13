@@ -99,8 +99,16 @@ public sealed class WorkspaceFileStore : IWorkspaceStore
             catch (Exception e) when (IsStorageFailure(e))
             {
                 // OS submission can succeed then report an error. Check the actual committed bytes under the lock.
-                if (_storage.Exists(MainFile) && _storage.Read(MainFile).AsSpan().SequenceEqual(next))
-                { return new(StorageError.None, CommitState.Committed, snapshot.Revision); }
+                try
+                {
+                    if (_storage.Exists(MainFile) && _storage.Read(MainFile).AsSpan().SequenceEqual(next))
+                    { return new(StorageError.None, CommitState.Committed, snapshot.Revision); }
+                }
+                catch (Exception verification) when (IsStorageFailure(verification))
+                {
+                    // A failed readback after OS submission cannot prove that nothing committed.
+                    return new(Error(verification), CommitState.Unknown, snapshot.Revision);
+                }
                 throw;
             }
             return new(StorageError.None, CommitState.Committed, snapshot.Revision);

@@ -158,6 +158,35 @@ public sealed class WindowsStorageTests
     }
 
     [Fact]
+    public void ActualWindowsPostReplaceReadDenialReportsUnknownCommitThenAllowsSafeRetry()
+    {
+        if (!OperatingSystem.IsWindows()) { Assert.False(OperatingSystem.IsWindows()); return; }
+        using var owned = new OwnedDirectory();
+        Assert.True(owned.Store().Save(Samples.Full()).Succeeded);
+        var next = Samples.Full().RenameSpace(Samples.SpaceA, "Next");
+        using (var fault = new BlockReadAfterReplace(owned.Main))
+        {
+            var result = owned.Store(fault).Save(next);
+            Assert.Equal(StorageError.IoFailure, result.Error);
+            Assert.Equal(CommitState.Unknown, result.Commit);
+        }
+        Assert.Equal(next.Revision, owned.Store().Load().Workspace!.Revision);
+        Assert.Equal(CommitState.Unchanged, owned.Store().Save(next).Commit);
+    }
+
+    private sealed class BlockReadAfterReplace(string main) : IStorageFaultInjector, IDisposable
+    {
+        private FileStream? _held;
+        public void Check(StorageStage stage)
+        {
+            if (stage != StorageStage.AfterReplace) { return; }
+            _held = new(main, FileMode.Open, FileAccess.Read, FileShare.None);
+            throw new IOException("owned post-submission failure");
+        }
+        public void Dispose() => _held?.Dispose();
+    }
+
+    [Fact]
     public void ActualWindowsWritePermissionDenialIsStructuredAndDoesNotMutateAclOrMain()
     {
         if (!OperatingSystem.IsWindows()) { Assert.False(OperatingSystem.IsWindows()); return; }

@@ -12,7 +12,7 @@ public enum StorageError
 
 public enum RecoveryState { Normal, BackupRecovered, PartiallyQuarantined, Unrecoverable, UnsupportedVersion, NotFound }
 public enum StorageOperation { Load, Save, Backup, Restore }
-public enum CommitState { NotCommitted, Committed, Unchanged }
+public enum CommitState { NotCommitted, Committed, Unchanged, Unknown }
 public enum QuarantineReason { InvalidObject, DuplicateIdentity, UnsupportedKind, DanglingReference, UnknownField }
 
 /// <summary>Allowlisted diagnostics only. No exception, path, name or arbitrary string payload.</summary>
