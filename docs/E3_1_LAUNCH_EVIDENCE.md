@@ -2,7 +2,7 @@
 
 ## Baseline and isolation
 
-Implementation starts at main `d994b0184fa2e097ad34d10eb7f28a1c506c8c7a`, on `feature/e3-1-safe-resource-launch`. At preflight, #31/#32/#33 are OPEN Draft: #31 targets main; #32 targets #31's branch; #33 targets #32's branch. None is merged, modified or used. Existing WorkspaceModel, E1 Interaction and SECURITY.md are unchanged. [ADR-0005](ADR/0005-controlled-resource-launch.md) remains Proposed.
+Implementation starts at main `d994b0184fa2e097ad34d10eb7f28a1c506c8c7a`, on `feature/e3-1-safe-resource-launch`. At preflight, #31/#32/#33 are OPEN Draft: #31 targets main; #32 targets #31's branch; #33 targets #32's branch. None is merged, modified or used as an implementation dependency; the integration correction below reads only their metadata for collision review. Existing WorkspaceModel, E1 Interaction and SECURITY.md are unchanged. [ADR-0008](ADR/0008-controlled-resource-launch.md) remains Proposed.
 
 ## Modules and actual support
 
@@ -13,7 +13,7 @@ Implementation starts at main `d994b0184fa2e097ad34d10eb7f28a1c506c8c7a`, on `fe
 | FolderItem | No | Fake lease/executor tests; live Windows directory validation | Every actual folder Shell open; network/removable/reparse denied |
 | UrlItem | No | Canonical HTTP(S), Unicode/escape and refusal tests using fake dispatch | Every actual browser/handler dispatch; custom protocols/credentials/unsafe targets denied |
 
-`Core/Launching` adds ItemLaunchService, LaunchRequest/Admission/Result, LaunchPolicy, ILaunchIdentityResolver, ILaunchLease, ILaunchExecutor and PreviewLaunchAdapter. `Platform.Windows/Launching` adds ApprovedApplication, WindowsLaunchResolver, WindowsResourceLease (private), NativeFiles (private) and WindowsLaunchExecutor. There is no arbitrary argument or shell-command contract. Only the private pinned Windows lease can reach the real executor. No UI, persistence, full application discovery, renderer/host or packaging change is included.
+`Core/Launching` adds ItemLaunchService, LaunchRequest/Admission/Result, LaunchPolicy, ILaunchIdentityResolver, ILaunchLease, ILaunchExecutor and PreviewLaunchAdapter. `Launching.Windows/Launching` adds ApprovedApplication, WindowsLaunchResolver, WindowsResourceLease (private), NativeFiles (private) and WindowsLaunchExecutor. There is no arbitrary argument or shell-command contract. Only the private pinned Windows lease can reach the real executor. No UI, persistence, full application discovery, renderer/host or packaging change is included.
 
 File/Folder/URL association execution is explicitly split into future E3-1 work requiring its own reviewed Windows dispatch/TOCTOU evidence. These routes are implemented as observable safe refusals, not fake-supported real opens. E3-1 is not a completed four-type user resource loop or V0.1 release.
 
@@ -56,6 +56,32 @@ The fixture is repository-owned, zero-argument and immediately returns 0; it has
 
 ## Security review and recovery
 
-Threats and residual risks are detailed in [ADR-0005](ADR/0005-controlled-resource-launch.md). Negative tests cover command/executable/script/shortcut domains, untrusted provenance, unsafe paths/URLs, replaced identities, inaccessible/missing targets, stale snapshots/generations, duplicate/cancelled requests, executor/resolver exceptions, feedback redaction and unchanged Workspace/source resources. File extensions alone never approve associations. Approved executable hashes do not establish dependency/publisher trust, so there are no user-app approvals.
+Threats and residual risks are detailed in [ADR-0008](ADR/0008-controlled-resource-launch.md). Negative tests cover command/executable/script/shortcut domains, untrusted provenance, unsafe paths/URLs, replaced identities, inaccessible/missing targets, stale snapshots/generations, duplicate/cancelled requests, executor/resolver exceptions, feedback redaction and unchanged Workspace/source resources. File extensions alone never approve associations. Approved executable hashes do not establish dependency/publisher trust, so there are no user-app approvals.
 
 All existing tests remain unchanged. Revert this PR or inject an empty application catalog to disable dispatch; no configuration migration, deletion, move or source write is necessary. Remaining desktop and association gates stay open. No PR is merged and no E3-2/E4 work is included.
+
+
+## PR #34 integration correction
+
+This follow-up fixes collisions found after the originally verified head `b548c555a794d8972efd1ec00306f41350477a29`. It remains on the same Draft PR and does not merge main or any E2 branch. Production code is now `src/Zhuomian.Launching.Windows/Zhuomian.Launching.Windows.csproj`, namespace `Zhuomian.Launching.Windows`; tests are `tests/Zhuomian.Launching.Windows.Tests/Zhuomian.Launching.Windows.Tests.csproj`, namespace `Zhuomian.Launching.Windows.Tests`. Project references, README links and assembly names follow the move. The security launch proposal is [ADR-0008](ADR/0008-controlled-resource-launch.md), still Proposed; E2's 0005–0007 allocation is reserved without copying its documents into this branch.
+
+| Independent E3 solution project | GUID |
+|---|---|
+| Zhuomian.Launching.Windows | `6F5FED9D-5948-491B-822D-078163A7FFC0` |
+| Zhuomian.Launching.Windows.Tests | `0FD9D24D-C793-4F86-B6DF-2A536C9BAA9E` |
+| Zhuomian.LaunchFixture (retained) | `D1B6B17A-E338-4A54-89C2-2460892A0817` |
+
+[Machine-readable isolation review](evidence/e3-1-branch-isolation.json) records the inspected immutable E2 heads: #31 `06d6f14520ebc1e7cc6486a4b3cdd90f11d7a678`, #32 `5ea708e0e1b7f760816380dbf56f303d899cc8e6`, #33 `9227f5d0ab6d7924c10cdc3bf61806dbde11262d`. For each, the added E3 project names/paths/GUIDs and ADR number have no collision. Identical main project/folder records are common ancestry, not duplicate registrations. Each solution also has unique project declarations. The review does not accept or execute any E2 production code.
+
+The existing CI still restores/builds/formats/tests the whole solution, discovering the new project through the solution. Its metadata labels identify the launch project and test project. Moving launch-platform upload before the unchanged test-results upload keeps E2's end-of-workflow publish additions independent. Three-way workflow text reviews against all three E2 snapshots returned exit 0 and retained one full solution test loop, one test-results artifact, one launch-platform artifact and each E2 publish step. No E2 step is copied into or executed by this branch. Future solution/ADR-index/status-document text integration still needs ordinary review; clean metadata and CI text are not proof of accepted E2 runtime integration.
+
+Reproduce the metadata/source audit without checkout or branch merges:
+
+```sh
+git fetch origin pull/31/head:refs/review/e3-1/pr31 pull/32/head:refs/review/e3-1/pr32 pull/33/head:refs/review/e3-1/pr33
+python3 scripts/review-e3-1-isolation.py
+```
+
+The audit compares all 119 C# source files against the previously verified head, allowing only the namespace/using changes required by relocation. Every test body, security assertion, launch policy, SHA256/handle/MOTW check and one-shot permission rule is unchanged; SECURITY.md is byte-identical. No test is removed or skipped. Local SDK 9.0.318 restore, full Release build, format verification and xUnit passed: 451 Core + 37 relocated Windows adapter cases = 488, 0 failed/skipped, 0 build warnings/errors. Linux does not prove native Windows success. New Windows CI evidence will be attached to this correction after its actual run.
+
+Support remains precisely the matrix above: default approval catalog empty, no user application approvals, File/Folder/URL dispatch disabled, and no assertion that E3 is complete. Only owned no-I/O fixture OS submission and private filesystem behavior may be verified on Windows CI. Publisher/dependency enrollment, association/folder/browser dispatch and real desktop focus/UAC/SmartScreen/session/DPI acceptance remain unresolved. Rollback of this correction restores the previous layout only; rollback of the full PR or an empty approval catalog disables launch. Neither rollback modifies user source resources.

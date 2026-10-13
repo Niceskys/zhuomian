@@ -10,7 +10,7 @@
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <Using Include="Xunit" />
-    <ProjectReference Include="../../src/Zhuomian.Platform.Windows/Zhuomian.Platform.Windows.csproj" />
+    <ProjectReference Include="../../src/Zhuomian.Launching.Windows/Zhuomian.Launching.Windows.csproj" />
     <ProjectReference Include="../Zhuomian.LaunchFixture/Zhuomian.LaunchFixture.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <Target Name="CopyLaunchFixture" AfterTargets="Build">

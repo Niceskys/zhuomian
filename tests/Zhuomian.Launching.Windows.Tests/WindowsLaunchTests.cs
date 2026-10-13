@@ -5,9 +5,9 @@ using System.Security.Principal;
 using Zhuomian.Core.Interaction;
 using Zhuomian.Core.Launching;
 using Zhuomian.Core.WorkspaceModel;
-using Zhuomian.Platform.Windows.Launching;
+using Zhuomian.Launching.Windows;
 
-namespace Zhuomian.Platform.Windows.Tests;
+namespace Zhuomian.Launching.Windows.Tests;
 
 public sealed class WindowsLaunchTests
 {

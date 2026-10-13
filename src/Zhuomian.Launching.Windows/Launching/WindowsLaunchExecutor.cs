@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using Zhuomian.Core.Launching;
 
-namespace Zhuomian.Platform.Windows.Launching;
+namespace Zhuomian.Launching.Windows;
 
 public sealed class WindowsLaunchExecutor : ILaunchExecutor
 {

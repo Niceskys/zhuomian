@@ -65,6 +65,8 @@ jobs:
             windowsBuild = [Environment]::OSVersion.Version.ToString()
             sdk = $sdk.Trim()
             processArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
+            launchProject = 'Zhuomian.Launching.Windows'
+            launchTestProject = 'Zhuomian.Launching.Windows.Tests'
             deployment = 'framework-dependent test apphost'
             nativeBoundary = 'owned zero-argument CreateProcess fixture and private filesystem'
             userApplicationAcceptance = $false
@@ -96,18 +98,18 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $($solution.FullName) (exit $LASTEXITCODE)." }
           }
 
-      - name: Upload test results
-        if: always() && steps.solution.outputs.found == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results
-          path: '${{ runner.temp }}/test-results/*.trx'
-          if-no-files-found: error
-
       - name: Upload controlled launch platform metadata
         if: always() && steps.solution.outputs.found == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: launch-platform
           path: '${{ runner.temp }}/launch-platform.json'
+          if-no-files-found: error
+
+      - name: Upload test results
+        if: always() && steps.solution.outputs.found == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: '${{ runner.temp }}/test-results/*.trx'
           if-no-files-found: error

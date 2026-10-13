@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Win32.SafeHandles;
 
-namespace Zhuomian.Platform.Windows.Launching;
+namespace Zhuomian.Launching.Windows;
 
 [SupportedOSPlatform("windows")]
 internal static partial class NativeFiles

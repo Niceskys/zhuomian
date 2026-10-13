@@ -1,6 +1,6 @@
 using Zhuomian.Core.WorkspaceModel;
 
-namespace Zhuomian.Platform.Windows.Launching;
+namespace Zhuomian.Launching.Windows;
 
 /// <summary>
 /// Code-composition approval, never populated directly from Workspace/import/provider output.

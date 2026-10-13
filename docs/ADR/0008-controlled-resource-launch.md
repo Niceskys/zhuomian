@@ -1,4 +1,4 @@
-# ADR-0005: Controlled resource launch and evidence boundaries
+# ADR-0008: Controlled resource launch and evidence boundaries
 
 - Status: Proposed
 - Date: 2026-10-13
@@ -24,7 +24,7 @@ Generic Process.Start/ShellExecute on Item strings would bypass the launch domai
 
 ## Decision
 
-This ADR remains Proposed. Two production modules are necessary for one revertible launch boundary: Core/Launching owns admission and lifecycle; Platform.Windows/Launching owns real filesystem handles and execution. Existing WorkspaceModel and Interaction code are unchanged. Tests and a no-I/O executable fixture accompany these modules.
+This ADR remains Proposed. Two production modules are necessary for one revertible launch boundary: Core/Launching owns admission and lifecycle; Launching.Windows/Launching owns real filesystem handles and execution. Existing WorkspaceModel and Interaction code are unchanged. Tests and a no-I/O executable fixture accompany these modules.
 
 ### Application identity and resolver trust
 

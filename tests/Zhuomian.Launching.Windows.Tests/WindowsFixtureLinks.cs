@@ -4,7 +4,7 @@ using System.Runtime.Versioning;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 
-namespace Zhuomian.Platform.Windows.Tests;
+namespace Zhuomian.Launching.Windows.Tests;
 
 /// <summary>Fixture setup only. Never used by production launch code and never touches user resources.</summary>
 [SupportedOSPlatform("windows")]

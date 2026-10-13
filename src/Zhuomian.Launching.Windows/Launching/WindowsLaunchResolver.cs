@@ -2,7 +2,7 @@ using System.ComponentModel;
 using Zhuomian.Core.Launching;
 using Zhuomian.Core.WorkspaceModel;
 
-namespace Zhuomian.Platform.Windows.Launching;
+namespace Zhuomian.Launching.Windows;
 
 /// <summary>Small exact catalog, not discovery. Default empty; unknown providers can never execute.</summary>
 public sealed class WindowsLaunchResolver : ILaunchIdentityResolver

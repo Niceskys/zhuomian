@@ -23,6 +23,7 @@ src/
   Zhuomian.Persistence
   Zhuomian.Media
   Zhuomian.Platform.Windows
+  Zhuomian.Launching.Windows
 
 tests/
   Zhuomian.Core.Tests

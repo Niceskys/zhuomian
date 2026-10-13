@@ -6,7 +6,7 @@ using Microsoft.Win32.SafeHandles;
 using Zhuomian.Core.Launching;
 using Zhuomian.Core.WorkspaceModel;
 
-namespace Zhuomian.Platform.Windows.Launching;
+namespace Zhuomian.Launching.Windows;
 
 /// <summary>Read-only handles pin every directory and leaf against deletion/rename. Leaf also denies writers.</summary>
 [SupportedOSPlatform("windows")]
