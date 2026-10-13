@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
+using Zhuomian.Core.Interaction;
 using static Zhuomian.Platform.Windows.NativeMethods;
 
 namespace Zhuomian.Platform.Windows;
@@ -16,6 +17,11 @@ public static class NativeSmoke
         using var host = new FallbackDesktopHost(log);
         host.Start(visible: false);
         nint window = host.Window;
+        nint anchor = ZOrderPlacement.SelectAnchor(window, window, true, DesktopAvailability.DesktopAvailable,
+            callback => EnumWindows((handle, _) => callback(handle), 0), _ => false);
+        if (anchor != 0 || !SetWindowPos(window, anchor, 0, 0, 0, 0, 0x13))
+        { throw new InvalidOperationException("native_zorder_boundary_failed"); }
+        log("native_zorder controlled_hidden_boundary_enumerated=true enumeration_completed=true normal_top=true not_Shell_foreground_or_WinD_evidence");
         long styles = (long)GetWindowLongPtrW(window, -20);
         if (!IsWindow(window) || (styles & 0x08000080) != 0x08000080 || (styles & 8) != 0 ||
             SendMessageW(window, 0x21, 0, 0) != 3 || GetForegroundWindow() != foreground)

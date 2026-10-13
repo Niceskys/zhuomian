@@ -245,19 +245,10 @@ public sealed class FallbackDesktopHost : IDisposable
     private void PlaceBehindApplications()
     {
         if (!_ready || !IsWindow(_window)) { return; }
-        nint anchor = 1; // HWND_BOTTOM for any external, unknown or unsafe context.
-        if (Dispatcher.Controller.HostAvailable && Dispatcher.Controller.Availability == DesktopAvailability.DesktopAvailable)
-        {
-            anchor = 0; // HWND_TOP is used only for exposed desktop, never TopMost.
-            if (!EnumWindows((window, _) =>
-                {
-                    if (window == _shell) { return false; }
-                    if (window != _window && ((long)GetWindowLongPtrW(window, -20) & 8) == 0 && IsWindowVisible(window) && !IsIconic(window) &&
-                        (DwmGetWindowAttribute(window, 14, out int cloaked, sizeof(int)) != 0 || cloaked == 0))
-                    { anchor = window; } // bottommost visible ordinary/unknown window remains above this host.
-                    return true;
-                }, 0)) { throw new InvalidOperationException("zorder_enumeration_failed"); }
-        }
+        nint anchor = ZOrderPlacement.SelectAnchor(_window, _shell, Dispatcher.Controller.HostAvailable,
+            Dispatcher.Controller.Availability, callback => EnumWindows((window, _) => callback(window), 0),
+            window => ((long)GetWindowLongPtrW(window, -20) & 8) == 0 && IsWindowVisible(window) && !IsIconic(window) &&
+                (DwmGetWindowAttribute(window, 14, out int cloaked, sizeof(int)) != 0 || cloaked == 0));
         if (!SetWindowPos(_window, anchor, 0, 0, 0, 0, 0x13)) { throw new InvalidOperationException("zorder_failed"); }
     }
     private void UpdateVisual()
