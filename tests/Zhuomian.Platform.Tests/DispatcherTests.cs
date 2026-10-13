@@ -172,9 +172,21 @@ public sealed class DispatcherTests
         Assert.Equal(palette.Background, result.Effective.Tint); Assert.Equal(palette, result.ContentPalette);
     }
     [Fact]
-    public async Task DifferentThreadCannotDispatchInput()
+    public void DifferentThreadCannotDispatchInput()
     {
         var (d, _, _) = Create();
-        await Task.Run(() => Assert.Throws<InvalidOperationException>(() => d.DispatchPointer(PointerAction.Move, new(A))));
+        int ownerThread = Environment.CurrentManagedThreadId;
+        int dispatchThread = ownerThread;
+        Exception? failure = null;
+        var worker = new Thread(() =>
+        {
+            dispatchThread = Environment.CurrentManagedThreadId;
+            failure = Record.Exception(() => d.DispatchPointer(PointerAction.Move, new(A)));
+        })
+        { IsBackground = true };
+        worker.Start();
+        Assert.True(worker.Join(TimeSpan.FromSeconds(5)), "Dedicated dispatcher-test thread did not complete.");
+        Assert.NotEqual(ownerThread, dispatchThread);
+        Assert.IsType<InvalidOperationException>(failure);
     }
 }
