@@ -29,6 +29,12 @@ public sealed class HostTests
         lease.Create(() => 456, _ => { }); lease.Dispose(); Assert.Equal([123, 456], released);
     }
     [Fact]
+    public void NativeHiddenAnimationRegionHitPaintingAndCancellation()
+    {
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000)) { return; }
+        NativeSmoke.CheckHiddenMotion(_ => { });
+    }
+    [Fact]
     public void NativeHiddenWindowStylesNoActivateRollbackAndCleanup()
     {
         // Linux exercises portable adapters; Windows CI executes the real User32 path without physical input.

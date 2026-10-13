@@ -18,6 +18,13 @@ public sealed class SpaceDispatcher : IInteractionLauncher
         public void Cancel(long token) => scheduler.Cancel(token);
         public IReadOnlyList<InteractionDeadline> TakeDue(long nowMilliseconds) => DeferDue ? [] : scheduler.TakeDue(nowMilliseconds);
     }
+    private sealed record Motion(VisualCompletion Completion, LogicalRect From, LogicalRect Target, long Started, bool Finished = false);
+    // Geometry ownership only. E1 remains the sole authority for logical transitions and Focus.
+    private readonly Dictionary<string, Motion> _motions = new(StringComparer.Ordinal);
+    private readonly IInteractionClock _clock;
+    private long? _motionPauseStarted;
+    public const int MotionDurationMilliseconds = 240; // Engineering parameter, awaiting real acceptance.
+    public bool HasActiveAnimation => !HasGesture && !_dragSuppressed && _motions.Values.Any(motion => !motion.Finished);
     private readonly InputFirstScheduler _inputScheduler;
     private readonly int _ownerThread = Environment.CurrentManagedThreadId;
     private readonly Workspace _workspace;
@@ -29,6 +36,7 @@ public sealed class SpaceDispatcher : IInteractionLauncher
     private bool _dragSuppressed;
     public SpaceDispatcher(IInteractionClock clock, DeterministicInteractionScheduler scheduler)
     {
+        _clock = clock;
         _workspace = EngineeringFixture.Create();
         _inputScheduler = new(scheduler);
         Controller = new(_workspace.GetInteractionPolicies(), clock, _inputScheduler, this, collapseDelayMilliseconds: 120);
@@ -66,6 +74,8 @@ public sealed class SpaceDispatcher : IInteractionLauncher
         VerifyThread();
         Controller.Post(new(SpaceInteractionEventKind.HostLost));
         Controller.Drain();
+        _motions.Clear();
+        _motionPauseStarted = null;
         _inside = null;
         _pressed = null;
         _dragSuppressed = false;
@@ -117,7 +127,7 @@ public sealed class SpaceDispatcher : IInteractionLauncher
                     if (valid && pressed.ItemId is null) { Controller.Post(new(SpaceInteractionEventKind.VisibleDesktopClick)); }
                 }
                 _pressed = null;
-                if (pressed.Close || pressed.Exit) { Controller.Post(new(SpaceInteractionEventKind.PointerCancel)); }
+                if (pressed.Close || pressed.Exit) { Controller.Post(new(SpaceInteractionEventKind.PointerCancel, GestureId: _gesture)); }
                 break;
             case PointerAction.Cancel:
             case PointerAction.DoubleClick:
@@ -129,14 +139,27 @@ public sealed class SpaceDispatcher : IInteractionLauncher
     private void CancelGesture()
     {
         _pressed = null;
-        Controller.Post(new(SpaceInteractionEventKind.PointerCancel));
+        Controller.Post(new(SpaceInteractionEventKind.PointerCancel, GestureId: _gesture));
         Controller.Drain();
     }
-    /// <summary>Geometry targets only, no interpolation/B0 claim. Completion is returned for later dispatch.</summary>
-    public IReadOnlyList<VisualCompletion> RenderTargets(MonitorWorkArea monitor)
+    /// <summary>Samples one frame. Retargets start at the last displayed bounds, not a hidden future sample.
+    /// Reduced Motion completes immediately; pinned clicks and external drag freeze ordinary motion.</summary>
+    public IReadOnlyList<VisualCompletion> RenderTargets(MonitorWorkArea monitor, bool allowMotion = false)
     {
         VerifyThread();
         Controller.Drain();
+        long now = _clock.NowMilliseconds;
+        bool paused = HasGesture || _dragSuppressed;
+        if (paused) { _motionPauseStarted ??= now; }
+        else if (_motionPauseStarted is { } pausedAt)
+        {
+            foreach (var id in _motions.Keys.ToArray())
+            {
+                var motion = _motions[id];
+                _motions[id] = motion with { Started = motion.Started + Math.Max(0, now - Math.Max(pausedAt, motion.Started)) };
+            }
+            _motionPauseStarted = null;
+        }
         var completions = new List<VisualCompletion>();
         foreach (var space in _workspace.Spaces.Values)
         {
@@ -145,13 +168,48 @@ public sealed class SpaceDispatcher : IInteractionLauncher
             bool expand = state.VisualState is SpaceVisualState.Focusing or SpaceVisualState.Focused;
             var plan = SpaceLayoutEngine.Calculate(space, EngineeringFixture.SavedBounds(space.Id), monitor,
                 EngineeringFixture.Expansion, expand ? LayoutTransitionDirection.Expand : LayoutTransitionDirection.Return, _visual[id]);
-            _visual[id] = plan.TargetBounds;
-            if (state.VisualState is SpaceVisualState.Focusing or SpaceVisualState.Returning)
+            if (state.VisualState is not (SpaceVisualState.Focusing or SpaceVisualState.Returning))
             {
-                completions.Add(new(id, Controller.InputGeneration, state.TransitionToken));
+                _motions.Remove(id);
+                _visual[id] = plan.TargetBounds;
+                continue;
+            }
+            var completion = new VisualCompletion(id, Controller.InputGeneration, state.TransitionToken);
+            if (!allowMotion || !Controller.HostAvailable || Controller.Availability == DesktopAvailability.Suspended)
+            {
+                _motions.Remove(id);
+                _visual[id] = plan.TargetBounds;
+                completions.Add(completion);
+                continue;
+            }
+            bool retarget = !_motions.TryGetValue(id, out var motion) || motion.Completion != completion || motion.Target != plan.TargetBounds;
+            if (retarget)
+            {
+                motion = new(completion, _visual[id], plan.TargetBounds, now);
+                _motions[id] = motion;
+            }
+            if (motion!.Finished) { completions.Add(completion); continue; }
+            if (paused)
+            {
+                // Safety retargets still win, but held input must not move its pinned Item.
+                continue;
+            }
+            double progress = Math.Clamp((now - motion!.Started) / (double)MotionDurationMilliseconds, 0, 1);
+            _visual[id] = Interpolate(motion.From, motion.Target, progress);
+            if (progress == 1)
+            {
+                _motions[id] = motion with { Finished = true };
+                completions.Add(completion);
             }
         }
         return completions;
+    }
+    private static LogicalRect Interpolate(LogicalRect from, LogicalRect target, double progress)
+    {
+        if (progress == 1) { return target; }
+        double eased = progress * progress * (3 - 2 * progress);
+        return new(from.X + (target.X - from.X) * eased, from.Y + (target.Y - from.Y) * eased,
+            from.Width + (target.Width - from.Width) * eased, from.Height + (target.Height - from.Height) * eased);
     }
     public void Complete(VisualCompletion completion)
     {

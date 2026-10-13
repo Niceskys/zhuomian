@@ -23,7 +23,7 @@ public sealed class FallbackDesktopHost : IDisposable
     private readonly EventProcedure _eventProcedure;
     private readonly nint _instance = GetModuleHandleW(null);
     private readonly HostLease _lease;
-    private readonly Clock _clock = new();
+    private readonly IInteractionClock _clock;
     private readonly DeterministicInteractionScheduler _scheduler = new();
     private readonly Dictionary<int, VisualCompletion> _completions = [];
     private readonly Action<string> _log;
@@ -40,8 +40,9 @@ public sealed class FallbackDesktopHost : IDisposable
     private Point? _downPoint;
     private AppearanceEnvironment _appearanceEnvironment = new(reducedTransparency: true, reducedMotion: true);
     public FallbackDesktopHost(Action<string> log) : this(log, null) { }
-    internal FallbackDesktopHost(Action<string> log, Action? afterConfigure)
+    internal FallbackDesktopHost(Action<string> log, Action? afterConfigure, IInteractionClock? clock = null)
     {
+        _clock = clock ?? new Clock();
         _afterConfigure = afterConfigure;
         _log = log ?? throw new ArgumentNullException(nameof(log));
         _procedure = WindowCallback;
@@ -79,14 +80,14 @@ public sealed class FallbackDesktopHost : IDisposable
             };
             if (RegisterClassExW(wc) == 0) { throw new InvalidOperationException("class_registration_failed"); }
             _registered = true;
-            _lease.Create(() => CreateWindowExW(HostExtendedStyle, _className, "Zhuomian E2-1 engineering fixture",
+            _lease.Create(() => CreateWindowExW(HostExtendedStyle, _className, "Zhuomian E2-2 engineering fixture",
                 HostStyle, _work.Left, _work.Top, _work.Right - _work.Left, _work.Bottom - _work.Top, 0, 0, _instance, 0), Configure);
             _ready = true;
             Dispatcher.HostRestored();
             Reconcile();
             UpdateVisual();
             if (visible) { ShowWindow(_window, 4); PlaceBehindApplications(); }
-            _log(FormattableString.Invariant($"host_started windows={Environment.OSVersion.Version.Build} monitors=1 dpi={Dpi} material=Solid motion=disabled animation=instantaneous keyboard=disabled"));
+            _log(FormattableString.Invariant($"host_started windows={Environment.OSVersion.Version.Build} monitors=1 dpi={Dpi} material=Solid motion_allowed={_appearanceEnvironment.ReducedMotion == false} animation={(_appearanceEnvironment.ReducedMotion ? "instant_reduced_or_unknown" : "continuous_candidate")} keyboard=disabled"));
         }
         catch { Dispose(); throw; }
     }
@@ -147,8 +148,9 @@ public sealed class FallbackDesktopHost : IDisposable
                         Reconcile(); Dispatcher.Complete(completion); UpdateVisual();
                     }
                     return 0;
-                case 0x113: // timer is armed only for an actual E1 deadline; it is never an idle loop.
-                    KillTimer(window, 1); Reconcile(); UpdateVisual(); return 0;
+                case 0x113: // Deadline and motion use independent one-shot timers, never an idle loop.
+                    if (wParam is not (1 or 2)) { return 0; }
+                    KillTimer(window, wParam); Reconcile(); UpdateVisual(); return 0;
                 case 0x200:
                 case 0x201:
                 case 0x202:
@@ -238,8 +240,8 @@ public sealed class FallbackDesktopHost : IDisposable
     }
     private void LoseInput()
     {
-        Dispatcher.HostLost(); _completions.Clear(); _downPoint = null;
-        if (_window != 0) { KillTimer(_window, 1); }
+        Dispatcher.HostLost(); AnimationTimerArmed = false; _completions.Clear(); _downPoint = null;
+        if (_window != 0) { KillTimer(_window, 1); KillTimer(_window, 2); }
         if (_window != 0 && GetCapture() == _window) { ReleaseCapture(); }
     }
     private void PlaceBehindApplications()
@@ -251,16 +253,30 @@ public sealed class FallbackDesktopHost : IDisposable
                 (DwmGetWindowAttribute(window, 14, out int cloaked, sizeof(int)) != 0 || cloaked == 0));
         if (!SetWindowPos(_window, anchor, 0, 0, 0, 0, 0x13)) { throw new InvalidOperationException("zorder_failed"); }
     }
-    private void UpdateVisual()
+    internal void RenderHiddenTestFrame(bool allowMotion)
+    {
+        if (_allowVisible) { throw new InvalidOperationException("hidden_test_only"); }
+        UpdateVisual(allowMotion);
+        SendMessageW(_window, 0x0F, 0, 0);
+    }
+    internal SurfaceHit? HitAt(int x, int y) => HitTest(x, y);
+    internal int PaintCount { get; private set; }
+    internal bool AnimationTimerArmed { get; private set; }
+    private void UpdateVisual(bool? motionOverride = null)
     {
         if (!_ready || _monitor is null) { return; }
-        var completions = Dispatcher.RenderTargets(_monitor);
+        bool motion = EngineeringFixture.Resolve(EngineeringFixture.ClickId, true, _appearanceEnvironment).AllowMotion;
+        var completions = Dispatcher.RenderTargets(_monitor, motionOverride ?? motion);
         ApplyRegion();
         string stateSummary = string.Join(";", Dispatcher.Workspace.Spaces.Keys.Order().Select(id =>
             id.ToString("D") + "=" + Dispatcher.Controller.GetState(id.ToString("D")).VisualState)) +
             FormattableString.Invariant($";availability={Dispatcher.Controller.Availability};gate={Dispatcher.Controller.IntentGate};fake={Dispatcher.FakeLaunchCount};generation={Dispatcher.Controller.InputGeneration}");
         if (stateSummary != _lastState) { _log("state_changed " + stateSummary); _lastState = stateSummary; }
-        InvalidateRect(_window, 0, false);
+        if (!InvalidateRect(_window, 0, false) || !UpdateWindow(_window)) { throw new InvalidOperationException("frame_paint_failed"); }
+        // Region, pointer geometry and synchronous paint all consume this one immutable frame on the owner thread.
+        KillTimer(_window, 2);
+        AnimationTimerArmed = Dispatcher.HasActiveAnimation;
+        if (AnimationTimerArmed && SetTimer(_window, 2, 16, 0) == 0) { throw new InvalidOperationException("motion_schedule_failed"); }
         foreach (var completion in completions)
         {
             if (_completions.ContainsValue(completion)) { continue; }
@@ -307,7 +323,8 @@ public sealed class FallbackDesktopHost : IDisposable
         foreach (var pair in OrderedSpaces().Reverse())
         {
             var b = pair.Value;
-            if (lx < b.X || lx >= b.Right || ly < b.Y || ly >= b.Bottom) { continue; }
+            var pixels = Pixels(b);
+            if (x < pixels.Left || x >= pixels.Right || y < pixels.Top || y >= pixels.Bottom) { continue; }
             double dx = lx - b.X, dy = ly - b.Y;
             if (dy < 34 && dx >= b.Width - 48) { return new(pair.Key, Exit: true); }
             if (dy < 34 && dx >= b.Width - 96) { return new(pair.Key, Close: true); }
@@ -328,8 +345,10 @@ public sealed class FallbackDesktopHost : IDisposable
             try { palette = new(Color(GetSysColor(5)), Color(GetSysColor(8))); }
             catch (ArgumentException) { palette = new(new(0, 0, 0), new(255, 255, 255)); }
         }
-        // No trusted reduced-transparency/motion integration yet: disable both capabilities unconditionally.
-        _appearanceEnvironment = new(high, reducedTransparency: true, reducedMotion: true, highContrastPalette: palette);
+        // SPI_GETCLIENTAREAANIMATION (BOOL). Unknown/high contrast fail to Reduced Motion.
+        bool motionKnown = ReadSystemBoolean(0x1042, 0, out bool animations, 0);
+        _appearanceEnvironment = new(high, reducedTransparency: true, reducedMotion: !motionKnown || !animations || high, highContrastPalette: palette);
+        _log($"motion_policy spi_known={motionKnown} client_animation={animations} high_contrast={high} reduced_motion={_appearanceEnvironment.ReducedMotion} material=Solid parameters=engineering_unaccepted");
     }
     private static RgbColor Color(uint color) => new((int)(color & 255), (int)((color >> 8) & 255), (int)((color >> 16) & 255));
     private static uint ColorRef(RgbColor color) => (uint)(color.Red | color.Green << 8 | color.Blue << 16);
@@ -347,6 +366,7 @@ public sealed class FallbackDesktopHost : IDisposable
         try
         {
             if (_monitor is null) { return; }
+            PaintCount++;
             nint font = CreateFontW(-(int)Math.Round(14 * _monitor.Density.PixelsPerDip), 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI");
             if (font == 0) { throw new InvalidOperationException("font_create_failed"); }
             nint previous = SelectObject(dc, font);
@@ -369,7 +389,7 @@ public sealed class FallbackDesktopHost : IDisposable
                     Text(dc, bounds, bounds.Width - 46, 8, 44, 28, "Exit");
                     Text(dc, bounds, 16, 54, bounds.Width - 32, 42, "[ FAKE Preview / counter only ]");
                     Text(dc, bounds, 16, 104, bounds.Width - 32, bounds.Height - 112,
-                        FormattableString.Invariant($"{state.VisualState} / {Dispatcher.Controller.IntentGate}\nFake clicks: {Dispatcher.FakeLaunchCount}\nSolid / NoActivate / NO animation\nMay obscure desktop icons.\nSearch, launch, drop disabled."));
+                        FormattableString.Invariant($"{state.VisualState} / {Dispatcher.Controller.IntentGate}\nFake clicks: {Dispatcher.FakeLaunchCount}\nSolid / NoActivate / Engineering motion\nMay obscure desktop icons.\nSearch, launch, drop disabled."));
                 }
             }
             finally { SelectObject(dc, previous); DeleteObject(font); }
