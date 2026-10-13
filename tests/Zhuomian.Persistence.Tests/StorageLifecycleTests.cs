@@ -104,6 +104,8 @@ public sealed class StorageLifecycleTests
         var inventory = store.Inventory(); Assert.False(inventory.IsComplete);
         Assert.Contains(inventory.Entries, e => e.Kind == StorageFileKind.Unknown && e.RetainBecause == RetentionReason.UnknownOwnership);
         Assert.DoesNotContain(name, JsonSerializer.Serialize(inventory));
+        Assert.All(inventory.Health.Quotas, q =>
+        { Assert.Equal(QuotaPressure.Unknown, q.Pressure); Assert.Equal(0, q.RemainingFiles); Assert.Equal(0, q.RemainingScanBytes); });
         Assert.False(store.DryRun().IsReviewable); Unchanged(owned, before);
     }
 
