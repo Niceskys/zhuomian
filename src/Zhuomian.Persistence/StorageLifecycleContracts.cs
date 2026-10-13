@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 namespace Zhuomian.Persistence;
 
 public enum StorageFileKind { Main, Backup, Prepared, Temp, Evidence, Lock, Unknown }
-public enum StorageValidation { ValidSnapshot, ReadOnlySnapshot, UnsupportedVersion, Corrupt, Unattributed, Incomplete, CoordinationLock }
+public enum StorageValidation { ValidSnapshot, ReadOnlySnapshot, UnsupportedVersion, Corrupt, Unattributed, Incomplete, CoordinationLock, InUse }
 public enum RetentionReason { AuthoritativeMain, RecoveryGeneration, RevisionReservation, UnfinishedOperation, UnconfirmedEvidence, CoordinationLock, UnknownOwnership, ValidationFailed }
 public enum StorageRisk { Healthy, ProtectedHistory, IncompleteOrUnsafe }
 public enum QuotaPressure { Normal, ApproachingLimit, AtLimit, Exceeded, Unknown }

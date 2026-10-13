@@ -15,7 +15,8 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
     private static string ValidateRoot(string root)
     {
         if (!Path.IsPathFullyQualified(root) || root.Contains("..", StringComparison.Ordinal) ||
-            (OperatingSystem.IsWindows() && (root.StartsWith("\\\\", StringComparison.Ordinal) || root.Length > 240)))
+            (OperatingSystem.IsWindows() && (root.StartsWith("\\\\", StringComparison.Ordinal) || root.Length > 240 ||
+                root.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries).Any(segment => segment.EndsWith('.') || segment.EndsWith(' ')))))
         { throw new ArgumentException("Invalid controlled storage root."); }
         return Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
     }

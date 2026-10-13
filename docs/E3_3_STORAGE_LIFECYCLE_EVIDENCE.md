@@ -56,3 +56,11 @@ EnableWindowsTargeting=true dotnet format Zhuomian.sln --no-restore --verify-no-
 dotnet test Zhuomian.sln --no-build -c Release -p:EnableWindowsTargeting=true --logger trx --results-directory <owned-test-results>
 git diff --check
 ```
+
+## Retained initial Windows failure
+
+[Run 38414301194](https://github.com/Niceskys/zhuomian/actions/runs/38414301194), head 206f0c8ad6d261682960152c9466af67d8d50f39, passed all documentation/performance tooling/exit-code/restore/Release/format gates, build zero warnings/errors, 451 Core and 37 Launching cases. Persistence was 148/149 with zero skips: the new directory-alias assertion failed because Windows Path.GetFullPath normalized the trailing dot before the native final-path comparison. The raw storage root now refuses trailing dot/space segments **before normalization**, with explicit constructor-refusal assertions; junction and native identity assertions remain intact. No original test was weakened or skipped. The strict collector did not execute after xUnit failure; the platform upload correctly failed for missing evidence, while TRX and launch metadata uploads succeeded. This run is failure evidence, not NTFS acceptance.
+
+Final review additionally withholds any claimed remaining byte budget for unreadable families (Unknown pressure, zero proved remainder). A sharing-denied temp explicitly reports InUse/Busy; other unreadable files remain incomplete. These behaviors are checked by the real Windows share-denial fixture.
+
+[Intermediate run 38414724102](https://github.com/Niceskys/zhuomian/actions/runs/38414724102), head cbc176dc57391c78720622798879136e767a3f1f, also retained the same 148/149 directory-alias failure: it was queued for the quota-diagnostic patch before the root-normalization fix was committed. Original suites and all pre-test gates passed. This is not a silent retry or claimed success.

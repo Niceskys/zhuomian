@@ -175,7 +175,12 @@ public sealed partial class WorkspaceFileStore : IStorageLifecycle
                         }
                     }
                 }
-                catch (Exception e) when (IsStorageFailure(e)) { entryError = Error(e); }
+                catch (Exception e) when (IsStorageFailure(e))
+                {
+                    entryError = Error(e);
+                    if (kind == StorageFileKind.Temp && IsSharingViolation(e))
+                    { validation = StorageValidation.InUse; entryError = StorageError.Busy; }
+                }
                 counts[kind] = counts.GetValueOrDefault(kind) + 1;
                 sizes[kind] = sizes.GetValueOrDefault(kind) + (length ?? 0);
                 bytes += length ?? 0;
@@ -226,6 +231,13 @@ public sealed partial class WorkspaceFileStore : IStorageLifecycle
         return (new(error, complete, enumerated && entries.All(e => e.Bytes is not null), bytes, entries.ToImmutable(), health,
             complete ? Convert.ToHexString(manifest.GetHashAndReset()) : null), hashes);
     }
+
+    private static bool IsSharingViolation(Exception error) => error switch
+    {
+        System.ComponentModel.Win32Exception native => native.NativeErrorCode is 32 or 33,
+        IOException io => (io.HResult & 0xFFFF) is 32 or 33,
+        _ => false,
+    };
 
     private static void Append(IncrementalHash hash, string value)
     {

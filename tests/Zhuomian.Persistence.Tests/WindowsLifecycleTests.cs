@@ -51,6 +51,15 @@ public sealed class WindowsLifecycleTests
             Assert.Equal(StorageError.MaintenanceDisabled, store.Apply(plan, true).Error);
         }
         Assert.Equal(before, File.ReadAllBytes(backup)); Assert.Equal(StorageError.None, store.ValidatePlan(plan).Error);
+        string temp = Path.Combine(owned.Root, "temp-" + Guid.NewGuid().ToString("N") + ".json"); File.WriteAllBytes(temp, before);
+        using (var active = new FileStream(temp, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            var inventory = store.Inventory(); Assert.False(inventory.IsComplete);
+            var entry = Assert.Single(inventory.Entries, e => e.Kind == StorageFileKind.Temp);
+            Assert.Equal(StorageValidation.InUse, entry.Validation); Assert.Equal(StorageError.Busy, entry.Error);
+            Assert.False(entry.CanDelete); Assert.False(store.DryRun().IsReviewable);
+        }
+        Assert.Equal(before, File.ReadAllBytes(temp)); Assert.True(store.Inventory().IsComplete);
     }
 
     [Fact]
@@ -62,8 +71,9 @@ public sealed class WindowsLifecycleTests
         WindowsFixtureLinks.Junction(link, outside.Root);
         try { Assert.Equal(StorageError.UnsafePath, owned.Store().Inventory().Error); Assert.Empty(Directory.GetFiles(outside.Root)); }
         finally { WindowsFixtureLinks.RemoveJunction(link); }
-        // Native final-path comparison also refuses namespace aliases, independently of lexical validation.
-        Assert.False(WorkspaceFileStore.ForTests(owned.Root + ".").Inventory().IsComplete);
+        // Refuse raw aliases before Path.GetFullPath can normalize away their spelling on Windows.
+        Assert.Throws<ArgumentException>(() => WorkspaceFileStore.ForTests(owned.Root + "."));
+        Assert.Throws<ArgumentException>(() => WorkspaceFileStore.ForTests(owned.Root + " "));
     }
 
     [Fact]
