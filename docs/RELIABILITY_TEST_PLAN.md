@@ -24,6 +24,14 @@
 
 当前仓库已经包含 .NET solution、Core/test 项目和多个 disposable Spike。现行 PR CI 会先验证文档、性能证据契约、通用进程采样器、per-run 样本统计器、跨 run 选择器和最终 evidence 装配器，再 restore/build solution、执行 `dotnet format --verify-no-changes`、运行测试并上传 TRX。性能契约自测只证明校验工具可执行；采样器 smoke test 只使用临时 `pwsh` 子进程和缩短参数验证采样/清理/fail-closed 行为；统计器与选择器自测只使用临时合成数据验证数学计算、选择语义与格式拒绝路径。这些 tooling tests 都**不产生 Zhuomian 基准或阈值校准证据**。Persistence/migration 生产能力尚未进入仓库，因此其专项测试目前是**尚未适用**，不是“已通过”证据。
 
+### .NET 原生命令失败传播
+
+GitHub Actions 的 `pwsh` 步骤在每个 solution 的 restore、Release build、完整 format 和 test 后立即检查 `$LASTEXITCODE`，非零时抛出终止错误，保留命令、solution 和退出码。不能仅依赖 `$ErrorActionPreference = 'Stop'` 或 runner 在脚本末尾检查最后一次原生命令的退出码；后续成功命令可能覆盖它。原始 stdout/stderr 直接保留在步骤日志中。
+
+[`scripts/test-ci-dotnet-exit-codes.ps1`](../scripts/test-ci-dotnet-exit-codes.ps1) 提取 workflow 的实际 .NET 循环，在临时目录用两个空 solution 和原生命令替身运行独立 `pwsh` 子进程。覆盖 PowerShell 7 原生命令错误偏好关闭/开启、两个 solution 各四个阶段的 16 次失败注入、两条成功路径，以及移除检查后的旧版 format 失败/test 成功假阳性重现。它验证命令编排与退出状态，不代替真实 .NET 构建、格式检查和全部领域测试；fixture 不修改正式源码，结束时清理。
+
+TRX 上传继续使用 `always()` 和原有 solution 条件，并保留 `if-no-files-found: error`。restore/build/format 提前失败且没有 TRX 时，上传步骤也会按严格约束失败；不得为了制造测试文件而继续执行 test 或用空 artifact 掩盖原始故障。
+
 ## 2. 确定性状态机测试
 
 交互核心使用可注入 clock、scheduler 和 event queue。测试不得依赖真实 `Task.Delay` 猜测时序。

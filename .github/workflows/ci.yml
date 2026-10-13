@@ -52,6 +52,10 @@ jobs:
           $found = @(Get-ChildItem -Path . -Filter *.sln -File -Recurse).Count -gt 0
           "found=$($found.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
+      - name: Verify .NET CI failure propagation
+        shell: pwsh
+        run: ./scripts/test-ci-dotnet-exit-codes.ps1
+
       - name: Restore and test .NET solution
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
@@ -59,11 +63,15 @@ jobs:
           $solutions = Get-ChildItem -Path . -Filter *.sln -File -Recurse
           foreach ($solution in $solutions) {
             dotnet restore $solution.FullName
+            if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed for $($solution.FullName) (exit $LASTEXITCODE)." }
             dotnet build $solution.FullName --no-restore --configuration Release
+            if ($LASTEXITCODE -ne 0) { throw "dotnet build failed for $($solution.FullName) (exit $LASTEXITCODE)." }
             dotnet format $solution.FullName --no-restore --verify-no-changes
+            if ($LASTEXITCODE -ne 0) { throw "dotnet format failed for $($solution.FullName) (exit $LASTEXITCODE)." }
             dotnet test $solution.FullName --no-build --configuration Release `
               --logger "trx;LogFilePrefix=test-results" `
               --results-directory "$env:RUNNER_TEMP\test-results"
+            if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $($solution.FullName) (exit $LASTEXITCODE)." }
           }
 
       - name: Upload test results
