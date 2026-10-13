@@ -211,9 +211,10 @@ public sealed partial class WorkspaceFileStore : IStorageLifecycle
         {
             int count = counts.GetValueOrDefault(kind);
             long size = sizes.GetValueOrDefault(kind);
-            int remaining = Math.Max(0, PersistenceLimits.MaxRecoveryFiles - count);
-            long scanRemaining = Math.Max(0, PersistenceLimits.MaxRecoveryScanBytes - size);
-            var pressure = !enumerated ? QuotaPressure.Unknown : count > PersistenceLimits.MaxRecoveryFiles || size > PersistenceLimits.MaxRecoveryScanBytes ?
+            bool sizeProven = enumerated && entries.Where(e => e.Kind == kind).All(e => e.Bytes is not null);
+            int remaining = enumerated ? Math.Max(0, PersistenceLimits.MaxRecoveryFiles - count) : 0;
+            long scanRemaining = sizeProven ? Math.Max(0, PersistenceLimits.MaxRecoveryScanBytes - size) : 0;
+            var pressure = !sizeProven ? QuotaPressure.Unknown : count > PersistenceLimits.MaxRecoveryFiles || size > PersistenceLimits.MaxRecoveryScanBytes ?
                 QuotaPressure.Exceeded : remaining == 0 || scanRemaining == 0 ? QuotaPressure.AtLimit :
                 remaining <= 2 || scanRemaining <= PersistenceLimits.MaxFileBytes ? QuotaPressure.ApproachingLimit : QuotaPressure.Normal;
             quotas.Add(new(kind, count, size, remaining, scanRemaining, pressure));

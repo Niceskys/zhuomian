@@ -43,7 +43,10 @@ public sealed class WindowsLifecycleTests
         string backup = Directory.GetFiles(owned.Root, "backup-*.json").Single(); byte[] before = File.ReadAllBytes(backup);
         using (var blocked = new FileStream(backup, FileMode.Open, FileAccess.Read, FileShare.None))
         {
-            Assert.False(store.Inventory().IsComplete); Assert.False(store.DryRun().IsReviewable);
+            var inventory = store.Inventory(); Assert.False(inventory.IsComplete); Assert.False(inventory.TotalsComplete);
+            var quota = Assert.Single(inventory.Health.Quotas, q => q.Kind == StorageFileKind.Backup);
+            Assert.Equal(QuotaPressure.Unknown, quota.Pressure); Assert.Equal(0, quota.RemainingScanBytes);
+            Assert.False(store.DryRun().IsReviewable);
             Assert.NotEqual(StorageError.None, store.ValidatePlan(plan).Error); Assert.NotEqual(StorageError.None, store.ValidateExport(export).Error);
             Assert.Equal(StorageError.MaintenanceDisabled, store.Apply(plan, true).Error);
         }
