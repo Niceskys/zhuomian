@@ -1,6 +1,6 @@
 # Zhuomian 架构规范
 
-> 状态：开发前规范基线 2026-10-12。未经 Spike 与 ADR 接受的平台实现均不是生产承诺；现有生产目录仅 Core 契约。
+> 状态：开发前规范基线 2026-10-12。未经 Spike 与 ADR 接受的平台实现均不是生产承诺；现有目录包含 Core 领域模块与 E3-1 受控 Windows 启动候选适配器；[实际启动范围](E3_1_LAUNCH_EVIDENCE.md) 不等于四类用户资源已支持。
 
 ## 1. 架构原则
 
@@ -23,6 +23,7 @@ src/
   Zhuomian.Persistence
   Zhuomian.Media
   Zhuomian.Platform.Windows
+  Zhuomian.Launching.Windows
 
 tests/
   Zhuomian.Core.Tests

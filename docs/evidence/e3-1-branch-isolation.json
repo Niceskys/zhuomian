@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "reviewedPr": 34,
+  "previousVerifiedHead": "b548c555a794d8972efd1ec00306f41350477a29",
+  "main": "d994b0184fa2e097ad34d10eb7f28a1c506c8c7a",
+  "e3AddedProjects": [
+    {
+      "name": "Zhuomian.Launching.Windows",
+      "path": "src/Zhuomian.Launching.Windows/Zhuomian.Launching.Windows.csproj",
+      "guid": "6F5FED9D-5948-491B-822D-078163A7FFC0"
+    },
+    {
+      "name": "Zhuomian.Launching.Windows.Tests",
+      "path": "tests/Zhuomian.Launching.Windows.Tests/Zhuomian.Launching.Windows.Tests.csproj",
+      "guid": "0FD9D24D-C793-4F86-B6DF-2A536C9BAA9E"
+    },
+    {
+      "name": "Zhuomian.LaunchFixture",
+      "path": "tests/Zhuomian.LaunchFixture/Zhuomian.LaunchFixture.csproj",
+      "guid": "D1B6B17A-E338-4A54-89C2-2460892A0817"
+    }
+  ],
+  "e3AddedAdr": "0008-controlled-resource-launch.md",
+  "branches": [
+    {
+      "pr": 31,
+      "head": "06d6f14520ebc1e7cc6486a4b3cdd90f11d7a678",
+      "addedAdrs": [
+        "docs/ADR/0005-e2-native-engineering-host.md"
+      ],
+      "projectNameCollisions": [],
+      "projectPathCollisions": [],
+      "projectGuidCollisions": [],
+      "adrNumberCollisions": [],
+      "workflowThreeWayTextMergeExitCode": 0,
+      "mergedWorkflowSha256": "e738faba49ee793bce914f2662da616570d624c5e49af65d9c85e5575a9568f0"
+    },
+    {
+      "pr": 32,
+      "head": "5ea708e0e1b7f760816380dbf56f303d899cc8e6",
+      "addedAdrs": [
+        "docs/ADR/0005-e2-native-engineering-host.md",
+        "docs/ADR/0006-e2-native-motion.md"
+      ],
+      "projectNameCollisions": [],
+      "projectPathCollisions": [],
+      "projectGuidCollisions": [],
+      "adrNumberCollisions": [],
+      "workflowThreeWayTextMergeExitCode": 0,
+      "mergedWorkflowSha256": "6eadad590a02073d17a2ca3720ce866d2cc82fdbac2ad570fe245cde7e5b33de"
+    },
+    {
+      "pr": 33,
+      "head": "9227f5d0ab6d7924c10cdc3bf61806dbde11262d",
+      "addedAdrs": [
+        "docs/ADR/0005-e2-native-engineering-host.md",
+        "docs/ADR/0006-e2-native-motion.md",
+        "docs/ADR/0007-e2-wpf-rendering-candidate.md"
+      ],
+      "projectNameCollisions": [],
+      "projectPathCollisions": [],
+      "projectGuidCollisions": [],
+      "adrNumberCollisions": [],
+      "workflowThreeWayTextMergeExitCode": 0,
+      "mergedWorkflowSha256": "19f1129de11f0379c54fd497aa5570b0ed5963ad1e7f0c6264135a1731548e28"
+    }
+  ],
+  "comparedCSharpFileCount": 119,
+  "allCSharpChangesLimitedToNamespaceRelocation": true,
+  "securityBaselineUnchanged": true,
+  "reviewScope": "Metadata and workflow text only; no E2 production code, execution or merge applied. Future solution/docs text integration still needs review; this is not E2 runtime acceptance."
+}

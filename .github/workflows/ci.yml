@@ -52,6 +52,30 @@ jobs:
           $found = @(Get-ChildItem -Path . -Filter *.sln -File -Recurse).Count -gt 0
           "found=$($found.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
+      - name: Record controlled launch test platform
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          if (-not $IsWindows) { throw 'Native launch evidence requires the Windows CI runner.' }
+          $sdk = dotnet --version
+          if ($LASTEXITCODE -ne 0) { throw "dotnet --version failed (exit $LASTEXITCODE)." }
+          $metadata = [ordered]@{
+            schemaVersion = 1
+            commitSha = '${{ github.sha }}'
+            windowsBuild = [Environment]::OSVersion.Version.ToString()
+            sdk = $sdk.Trim()
+            processArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
+            launchProject = 'Zhuomian.Launching.Windows'
+            launchTestProject = 'Zhuomian.Launching.Windows.Tests'
+            deployment = 'framework-dependent test apphost'
+            nativeBoundary = 'owned zero-argument CreateProcess fixture and private filesystem'
+            userApplicationAcceptance = $false
+            associationLaunchEnabled = $false
+            desktopAcceptance = $false
+          }
+          $metadata | ConvertTo-Json | Set-Content -LiteralPath "$env:RUNNER_TEMP/launch-platform.json" -Encoding utf8
+          $metadata | ConvertTo-Json
+
       - name: Verify .NET CI failure propagation
         shell: pwsh
         run: ./scripts/test-ci-dotnet-exit-codes.ps1
@@ -73,6 +97,14 @@ jobs:
               --results-directory "$env:RUNNER_TEMP\test-results"
             if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $($solution.FullName) (exit $LASTEXITCODE)." }
           }
+
+      - name: Upload controlled launch platform metadata
+        if: always() && steps.solution.outputs.found == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: launch-platform
+          path: '${{ runner.temp }}/launch-platform.json'
+          if-no-files-found: error
 
       - name: Upload test results
         if: always() && steps.solution.outputs.found == 'true'
