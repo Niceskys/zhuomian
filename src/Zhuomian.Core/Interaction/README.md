@@ -40,4 +40,4 @@ DragEnter 取消 Hover、点击和待切换意图，冻结自动展开和收回�
 | INV-09 | DragEnter/End/Esc、点击/展开抑制、已有展开稳定及安全抢占；真实添加/布局事务待后续模块 |
 | INV-10 | 控制器无持久化/几何/Grid 写入能力；LayoutChanged 不改目标。真实返回轨迹/原位保存和 Item transform 待 E2/E4 |
 
-真实有效区域、显示器中心/Clamp、命中坐标随动画同步、Reduced Motion 轨迹、WinUI/IME、NoActivate、Windows Hook、WorkerW、视频和 Dock 均未实现/未验收。E1 其余数据模型、Space/Item 引用、纯布局和主题继承需独立 PR；E2 再接带门禁的原生 adapter。本 PR 不关闭任何 P0 平台/性能风险。
+真实有效区域、显示器中心/Clamp、命中坐标随动画同步、Reduced Motion 轨迹、WinUI/IME、NoActivate、Windows Hook、WorkerW、视频和 Dock 均未实现/未验收。E1 数据模型和 Space/Item 引用已有独立模块（[Workspace 调用契约](../WorkspaceModel/README.md)）；纯布局和主题继承仍需独立 PR；E2 再接带门禁的原生 adapter。本 PR 不关闭任何 P0 平台/性能风险。
