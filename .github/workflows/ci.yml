@@ -112,3 +112,44 @@ jobs:
           name: e2-2-windows-x64-engineering
           path: '${{ runner.temp }}/e2-2-engineering/'
           if-no-files-found: error
+
+      - name: Publish and exercise WPF native candidate
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'e2-3-wpf'
+          dotnet publish src/Zhuomian.Ui.WpfCandidate --configuration Release --runtime win-x64 --self-contained true --output $output
+          if ($LASTEXITCODE -ne 0) { throw "WPF publish failed (exit $LASTEXITCODE)." }
+          $exe = Join-Path $output 'Zhuomian.Ui.WpfCandidate.exe'
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'WPF EXE missing.' }
+          Copy-Item src/Zhuomian.Ui.WpfCandidate/README.md, src/Zhuomian.Ui.WpfCandidate/Start-Wpf-Candidate.cmd -Destination $output
+          Copy-Item docs/ADR/0007-e2-wpf-rendering-candidate.md -Destination $output
+          & $exe --smoke 2>&1 | Tee-Object -FilePath (Join-Path $output 'ci-wpf-smoke.log')
+          if ($LASTEXITCODE -ne 0) { throw "WPF EXE smoke failed (exit $LASTEXITCODE)." }
+          foreach ($image in @('idle-offscreen.png', 'expanded-offscreen.png', 'high-contrast-offscreen.png')) {
+            if (-not (Test-Path (Join-Path $output $image))) { throw "Actual WPF offscreen render missing: $image" }
+          }
+          "commit=${{ github.event.pull_request.head.sha || github.sha }}" | Set-Content (Join-Path $output 'BUILD.txt')
+          "Independent hidden HWND / synthetic input / WPF offscreen renders only. Desktop screenshots and product performance UNVERIFIED." | Add-Content (Join-Path $output 'BUILD.txt')
+          dotnet list src/Zhuomian.Ui.WpfCandidate package --include-transitive | Set-Content (Join-Path $output 'DEPENDENCIES.txt')
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency inventory failed.' }
+          $cache = Join-Path $env:USERPROFILE '.nuget/packages'
+          foreach ($package in @('microsoft.netcore.app.runtime.win-x64', 'microsoft.windowsdesktop.app.runtime.win-x64')) {
+            $folder = Join-Path $cache $package
+            $notices = @(Get-ChildItem $folder -File -Recurse | Where-Object { $_.Name -match '^(LICENSE|THIRD-PARTY-NOTICES|ThirdPartyNotices)' })
+            if ($notices.Count -eq 0) { throw "Runtime license notices missing: $package" }
+            $index = 0
+            foreach ($notice in $notices) {
+              $index++
+              Copy-Item $notice.FullName -Destination (Join-Path $output "$package-$index-$($notice.Name)")
+            }
+          }
+          Get-ChildItem -LiteralPath $output -File -Recurse | Sort-Object FullName | ForEach-Object {
+            "$( (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash )  $([IO.Path]::GetRelativePath($output, $_.FullName))"
+          } | Set-Content (Join-Path $output 'SHA256SUMS.txt')
+
+      - name: Upload WPF native candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2-3-windows-x64-wpf-candidate
+          path: '${{ runner.temp }}/e2-3-wpf/'
+          if-no-files-found: error
