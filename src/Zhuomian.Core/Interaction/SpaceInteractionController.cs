@@ -72,6 +72,7 @@ public sealed class SpaceInteractionController
         _collapseDelayMilliseconds = collapseDelayMilliseconds;
     }
 
+    public long InputGeneration => _epoch;
     public DesktopAvailability Availability { get; private set; } = DesktopAvailability.DesktopAvailable;
     public DesktopIntentGate IntentGate { get; private set; }
     public KeyboardMode KeyboardMode { get; private set; }
@@ -94,7 +95,7 @@ public sealed class SpaceInteractionController
     public void Post(SpaceInteractionEvent input)
     {
         ArgumentNullException.ThrowIfNull(input);
-        _queue.Add(new(input, _epoch, ++_sequence));
+        _queue.Add(new(input, input.Generation ?? _epoch, ++_sequence));
     }
 
     /// <summary>Returns consumed/failure feedback; callers need not infer a rejected click as blank activation.</summary>
@@ -122,10 +123,11 @@ public sealed class SpaceInteractionController
                 var batch = _queue.OrderBy(q => Priority(q.Event.Kind)).ThenBy(q => q.Sequence).ToArray();
                 _queue.Clear();
                 _itemClickTick = _click?.ItemId is not null || batch.Any(q =>
-                    q.Event.Kind == SpaceInteractionEventKind.PointerDown && q.Event.ItemId is not null);
+                    q.Epoch == _epoch && q.Event.Kind == SpaceInteractionEventKind.PointerDown &&
+                    q.Event.ItemId is not null);
                 foreach (var q in batch)
                 {
-                    if (q.Epoch == _epoch || IsSafety(q.Event.Kind))
+                    if (q.Epoch == _epoch || (IsSafety(q.Event.Kind) && q.Event.Generation is null))
                     {
                         Handle(q.Event);
                     }

@@ -61,7 +61,8 @@ public enum SpaceInteractionEventKind
 /// follow-ups retain the first ID or use ClickCount=2. PointerUp carries the pinned item identity
 /// and ValidClick from click recognition, not a new blank hit test after layout movement.
 /// TransitionCompleted/Deadline must echo the exact issued Token. TextInput and IME events
-/// echo KeyboardToken from the explicit search session. All identities are opaque, not launch payloads.
+/// echo KeyboardToken from the explicit search session. Asynchronous input/hit snapshots
+/// capture InputGeneration before dispatch and echo Generation; null denotes synchronous dispatcher input. All identities are opaque, not launch payloads.
 /// </summary>
 public sealed record SpaceInteractionEvent(
     SpaceInteractionEventKind Kind,
@@ -74,7 +75,8 @@ public sealed record SpaceInteractionEvent(
     DesktopAvailability Availability = DesktopAvailability.DesktopAvailable,
     string? ForegroundIdentity = null,
     InteractionActivity Activities = InteractionActivity.None,
-    string Text = "");
+    string Text = "",
+    long? Generation = null);
 
 public readonly record struct SpaceInteractionState(
     SpaceVisualState VisualState,

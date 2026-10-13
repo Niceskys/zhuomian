@@ -8,6 +8,7 @@
 - 构造控制器时注入单调 `IInteractionClock`、`IInteractionScheduler`、`IInteractionLauncher` 和非负收回延迟。收回延迟没有产品默认值；测试中的 30ms 只用于边界断言。
 - 控制器、scheduler 与 launcher 在同一 dispatcher 上调用，不是跨线程对象。平台回调必须先归一化并汇聚到该 dispatcher。在同一 tick 内先 `Post` 所有输入，再 `Drain`；安全抢占、拖拽/菜单、搜索/IME、点击先于 due timer。已经提交到较早 tick 的 Focusing 不会阻断 Item 的首次点击。
 - 内置 `DeterministicInteractionScheduler` 为一次性、拉取式调度。dispatcher 可按 `NextDeadline` 唤醒后 `Drain`，无 deadline 时不轮询；本模块不安装 OS timer。timer 被取消后即使仍被投递，也由 token 与 epoch 拒绝。
+- 异步输入/命中快照跨 dispatcher 前捕获 `InputGeneration`，投递时携带 `Generation`；旧 generation（包括延迟安全状态结果）不会修改恢复后的状态。省略 Generation 仅用于 dispatcher 内同步读取/投递，不能用它包装旧异步结果。
 - pointer-down 的 `SpaceId/ItemId` 来自当时可见的同步命中。`GestureId` 是整个控制器内单调增长的物理点击序列 ID；后续重复 OS 消息沿用该 ID，双击第二序列使用 `ClickCount=2`。独立重复单击使用新 ID，不引入长时间去抖。
 - pointer-up 的 `ValidClick` 由 adapter 的点击识别产生，并携带固定目标；布局变化不得将命中重新解释为空白或另一个 Item。若目标已删除，投递 `ItemInvalidated`；若 Space 删除，投递 `SpaceRemoved`。失效反馈为 `ClickInvalidated`，不得回落为空白激活。
 - `LayoutChanged` 不改变固定点击目标。控制器不拥有 bounds、持久化原位、Grid、外部资源或拖入保存事务，因此不会写回动画坐标、重排图标或操作源文件；这些属于后续独立模块。

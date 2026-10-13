@@ -588,6 +588,30 @@ public sealed class SpaceInteractionControllerTests
     }
 
     [Fact]
+    public void DelayedHitSnapshotAndSafetyResultCannotCrossRecoveryGeneration()
+    {
+        var h = new Harness();
+        long old = h.Controller.InputGeneration;
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.HostLost));
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.HostRestored));
+        long current = h.Controller.InputGeneration;
+        Assert.NotEqual(old, current);
+        h.Send(new SpaceInteractionEvent(SpaceInteractionEventKind.PointerEnter, "A"));
+        h.Clock.NowMilliseconds = 20;
+        h.Controller.Post(new(SpaceInteractionEventKind.PointerDown, "B", "item-1", 1, Generation: old));
+        h.Controller.Post(new(SpaceInteractionEventKind.PointerUp, "B", "item-1", 1, Generation: old));
+        h.Controller.Post(new(SpaceInteractionEventKind.AvailabilityChanged,
+            Availability: DesktopAvailability.Suspended, Generation: old));
+        h.Controller.Drain();
+        Assert.Empty(h.Launcher.Calls);
+        Assert.Equal(DesktopAvailability.DesktopAvailable, h.Controller.Availability);
+        Assert.Equal(current, h.Controller.InputGeneration);
+        Assert.Equal("A", h.Controller.FocusOwner);
+        h.Click("B", "item-1", 2);
+        Assert.Single(h.Launcher.Calls);
+    }
+
+    [Fact]
     public void StaleKeyboardAndImeEventsCannotModifyNewSearchSession()
     {
         var h = new Harness();
