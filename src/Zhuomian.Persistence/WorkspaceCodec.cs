@@ -83,6 +83,14 @@ public static class WorkspaceCodec
     private static void CheckText(string? text)
     {
         if (text?.Length > PersistenceLimits.MaxStringLength) { throw new StorageException(StorageError.TooLarge); }
+        if (text is null) { return; }
+        for (int index = 0; index < text.Length; index++)
+        {
+            if (!char.IsSurrogate(text[index])) { continue; }
+            if (!char.IsHighSurrogate(text[index]) || index + 1 >= text.Length || !char.IsLowSurrogate(text[index + 1]))
+            { throw new StorageException(StorageError.InvalidStructure); }
+            index++;
+        }
     }
 
     public static RecoveryResult Decode(ReadOnlyMemory<byte> bytes)

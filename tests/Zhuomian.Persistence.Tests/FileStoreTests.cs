@@ -325,6 +325,17 @@ public sealed class FileStoreTests
     }
 
     [Fact]
+    public void InvalidUtf16ResourcePathCannotBeSilentlyReplacedByJsonEncoder()
+    {
+        using var owned = new OwnedDirectory();
+        var item = new FileItem(Guid.NewGuid(), new("Unsupported encoding"), new(@"C:\fixtures\" + "\uD800" + ".txt"));
+        var snapshot = Samples.Full().AddItem(item);
+        Assert.Equal(StorageError.InvalidStructure, owned.Store().Save(snapshot).Error);
+        Assert.Empty(Directory.GetFiles(owned.Root, "*.json"));
+        Assert.Contains('\uD800', item.Path.Value);
+    }
+
+    [Fact]
     public void AggregateSerializationLimitStopsLargeValidSnapshotBeforeCreatingFiles()
     {
         using var owned = new OwnedDirectory();

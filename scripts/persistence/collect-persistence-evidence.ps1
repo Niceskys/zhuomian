@@ -13,7 +13,7 @@ $selected = @($trxFiles | Where-Object {
 if ($selected.Count -ne 1) { throw 'Expected exactly one persistence TRX.' }
 [xml]$trx = Get-Content -LiteralPath $selected[0].FullName -Raw
 $counters = $trx.TestRun.ResultSummary.Counters
-if ([int]$counters.failed -ne 0 -or [int]$counters.notExecuted -ne 0 -or [int]$counters.passed -ne [int]$counters.total -or [int]$counters.total -ne 102) {
+if ([int]$counters.failed -ne 0 -or [int]$counters.notExecuted -ne 0 -or [int]$counters.passed -ne [int]$counters.total -or [int]$counters.total -ne 103) {
     throw 'Persistence suite incomplete, failed or skipped.'
 }
 $baseline = [ordered]@{}
