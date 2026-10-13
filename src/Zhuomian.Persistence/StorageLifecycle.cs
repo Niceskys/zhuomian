@@ -100,9 +100,8 @@ public sealed partial class WorkspaceFileStore : IStorageLifecycle
         var hashes = new Dictionary<Guid, string>();
         var counts = new Dictionary<StorageFileKind, int>();
         var sizes = new Dictionary<StorageFileKind, long>();
-        var contents = new Dictionary<long, string>();
+        var contents = new HistoryCommitments();
         var generations = new HashSet<long>();
-        Guid? workspaceId = null;
         long? minimum = null, maximum = null, prepared = null;
         long bytes = 0, scannedBytes = 0;
         StorageError error = StorageError.None;
@@ -164,12 +163,7 @@ public sealed partial class WorkspaceFileStore : IStorageLifecycle
                                 if (kind == StorageFileKind.Prepared) { prepared = Math.Max(prepared ?? 0, revision.Value); }
                                 if (kind is StorageFileKind.Main or StorageFileKind.Backup or StorageFileKind.Prepared)
                                 {
-                                    if (workspaceId is not null && workspaceId != decoded.Workspace.Id) { entryError = StorageError.WorkspaceConflict; }
-                                    workspaceId ??= decoded.Workspace.Id;
-                                    string canonical = Convert.ToHexString(SHA256.HashData(WorkspaceCodec.Encode(decoded.Workspace)));
-                                    if (contents.TryGetValue(revision.Value, out string? previous) && previous != canonical)
-                                    { entryError = StorageError.RevisionConflict; }
-                                    contents[revision.Value] = canonical;
+                                    entryError = contents.Observe(decoded.Workspace);
                                 }
                             }
                         }

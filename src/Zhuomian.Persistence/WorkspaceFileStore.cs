@@ -34,6 +34,8 @@ public sealed partial class WorkspaceFileStore : IWorkspaceStore
         return new(ownedRoot, diagnostics, faults);
     }
 
+    internal StorageReadMetrics ReadMetrics { get { lock (_gate) { return _storage.Metrics; } } }
+
     public RecoveryResult Load() => RunRecovery(StorageOperation.Load, () => Recover(restore: false));
     public RecoveryResult Restore() => RunRecovery(StorageOperation.Restore, () => Recover(restore: true));
 
@@ -59,7 +61,7 @@ public sealed partial class WorkspaceFileStore : IWorkspaceStore
         return RunWrite(StorageOperation.Save, () =>
         {
             byte[] next = WorkspaceCodec.Encode(snapshot);
-            var reservation = Reservations(snapshot.Id, snapshot.Revision, next);
+            var reservation = ReadHistory(snapshot.Id, snapshot.Revision, next);
             if (_storage.Exists(MainFile))
             {
                 byte[] currentBytes = _storage.Read(MainFile);
@@ -121,6 +123,8 @@ public sealed partial class WorkspaceFileStore : IWorkspaceStore
         byte[] bytes = _storage.Read(MainFile);
         var result = WorkspaceCodec.Decode(bytes);
         if (result.Workspace is null || result.IsReadOnly) { return new(result.Error == StorageError.None ? StorageError.ReadOnly : result.Error); }
+        var history = ReadHistory(result.Workspace.Id);
+        if (history.Error != StorageError.None) { return new(history.Error); }
         _storage.Archive(bytes);
         return new(StorageError.None, CommitState.Committed, result.Workspace.Revision);
     });
@@ -129,25 +133,31 @@ public sealed partial class WorkspaceFileStore : IWorkspaceStore
     {
         bool exists = _storage.Exists(MainFile);
         RecoveryResult primary = exists ? ReadCandidate(MainFile) : new(RecoveryState.NotFound, StorageError.NotFound);
-        if (!restore && primary.Workspace is not null) { return WithEvidence(primary, MainFile); }
+        if (!restore && primary.Workspace is not null)
+        {
+            if (primary.IsReadOnly) { return WithEvidence(primary, MainFile); }
+            // A readable main remains available even if history cannot authorize mutation.
+            // Never turn incomplete evidence into a writable, healthy result.
+            (StorageError Error, long Revision, bool Match) history;
+            try { history = ReadHistory(primary.Workspace.Id); }
+            catch (Exception e) when (IsStorageFailure(e)) { history = (Error(e), 0, false); }
+            return history.Error == StorageError.None ? WithEvidence(primary, MainFile) :
+                new(primary.State, history.Error, primary.Workspace, primary.Quarantine, MainFile, readOnly: true);
+        }
         // A future schema must never be downgraded by automatic recovery or restore.
         if (primary.Error is StorageError.UnsupportedVersion or StorageError.UnsafePath or StorageError.AccessDenied or StorageError.IoFailure)
         { return WithEvidence(primary, MainFile); }
         RecoveryResult? best = null;
         string? bestName = null;
-        var contents = new Dictionary<long, byte[]>();
+        var contents = new HistoryCommitments();
+        if (primary.Workspace is not null && !primary.IsReadOnly) { contents.Observe(primary.Workspace); }
         foreach (string name in _storage.Backups())
         {
             var candidate = ReadCandidate(name);
             if (candidate.Workspace is null || candidate.IsReadOnly) { continue; }
-            if (best?.Workspace is not null && candidate.Workspace.Id != best.Workspace.Id)
-            { return new(RecoveryState.Unrecoverable, StorageError.WorkspaceConflict, readOnly: true); }
-            if (primary.Workspace is not null && candidate.Workspace.Id != primary.Workspace.Id)
-            { return new(RecoveryState.Unrecoverable, StorageError.WorkspaceConflict, readOnly: true); }
-            byte[] canonical = WorkspaceCodec.Encode(candidate.Workspace);
-            if (contents.TryGetValue(candidate.Workspace.Revision, out var previous) && !previous.AsSpan().SequenceEqual(canonical))
-            { return new(RecoveryState.Unrecoverable, StorageError.RevisionConflict, readOnly: true); }
-            contents[candidate.Workspace.Revision] = canonical;
+            var conflict = contents.Observe(candidate.Workspace);
+            if (conflict != StorageError.None)
+            { return new(RecoveryState.Unrecoverable, conflict, readOnly: true); }
             if (best is null || candidate.Workspace.Revision > best.Workspace!.Revision)
             { best = candidate; bestName = name; }
         }
@@ -160,7 +170,7 @@ public sealed partial class WorkspaceFileStore : IWorkspaceStore
         if (restore)
         {
             if (primary.IsReadOnly && primary.Workspace is not null) { return new(RecoveryState.PartiallyQuarantined, StorageError.ReadOnly, primary.Workspace, primary.Quarantine, MainFile, readOnly: true); }
-            var reserved = Reservations(workspace.Id);
+            var reserved = ReadHistory(workspace.Id);
             if (reserved.Error != StorageError.None) { return new(RecoveryState.Unrecoverable, reserved.Error, readOnly: true); }
             long floor = Math.Max(reserved.Revision, Math.Max(workspace.Revision, primary.Workspace?.Revision ?? 0));
             if (floor == long.MaxValue) { return new(RecoveryState.Unrecoverable, StorageError.RevisionOverflow, evidenceId: bestName, readOnly: true); }
@@ -180,29 +190,33 @@ public sealed partial class WorkspaceFileStore : IWorkspaceStore
                 if (!_storage.Exists(MainFile) || !_storage.Read(MainFile).AsSpan().SequenceEqual(next)) { throw; }
             }
         }
-        return new(RecoveryState.BackupRecovered, StorageError.None, workspace, evidenceId: bestName,
+        var readError = restore ? StorageError.None : ReadHistory(workspace.Id).Error;
+        return new(RecoveryState.BackupRecovered, readError, workspace, evidenceId: bestName,
             primaryError: primary.Error, readOnly: !restore);
     }
 
-    private (StorageError Error, long Revision, bool Match) Reservations(Guid workspaceId, long? revision = null, byte[]? next = null)
+    private (StorageError Error, long Revision, bool Match) ReadHistory(Guid workspaceId, long? revision = null, byte[]? next = null)
     {
-        long maximum = 0;
-        bool match = false;
-        foreach (string name in _storage.Backups("prepared"))
+        var history = new HistoryCommitments();
+        if (_storage.Exists(MainFile))
         {
-            var candidate = ReadCandidate(name);
-            if (candidate.Workspace is null || candidate.IsReadOnly) { return (StorageError.RecoveryRequired, maximum, false); }
-            if (candidate.Workspace.Id != workspaceId) { return (StorageError.WorkspaceConflict, maximum, false); }
-            long value = candidate.Workspace.Revision;
-            maximum = Math.Max(maximum, value);
-            if (revision == value)
+            var main = ReadCandidate(MainFile);
+            if (main.Workspace is not null && !main.IsReadOnly) { history.Observe(main.Workspace); }
+        }
+        // Both families bind revision content. Checking only the requested revision would
+        // silently accept contradictory earlier records; a scalar maximum cannot fix that.
+        foreach (string prefix in new[] { "backup", "prepared" })
+        {
+            foreach (string name in _storage.Backups(prefix))
             {
-                if (!WorkspaceCodec.Encode(candidate.Workspace).AsSpan().SequenceEqual(next))
-                { return (StorageError.RevisionConflict, maximum, false); }
-                match = true;
+                var candidate = ReadCandidate(name);
+                if (candidate.Workspace is null || candidate.IsReadOnly)
+                { return (StorageError.RecoveryRequired, history.MaximumRevision, false); }
+                var error = history.Observe(candidate.Workspace);
+                if (error != StorageError.None) { return (error, history.MaximumRevision, false); }
             }
         }
-        return (revision < maximum ? StorageError.StaleRevision : StorageError.None, maximum, match);
+        return history.Check(workspaceId, revision, next);
     }
 
     private RecoveryResult ReadCandidate(string name)

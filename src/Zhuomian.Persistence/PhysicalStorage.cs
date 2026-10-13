@@ -12,6 +12,8 @@ public interface IStorageFaultInjector { void Check(StorageStage stage); }
 internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults)
 {
     internal string Root { get; } = ValidateRoot(root);
+    private long _successfulReadFiles, _successfulReadBytes, _historyEnumerationEntries;
+    internal StorageReadMetrics Metrics => new(_successfulReadFiles, _successfulReadBytes, _historyEnumerationEntries);
     private static string ValidateRoot(string root)
     {
         if (!Path.IsPathFullyQualified(root) || root.Contains("..", StringComparison.Ordinal) ||
@@ -90,6 +92,7 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
                 if (memory.Length + count > PersistenceLimits.MaxFileBytes) { throw new StorageException(StorageError.TooLarge); }
                 memory.Write(buffer, 0, count);
             }
+            _successfulReadFiles++; _successfulReadBytes += memory.Length;
             return memory.ToArray();
         }
     }
@@ -109,6 +112,7 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
         byte[] bytes = new byte[checked((int)length)];
         stream.ReadExactly(bytes);
         if (stream.Length != length) { throw new StorageException(StorageError.StalePlan); }
+        _successfulReadFiles++; _successfulReadBytes += length;
         return (length, identity, bytes);
     }
 
@@ -125,6 +129,7 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
         long total = 0;
         foreach (string path in Directory.EnumerateFiles(Root, prefix + "-*.json"))
         {
+            _historyEnumerationEntries++;
             if (names.Count >= PersistenceLimits.MaxRecoveryFiles) { throw new StorageException(StorageError.TooLarge); }
             // Do not follow a reparse point even while estimating the recovery budget.
             CheckLeaf(path);
@@ -243,3 +248,5 @@ internal static partial class NativeStorage
         internal uint IndexLow;
     }
 }
+
+internal readonly record struct StorageReadMetrics(long SuccessfulReadFiles, long SuccessfulReadBytes, long HistoryEnumerationEntries);

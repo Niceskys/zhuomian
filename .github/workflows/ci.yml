@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
@@ -97,6 +99,20 @@ jobs:
               --results-directory "$env:RUNNER_TEMP\test-results"
             if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $($solution.FullName) (exit $LASTEXITCODE)." }
           }
+
+      - name: Execute immutable legacy compatibility and same-protocol capacity comparison
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/persistence/test-legacy-history-compatibility.ps1 -OutputDirectory "$env:RUNNER_TEMP/history-evidence"
+
+      - name: Upload legacy compatibility and capacity evidence
+        if: always() && steps.solution.outputs.found == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: history-evidence
+          path: '${{ runner.temp }}/history-evidence/*.json'
+          if-no-files-found: error
 
       - name: Verify native persistence evidence
         if: steps.solution.outputs.found == 'true'
