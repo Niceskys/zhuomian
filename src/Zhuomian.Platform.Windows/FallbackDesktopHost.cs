@@ -68,8 +68,15 @@ public sealed class FallbackDesktopHost : IDisposable
         _work = info.Work;
         try
         {
-            var wc = new WindowClass { Size = (uint)Marshal.SizeOf<WindowClass>(), Style = 8, Procedure = _procedure,
-                Instance = _instance, ClassName = _className, Cursor = LoadCursorW(0, 32512) };
+            var wc = new WindowClass
+            {
+                Size = (uint)Marshal.SizeOf<WindowClass>(),
+                Style = 8,
+                Procedure = _procedure,
+                Instance = _instance,
+                ClassName = _className,
+                Cursor = LoadCursorW(0, 32512)
+            };
             if (RegisterClassExW(wc) == 0) { throw new InvalidOperationException("class_registration_failed"); }
             _registered = true;
             _lease.Create(() => CreateWindowExW(HostExtendedStyle, _className, "Zhuomian E2-1 engineering fixture",
