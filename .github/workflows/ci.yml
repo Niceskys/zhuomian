@@ -132,7 +132,7 @@ jobs:
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
         run: |
-          ./scripts/persistence/test-history-three-version-performance.ps1 -OutputDirectory "$env:RUNNER_TEMP/history-performance"
+          ./scripts/persistence/test-baseline-history-performance.ps1 -OutputDirectory "$env:RUNNER_TEMP/history-performance"
 
       - name: Upload repeated history performance samples
         if: always() && steps.solution.outputs.found == 'true'
