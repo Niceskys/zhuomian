@@ -1,0 +1,69 @@
+# E3-4B protocol implementation review
+
+Status: candidate for review, 2026-10-14. [ADR-0011](ADR/0011-safe-history-compaction.md) remains Proposed. No new protocol, migration, retirement or 1000+ successful-save ability is enabled by this document. The v1 limit remains. PR #37 changes only safe v1 validation/performance.
+
+## Storage graph and long-lived revision commitments
+
+Implement a separately dispatched v2 reader/writer in Persistence, retaining domain schema 1 and the existing workspace.lock. Fixed native-validated namespace: state-v2.json (committed root), generations/ (immutable bounded manifests/index pages), history-v2/ (raw segments), migration-v2/ (raw copies/transition evidence). Configuration cannot supply paths, arbitrary basenames or export destinations. Names derive from trusted protocol IDs, with CreateNew/collision refusal. Pin/open/validate every ancestor, created directory and leaf; enforce fixed local NTFS, final path/kind, single-link leaves, no reparse/alias and deny write/delete sharing during verification.
+
+A segment stores exact raw source envelope bytes, including whitespace, unknown fields/kinds, RemovedItems/RemovedSpaces, quarantined objects and damaged evidence. Record metadata binds family, stable protocol source ID, native identity at capture, source length/raw SHA256, parser status, Workspace identity/revision/canonical digest **when proven**, and generation membership. Local provenance stays private. Suggested limits: 128 records / 16 MiB per segment, unchanged 8 MiB per original parser input. This is a real bounded-record protocol, not an increased v1 loose-file scan budget. Unknown/truncated/oversize segment structures refuse. Never extract archive-supplied paths.
+
+The generation root binds version, Workspace ID, generation/parent-root digest, exact manifest/index-root digest, selected main record and reservation high water. A manifest binds the **complete covered source-ID set**, record count/family/segment membership, hashes/lengths, uncertainty flags and preceding generation. Sparse revisions are legal; intervals alone do not prove completeness. Every trusted revision maps to canonical content digest, duplicates require equality, all raw copies remain recoverable. Scalar high water is insufficient. Foreign IDs, contradictions or unknown coverage refuse mutation.
+
+Use bounded immutable sorted commitment pages (e.g. 128 entries per leaf, bounded fanout/depth/bytes, visited-ID checks). The index is reconstructible from verified segments; a missing leaf is not an empty revision interval. Repair creates a newly verified generation under lock, without editing existing pages. Missing raw sources/coverage refuse repair. Fully understood duplicate retries keep their current semantics; partial/unknown current data remains read-only. SHA256 is integrity/content binding, not authenticated ownership.
+
+First implementation must verify every relevant segment/index dependency per operation, streaming with bounded memory. Total read work remains proportional to retained history: no constant-time or infinite-retention claim. This can exceed 256 loose files without skipping an unverified archive. Any later acceleration needs a separate native identity/content/lease proof across cooperating processes; metadata-only persistent caches are insufficient. Save/Load/Backup/Restore/Inventory/retrieval traverse the same committed coverage graph.
+
+## Reservation, main and archive transactions
+
+1. Pin directories, acquire workspace.lock and validate complete current root/dependencies/barriers. Unknown namespace entries block authoritative maintenance.
+2. Resolve all trusted Workspace/revision/content commitments. Gaps do not authorize a revision below high water. Overflow refuses.
+3. Write an immutable prepared reservation and new manifest/index dependencies; Flush(true), native reopen, exact readback/coverage/hash validation. Atomically publish a root with reserved high water and **old main** selected. This is the **reservation commit point**. Subsequent failure burns the pair: restart replays it, same content retry is allowed, different content is refused.
+4. Write/verify the new main record and complete copy-on-write dependencies. Publish a root selecting new main. This single root replacement is the **main commit point**. Failed post-submission readback returns Unknown; compare actual validated root/content after reload under lock.
+5. Archive rollover publishes another generation only after verified raw-copy coverage. Old segments/sources stay. Retiring any source requires separately authorized, reviewed reversible retirement semantics; no move/delete sequence is assumed atomic.
+
+Committed roots never reference staging dependencies. Before publication, old complete state remains authoritative. After reservation publication, old main plus the new reserved pair is authoritative. After main publication, the full new generation is authoritative. Keep parent/transition witnesses, raw copies and orphan staging; do not treat a partial index as complete history. If root loss makes reservation coverage uncertain, refuse writing: do not select the highest filename/generation and assume no failed reservation existed. Explicit recovery must prove complete source and reservation coverage. File.Replace supplies one namespace publication, not a multi-file transaction; Flush(true) does not prove device/power-loss durability.
+
+## Controlled v1 migration and legacy isolation candidate
+
+Migration requires the original lock and exact raw-copy fixtures for shared four-kind Items, RemovedItems/RemovedSpaces, unknown fields/kinds, partial quarantine, valid/damaged evidence and failed reservations. Bind source namespace/native identities, copy without reserializing, verify raw hashes and complete source set before publication. Unknown/corrupt evidence remains uncertain coverage: diagnostic migration can be read-only, but cannot authorize new writes or discard it. First rollout retains every original backup/prepared/evidence and external/managed resource.
+
+A main-only format bump and single prepared sentinel are disproved by actual old-code tests. Candidate barriers:
+
+1. Publish a unique future-format prepared transition witness through CreateNew/Flush/readback and collision refusal. E3-2/E3-3 Save/Restore must refuse it when main is present/missing/corrupt. Old Backup can still append with v1 main, so no v2 writing/retirement is authorized at this stage.
+2. Build and validate the complete raw-copy generation, marked migrating/read-only. Preserve exact original main with source identity and replayable transition evidence.
+3. Under the lock, preserve/relocate original main through a raw-copy/identity transaction and create a **non-reparse directory at fixed legacy workspace.json**. Existing Exists calls CheckLeaf before File.Exists and refuses a directory: old Load/Save/Backup/Restore should all fail closed. New root/main uses state-v2.json; loss/corruption of that new file does not remove the legacy barrier. Verify, pin and bind directory identity in migration evidence.
+4. Publish active v2 only when coverage, dependencies, directory barrier and prepared witness verify together. Crash before active publication leaves a migrating/read-only state. Restart re-enumerates and captures any old Backup additions; never trust the stale pre-copy source set. Repeat start resumes only the exact transition or refuses. Do not undo a barrier after newer revisions commit.
+
+This is a candidate, **not proof of sufficient isolation**. Test actual pinned old executables at every stage for complete/corrupt/missing new root/main, leftover v1 main, directory barrier present/missing/replaced/linked, witness present/missing/corrupt, mixed IDs, full quotas, repeat startup and native ACL/share/creation/rename failures. Same-account malicious namespace destruction is outside existing isolation claims, but accidental removal/downgrade and crash/metadata-loss support must be explicitly bounded.
+
+Unresolved risk: if both barriers vanish and reachable v1 history remains, an independently executable old client cannot be forced by this document to consult an unrecognized v2 root. Directory identity protects new clients, not old code. If required failure cases allow old writes, **block production migration**. Stronger OS/package isolation may require a separate capability decision; it is not silently introduced here.
+
+## Failure and implementation acceptance matrix
+
+| Fault/cut | Required behavior |
+|---|---|
+| Copy/temp/Flush/readback before root publication | Complete old root/source bytes stay; preserve staging; no empty initialization |
+| Reservation root before main publication | Replay bound ID/revision/content; Restore above floor; safe identical retry |
+| Root replacement submitted, verification obstructed | Unknown outcome; actual complete-state reload before retry |
+| Missing/corrupt segment/index/manifest or mixed generations | Refuse writing unless complete recovery/reservation coverage is proved |
+| Migration before directory barrier | Old Save/Restore blocked by witness; record old Backup additions before active commit |
+| Barrier present, active root not yet committed | Old operations refuse; new code resumes verified migration or stays read-only |
+| Active root/new main missing/corrupt | Preserve barriers; verify complete recovery generations/reservation linkage |
+| Disk-full/permission/Flush failure | Refuse without losing last good root, raw sources or reserved commitments |
+
+Implement deterministic stage faults and killed Windows child processes before/after every publication, source replacement during copying, two-process Save/Restore/maintenance competition, NTFS links/aliases/held files and directory rename denial, simulated disk/Flush/ACL errors and exact original resource hashes. Test sparse revisions, equal retries, differing contents/IDs and conflicts across migration/rollover. Parent-root and reservation witness loss must be negative tests, not an automatic rollback loophole.
+
+Capacity gate: 1024 successful distinct Saves with complete supported fixtures, checkpoints 256/512/1000/1024, restart Load, content/revision decisions and successful Restore above all trusted high water. Inventory and retrieval must account for every raw record. Measure repeated timing, successful/refused operations, file count, logical reads, total/free disk and copy-first staging headroom. Test low-space failure without damaging last good data. **1000+ remains a target until the real implementation passes**, not a synthetic codec/index result.
+
+No cleanup policy is approved. v1 sources plus v2 copies and retained generations consume finite disk, may eventually refuse saves, and cannot provide infinite retention. Before migration, reverting this PR preserves bytes; after v2 commits, old writers must stay fenced and rollback needs separately verified reconstruction retaining every newer reservation/content pair. Windows 11 desktop/device acceptance, physical power loss/full-disk and long real-device/UI integration remain open. No external export, shell, asset deletion, telemetry or sync is introduced.
+
+## Pending independent-namespace recommendation
+
+**Review proposal only, outside PR #37 acceptance.** Disk v1 has not been shipped as a formal user release (consistent with SECURITY.md); independently runnable engineering versions do exist. Keep the current v1 reader, all existing fixtures, exact historical sources, unknown fields, quarantine and damaged evidence. Do not automatically overwrite, migrate or delete v1 data. This statement does not change any current behavior or waive current v1 recovery contracts.
+
+E3-4B should first evaluate a separately owned v2 storage namespace whose authoritative roots, lock, history coverage and revision commitments never automatically depend on v1 state. An old development executable writing its unchanged v1 namespace cannot lower v2’s authoritative revision; v2 must not opportunistically import that later v1 write or fall back into v1 when its own root is missing/corrupt. Missing v2 coverage must fail closed. This removes a same-path writer dependency, but does not by itself prove native path ownership, transaction recovery or migration. Switching an application back to old v1 may show stale v1 data: no seamless downgrade guarantee, no promise that every old development binary can safely read/write future v2. No directory change is implemented here.
+
+The previous same-namespace migration and dual-barrier candidate above remains an alternative, not a selected production protocol. Its barrier-loss failure still blocks that migration. Independent namespaces preserve all v1 assets in place and consume additional finite disk; they must not silently abandon recovery capabilities or declare unknown v1 history an empty interval. If later importing v1, explicitly prove complete raw source/commitment coverage in a separately authorized transaction; incomplete input cannot create authoritative v2 state. Future formal-user migration requires separate user authorization and acceptance, exact-byte preservation, known/unknown/partial/damaged fixtures, commit/rollback/restart proof, old-code tests, capacity and recovery evidence.
+
+No current implementation/spec conflict is introduced because no behavior changes. Decisions still needed before E3-4B: namespace ownership/name and initialization, explicit create-vs-import flow, disposition of existing engineering v1 data, downgrade messaging and authorized import/rollback contract. If automatic abandonment/import were implemented without that review, it would conflict with PRODUCT_SPEC’s safe persistence/recovery and ARCHITECTURE/SECURITY migration validation requirements. Those requirements remain intact. ADR-0009/0010/0011 remain Proposed; these suggestions are not self-approved specification changes.

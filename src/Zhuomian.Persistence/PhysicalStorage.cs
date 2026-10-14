@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -5,13 +6,15 @@ using Microsoft.Win32.SafeHandles;
 
 namespace Zhuomian.Persistence;
 
-public enum StorageStage { BeforeTempWrite, BeforeFlush, BeforeReplace, AfterReplace }
+public enum StorageStage { BeforeTempWrite, BeforeFlush, BeforeReplace, AfterReplace, BeforeRead }
 /// <summary>Trusted fault seam for owned test roots. Never selected by configuration.</summary>
 public interface IStorageFaultInjector { void Check(StorageStage stage); }
 
 internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults)
 {
     internal string Root { get; } = ValidateRoot(root);
+    private long _successfulReadFiles, _successfulReadBytes, _historyEnumerationEntries;
+    internal StorageReadMetrics Metrics => new(_successfulReadFiles, _successfulReadBytes, _historyEnumerationEntries);
     private static string ValidateRoot(string root)
     {
         if (!Path.IsPathFullyQualified(root) || root.Contains("..", StringComparison.Ordinal) ||
@@ -75,6 +78,7 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
 
     internal byte[] Read(string name)
     {
+        faults?.Check(StorageStage.BeforeRead);
         string path = PathFor(name);
         FileStream stream;
         if (OperatingSystem.IsWindows()) { stream = new(NativeStorage.Open(path, false, 0x80000000, 1, 3), FileAccess.Read); }
@@ -83,14 +87,24 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
         {
             if (stream.Length > PersistenceLimits.MaxFileBytes) { throw new StorageException(StorageError.TooLarge); }
             using var memory = new MemoryStream();
-            byte[] buffer = new byte[65536];
-            int count;
-            while ((count = stream.Read(buffer)) > 0)
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(65536);
+            try
             {
-                if (memory.Length + count > PersistenceLimits.MaxFileBytes) { throw new StorageException(StorageError.TooLarge); }
-                memory.Write(buffer, 0, count);
+                int count;
+                while ((count = stream.Read(buffer)) > 0)
+                {
+                    if (memory.Length + count > PersistenceLimits.MaxFileBytes) { throw new StorageException(StorageError.TooLarge); }
+                    memory.Write(buffer, 0, count);
+                }
+                _successfulReadFiles++; _successfulReadBytes += memory.Length;
+                return memory.ToArray();
             }
-            return memory.ToArray();
+            finally
+            {
+                // The returned document is an owned MemoryStream copy; never expose a pooled buffer.
+                // Clear private configuration bytes on success and every failure before reuse.
+                ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
+            }
         }
     }
 
@@ -109,6 +123,7 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
         byte[] bytes = new byte[checked((int)length)];
         stream.ReadExactly(bytes);
         if (stream.Length != length) { throw new StorageException(StorageError.StalePlan); }
+        _successfulReadFiles++; _successfulReadBytes += length;
         return (length, identity, bytes);
     }
 
@@ -125,6 +140,7 @@ internal sealed class PhysicalStorage(string root, IStorageFaultInjector? faults
         long total = 0;
         foreach (string path in Directory.EnumerateFiles(Root, prefix + "-*.json"))
         {
+            _historyEnumerationEntries++;
             if (names.Count >= PersistenceLimits.MaxRecoveryFiles) { throw new StorageException(StorageError.TooLarge); }
             // Do not follow a reparse point even while estimating the recovery budget.
             CheckLeaf(path);
@@ -243,3 +259,5 @@ internal static partial class NativeStorage
         internal uint IndexLow;
     }
 }
+
+internal readonly record struct StorageReadMetrics(long SuccessfulReadFiles, long SuccessfulReadBytes, long HistoryEnumerationEntries);

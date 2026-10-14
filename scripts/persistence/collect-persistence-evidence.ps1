@@ -13,7 +13,7 @@ $selected = @($trxFiles | Where-Object {
 if ($selected.Count -ne 1) { throw 'Expected exactly one persistence TRX.' }
 [xml]$trx = Get-Content -LiteralPath $selected[0].FullName -Raw
 $counters = $trx.TestRun.ResultSummary.Counters
-if ([int]$counters.failed -ne 0 -or [int]$counters.notExecuted -ne 0 -or [int]$counters.passed -ne [int]$counters.total -or [int]$counters.total -ne 149) {
+if ([int]$counters.failed -ne 0 -or [int]$counters.notExecuted -ne 0 -or [int]$counters.passed -ne [int]$counters.total -or [int]$counters.total -ne 171) {
     throw 'Persistence suite incomplete, failed or skipped.'
 }
 $baseline = [ordered]@{}
@@ -34,6 +34,26 @@ $results = @($trx.TestRun.Results.UnitTestResult)
 $originalPersistence = @($results | Where-Object { $_.testName -match '^Zhuomian.Persistence.Tests\.(CodecTests|FileStoreTests|WindowsStorageTests)\.' })
 if ($originalPersistence.Count -ne 103 -or @($originalPersistence | Where-Object { $_.outcome -ne 'Passed' }).Count -ne 0) {
     throw 'The 103 original persistence assertions must remain passing.'
+}
+$originalLifecycle = @($results | Where-Object { $_.testName -match '^Zhuomian.Persistence.Tests\.(StorageLifecycleTests|WindowsLifecycleTests)\.' })
+if ($originalLifecycle.Count -ne 46 -or @($originalLifecycle | Where-Object { $_.outcome -ne 'Passed' }).Count -ne 0) {
+    throw 'The 46 original lifecycle assertions must remain passing.'
+}
+$history = @($results | Where-Object { $_.testName -match '^Zhuomian.Persistence.Tests\.HistorySafetyTests\.' })
+if ($history.Count -ne 16 -or @($history | Where-Object { $_.outcome -ne 'Passed' }).Count -ne 0) {
+    throw 'The 16 new history safety assertions must all execute and pass.'
+}
+$optimization = @($results | Where-Object { $_.testName -match '^Zhuomian.Persistence.Tests\.HistoryOptimizationTests\.' })
+if ($optimization.Count -ne 6 -or @($optimization | Where-Object { $_.outcome -ne 'Passed' }).Count -ne 0) {
+    throw 'The six operation-local reuse safety cases must all execute and pass.'
+}
+$capacityResult = @($history | Where-Object { $_.testName -match 'OneThousandRealSaveAttempts' })
+$capacityOutput = [string]$capacityResult[0].Output.StdOut
+$capacityLine = @($capacityOutput -split "`n" | Where-Object { $_.StartsWith('E3_4_CAPACITY=', [StringComparison]::Ordinal) })
+if ($capacityLine.Count -ne 1) { throw 'Missing actual capacity measurement.' }
+$capacity = $capacityLine[0].Substring('E3_4_CAPACITY='.Length) | ConvertFrom-Json
+if ($capacity.attempts -ne 1000 -or $capacity.committed -ne 256 -or $capacity.refused -ne 744 -or $capacity.quotaRelief) {
+    throw 'Capacity evidence must retain unresolved quota rather than fabricate success.'
 }
 $lifecycleAssertions = @(
     'InventoryClassifiesAllOwnedFamiliesAndExposesOnlyRedactedDiagnostics',
@@ -82,7 +102,11 @@ if ($LASTEXITCODE -ne 0) { throw "SDK query failed (exit $LASTEXITCODE)." }
 $drive = [System.IO.DriveInfo]::new([System.IO.Path]::GetPathRoot([System.IO.Path]::GetTempPath()))
 if ($drive.DriveFormat -ne 'NTFS') { throw 'Native fixture volume must be NTFS.' }
 $evidence = [ordered]@{
-    evidenceVersion = 2
+    evidenceVersion = 4
+    historyOptimizationCount = $optimization.Count
+    historyOptimizationOutcomes = @($optimization | ForEach-Object { [ordered]@{ testName = $_.testName; outcome = $_.outcome } })
+    historySafetyCount = $history.Count
+    capacityExperiment = $capacity
     commitSha = $CommitSha
     windowsBuild = [Environment]::OSVersion.Version.ToString()
     sdk = $sdk.Trim()

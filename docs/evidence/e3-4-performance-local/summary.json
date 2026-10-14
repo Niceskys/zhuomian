@@ -1,0 +1,535 @@
+{
+  "schemaVersion": 1,
+  "reviewedBaselineSha": "fa6338d662e5e59efe01a6ce01b399b3551a95ba",
+  "currentSha": "4ccbc0e82e7d4bdc236d4ab9e1939f5786cbe403",
+  "fixtureSha256": "6349E249FDC024F6AF52FC00ACB9171A2D05E37B9E5CA4750992171C786CB95C",
+  "repetitions": 5,
+  "alternatingOrder": true,
+  "immutableBaseline": true,
+  "sameAcceptanceAndLogicalIo": true,
+  "quotaRelief": false,
+  "physicalDeviceIoMeasured": false,
+  "desktopAcceptance": false,
+  "cells": [
+    {
+      "totalHistory": 0,
+      "backups": 0,
+      "prepared": 0,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "before": {
+        "minMs": 0.4192,
+        "medianMs": 0.5425,
+        "maxMs": 0.8442,
+        "medianAllocatedBytes": 348728,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 0.5544,
+        "medianMs": 0.8158,
+        "maxMs": 1.0727,
+        "medianAllocatedBytes": 157584,
+        "samples": 5
+      },
+      "medianChangePercent": 50.3778801843318,
+      "successfulReadFiles": 2,
+      "successfulReadBytes": 4978,
+      "enumerationEntries": 0
+    },
+    {
+      "totalHistory": 0,
+      "backups": 0,
+      "prepared": 0,
+      "operation": "Save",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 1.3998,
+        "medianMs": 1.7786,
+        "maxMs": 2.7698,
+        "medianAllocatedBytes": 1031072,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 1.3203,
+        "medianMs": 1.9715,
+        "maxMs": 3.1927,
+        "medianAllocatedBytes": 642704,
+        "samples": 5
+      },
+      "medianChangePercent": 10.845608905881043,
+      "successfulReadFiles": 5,
+      "successfulReadBytes": 12445,
+      "enumerationEntries": 0
+    },
+    {
+      "totalHistory": 0,
+      "backups": 0,
+      "prepared": 0,
+      "operation": "Backup",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 0.6295,
+        "medianMs": 0.7174,
+        "maxMs": 1.2608,
+        "medianAllocatedBytes": 549488,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 0.6002,
+        "medianMs": 1.0407,
+        "maxMs": 3.5227,
+        "medianAllocatedBytes": 293000,
+        "samples": 5
+      },
+      "medianChangePercent": 45.06551435740172,
+      "successfulReadFiles": 3,
+      "successfulReadBytes": 7467,
+      "enumerationEntries": 0
+    },
+    {
+      "totalHistory": 0,
+      "backups": 0,
+      "prepared": 0,
+      "operation": "Restore",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "before": {
+        "minMs": 0.2542,
+        "medianMs": 0.3402,
+        "maxMs": 0.5947,
+        "medianAllocatedBytes": 214656,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 0.376,
+        "medianMs": 0.8945,
+        "maxMs": 1.1672,
+        "medianAllocatedBytes": 150416,
+        "samples": 5
+      },
+      "medianChangePercent": 162.93356848912404,
+      "successfulReadFiles": 1,
+      "successfulReadBytes": 2489,
+      "enumerationEntries": 0
+    },
+    {
+      "totalHistory": 32,
+      "backups": 16,
+      "prepared": 16,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "before": {
+        "minMs": 9.8297,
+        "medianMs": 12.9296,
+        "maxMs": 18.7897,
+        "medianAllocatedBytes": 7115984,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 12.2299,
+        "medianMs": 13.7899,
+        "maxMs": 15.0502,
+        "medianAllocatedBytes": 2620672,
+        "samples": 5
+      },
+      "medianChangePercent": 6.653724786536319,
+      "successfulReadFiles": 34,
+      "successfulReadBytes": 84642,
+      "enumerationEntries": 32
+    },
+    {
+      "totalHistory": 32,
+      "backups": 16,
+      "prepared": 16,
+      "operation": "Save",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 11.2294,
+        "medianMs": 14.737,
+        "maxMs": 32.4724,
+        "medianAllocatedBytes": 7821416,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 9.7109,
+        "medianMs": 14.7346,
+        "maxMs": 16.7291,
+        "medianAllocatedBytes": 3137792,
+        "samples": 5
+      },
+      "medianChangePercent": -0.016285539797789017,
+      "successfulReadFiles": 37,
+      "successfulReadBytes": 92112,
+      "enumerationEntries": 64
+    },
+    {
+      "totalHistory": 32,
+      "backups": 16,
+      "prepared": 16,
+      "operation": "Backup",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 11.144,
+        "medianMs": 13.0442,
+        "maxMs": 21.9626,
+        "medianAllocatedBytes": 7327488,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 7.6249,
+        "medianMs": 12.5668,
+        "maxMs": 15.2246,
+        "medianAllocatedBytes": 2772128,
+        "samples": 5
+      },
+      "medianChangePercent": -3.6598641541834676,
+      "successfulReadFiles": 35,
+      "successfulReadBytes": 87132,
+      "enumerationEntries": 48
+    },
+    {
+      "totalHistory": 32,
+      "backups": 16,
+      "prepared": 16,
+      "operation": "Restore",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 15.9338,
+        "medianMs": 17.4836,
+        "maxMs": 31.1228,
+        "medianAllocatedBytes": 11064112,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 8.3048,
+        "medianMs": 14.6688,
+        "maxMs": 30.5263,
+        "medianAllocatedBytes": 3103944,
+        "samples": 5
+      },
+      "medianChangePercent": -16.099659109107968,
+      "successfulReadFiles": 52,
+      "successfulReadBytes": 129453,
+      "enumerationEntries": 64
+    },
+    {
+      "totalHistory": 128,
+      "backups": 64,
+      "prepared": 64,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "before": {
+        "minMs": 38.307,
+        "medianMs": 42.7951,
+        "maxMs": 49.2888,
+        "medianAllocatedBytes": 27392032,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 36.7326,
+        "medianMs": 54.5481,
+        "maxMs": 56.5778,
+        "medianAllocatedBytes": 10015264,
+        "samples": 5
+      },
+      "medianChangePercent": 27.463424550941575,
+      "successfulReadFiles": 130,
+      "successfulReadBytes": 323682,
+      "enumerationEntries": 128
+    },
+    {
+      "totalHistory": 128,
+      "backups": 64,
+      "prepared": 64,
+      "operation": "Save",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 37.5802,
+        "medianMs": 40.1726,
+        "maxMs": 45.6473,
+        "medianAllocatedBytes": 28201000,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 30.915,
+        "medianMs": 43.9525,
+        "maxMs": 59.0328,
+        "medianAllocatedBytes": 10628944,
+        "samples": 5
+      },
+      "medianChangePercent": 9.40914951982197,
+      "successfulReadFiles": 133,
+      "successfulReadBytes": 331152,
+      "enumerationEntries": 256
+    },
+    {
+      "totalHistory": 128,
+      "backups": 64,
+      "prepared": 64,
+      "operation": "Backup",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 36.9592,
+        "medianMs": 44.538,
+        "maxMs": 49.5534,
+        "medianAllocatedBytes": 27656656,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 22.5117,
+        "medianMs": 29.4287,
+        "maxMs": 52.5656,
+        "medianAllocatedBytes": 10212784,
+        "samples": 5
+      },
+      "medianChangePercent": -33.92451389824419,
+      "successfulReadFiles": 131,
+      "successfulReadBytes": 326172,
+      "enumerationEntries": 192
+    },
+    {
+      "totalHistory": 128,
+      "backups": 64,
+      "prepared": 64,
+      "operation": "Restore",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 58.5544,
+        "medianMs": 67.4658,
+        "maxMs": 257.2778,
+        "medianAllocatedBytes": 41539024,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 30.166,
+        "medianMs": 40.134,
+        "maxMs": 54.714,
+        "medianAllocatedBytes": 10895096,
+        "samples": 5
+      },
+      "medianChangePercent": -40.512081676938536,
+      "successfulReadFiles": 196,
+      "successfulReadBytes": 488013,
+      "enumerationEntries": 256
+    },
+    {
+      "totalHistory": 256,
+      "backups": 128,
+      "prepared": 128,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "before": {
+        "minMs": 68.352,
+        "medianMs": 76.866,
+        "maxMs": 115.1933,
+        "medianAllocatedBytes": 54438056,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 51.1696,
+        "medianMs": 61.0098,
+        "maxMs": 99.0052,
+        "medianAllocatedBytes": 19876624,
+        "samples": 5
+      },
+      "medianChangePercent": -20.628366247755835,
+      "successfulReadFiles": 258,
+      "successfulReadBytes": 642462,
+      "enumerationEntries": 256
+    },
+    {
+      "totalHistory": 256,
+      "backups": 128,
+      "prepared": 128,
+      "operation": "Save",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 79.9813,
+        "medianMs": 81.8923,
+        "maxMs": 89.7998,
+        "medianAllocatedBytes": 55375200,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 58.1258,
+        "medianMs": 62.7812,
+        "maxMs": 75.8555,
+        "medianAllocatedBytes": 20618400,
+        "samples": 5
+      },
+      "medianChangePercent": -23.336870499424258,
+      "successfulReadFiles": 261,
+      "successfulReadBytes": 649935,
+      "enumerationEntries": 512
+    },
+    {
+      "totalHistory": 256,
+      "backups": 128,
+      "prepared": 128,
+      "operation": "Backup",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 63.8351,
+        "medianMs": 78.0192,
+        "maxMs": 96.5445,
+        "medianAllocatedBytes": 54765944,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 44.571,
+        "medianMs": 56.8988,
+        "maxMs": 65.5461,
+        "medianAllocatedBytes": 20137872,
+        "samples": 5
+      },
+      "medianChangePercent": -27.0707723227103,
+      "successfulReadFiles": 259,
+      "successfulReadBytes": 644953,
+      "enumerationEntries": 384
+    },
+    {
+      "totalHistory": 256,
+      "backups": 128,
+      "prepared": 128,
+      "operation": "Restore",
+      "outcome": "Committed",
+      "error": "None",
+      "before": {
+        "minMs": 89.1117,
+        "medianMs": 107.1346,
+        "maxMs": 152.7736,
+        "medianAllocatedBytes": 82172272,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 56.6514,
+        "medianMs": 65.449,
+        "maxMs": 78.6978,
+        "medianAllocatedBytes": 21285888,
+        "samples": 5
+      },
+      "medianChangePercent": -38.909558629985085,
+      "successfulReadFiles": 388,
+      "successfulReadBytes": 966184,
+      "enumerationEntries": 512
+    },
+    {
+      "totalHistory": 512,
+      "backups": 256,
+      "prepared": 256,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "before": {
+        "minMs": 114.2916,
+        "medianMs": 141.4517,
+        "maxMs": 299.4378,
+        "medianAllocatedBytes": 108499784,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 100.501,
+        "medianMs": 117.3303,
+        "maxMs": 214.0773,
+        "medianAllocatedBytes": 39510952,
+        "samples": 5
+      },
+      "medianChangePercent": -17.052746626587023,
+      "successfulReadFiles": 514,
+      "successfulReadBytes": 1280158,
+      "enumerationEntries": 512
+    },
+    {
+      "totalHistory": 512,
+      "backups": 256,
+      "prepared": 256,
+      "operation": "Save",
+      "outcome": "Refused",
+      "error": "TooLarge",
+      "before": {
+        "minMs": 112.8478,
+        "medianMs": 124.6497,
+        "maxMs": 138.5982,
+        "medianAllocatedBytes": 108831232,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 66.3461,
+        "medianMs": 102.0639,
+        "maxMs": 119.4357,
+        "medianAllocatedBytes": 39768480,
+        "samples": 5
+      },
+      "medianChangePercent": -18.119417856601338,
+      "successfulReadFiles": 514,
+      "successfulReadBytes": 1280158,
+      "enumerationEntries": 768
+    },
+    {
+      "totalHistory": 512,
+      "backups": 256,
+      "prepared": 256,
+      "operation": "Backup",
+      "outcome": "Refused",
+      "error": "TooLarge",
+      "before": {
+        "minMs": 110.6271,
+        "medianMs": 121.4521,
+        "maxMs": 136.9499,
+        "medianAllocatedBytes": 108752576,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 66.706,
+        "medianMs": 95.953,
+        "maxMs": 111.7229,
+        "medianAllocatedBytes": 39692424,
+        "samples": 5
+      },
+      "medianChangePercent": -20.995190696579147,
+      "successfulReadFiles": 514,
+      "successfulReadBytes": 1280158,
+      "enumerationEntries": 768
+    },
+    {
+      "totalHistory": 512,
+      "backups": 256,
+      "prepared": 256,
+      "operation": "Restore",
+      "outcome": "Refused",
+      "error": "TooLarge",
+      "before": {
+        "minMs": 172.6305,
+        "medianMs": 180.0729,
+        "maxMs": 206.9349,
+        "medianAllocatedBytes": 162997128,
+        "samples": 5
+      },
+      "after": {
+        "minMs": 64.5467,
+        "medianMs": 101.0499,
+        "maxMs": 107.7695,
+        "medianAllocatedBytes": 41634648,
+        "samples": 5
+      },
+      "medianChangePercent": -43.88389368972233,
+      "successfulReadFiles": 770,
+      "successfulReadBytes": 1917746,
+      "enumerationEntries": 1024
+    }
+  ]
+}

@@ -1,0 +1,1053 @@
+{
+  "schemaVersion": 1,
+  "versions": {
+    "A": "ec43366ab3b86b54bac9e311b5f7d9ebb2fa9b6d",
+    "B": "fa6338d662e5e59efe01a6ce01b399b3551a95ba",
+    "C": "b25f9cefcf15f77be82b365563e4814b528d2f40"
+  },
+  "assemblySha256": {
+    "B": "B38BFB4138395ECDC16FEFEF1F70355DB853AC857D500521FD9835D484321A28",
+    "C": "D19897CFF33CC223B94A6EA83D45833B0E1123B0C408D191199CF3CC8E54EE4E",
+    "A": "EA9EC6187D8F66BECE1F26BFDA2EBE9B65DFAC8CAB22FD3C2BB76C07E14FB8EA"
+  },
+  "fixtureSha256": "6349E249FDC024F6AF52FC00ACB9171A2D05E37B9E5CA4750992171C786CB95C",
+  "environment": "Microsoft Windows 10.0.26100/9.0.21/X64/full v1 fixture; half backups/half prepared; one complete warmup matrix per process; fresh root per sample; setup/cleanup excluded",
+  "roundOrders": [
+    "ABC",
+    "CBA",
+    "BCA",
+    "ACB",
+    "CAB",
+    "BAC"
+  ],
+  "repetitions": 6,
+  "measuredSamplesPerVersion": 120,
+  "sameAcceptanceAndSeeds": true,
+  "sameBAndCLogicalIo": true,
+  "aLogicalIoUnavailable": true,
+  "quotaRelief": false,
+  "desktopAcceptance": false,
+  "physicalDeviceIoMeasured": false,
+  "cells": [
+    {
+      "totalHistory": 0,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "A": {
+        "minMs": 0.9956,
+        "medianMs": 1.0352000000000001,
+        "maxMs": 1.1175,
+        "samples": 6,
+        "medianAllocatedBytes": 156536,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 1.5133,
+        "medianMs": 1.60325,
+        "maxMs": 2.3758,
+        "samples": 6,
+        "medianAllocatedBytes": 370608,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 2,
+        "successfulReadBytes": 4978,
+        "enumerationEntries": 0
+      },
+      "C": {
+        "minMs": 1.3906,
+        "medianMs": 1.62155,
+        "maxMs": 2.581,
+        "samples": 6,
+        "medianAllocatedBytes": 179144,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 2,
+        "successfulReadBytes": 4978,
+        "enumerationEntries": 0
+      },
+      "aToBPercent": 54.87345440494589,
+      "bToCPercent": 1.141431467331988,
+      "aToCPercent": 56.64122874806799,
+      "pairedBToCPercent": [
+        -18.866099071207433,
+        64.10223804679553,
+        0.9700339820821746,
+        -12.185138539042818,
+        -8.108108108108114,
+        -32.27965316945871
+      ],
+      "cSlowerThanBRounds": 2
+    },
+    {
+      "totalHistory": 0,
+      "operation": "Save",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 35.2078,
+        "medianMs": 65.60695,
+        "maxMs": 110.7217,
+        "samples": 6,
+        "medianAllocatedBytes": 843976,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 37.5423,
+        "medianMs": 84.17965,
+        "maxMs": 114.8268,
+        "samples": 6,
+        "medianAllocatedBytes": 1057512,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 5,
+        "successfulReadBytes": 12445,
+        "enumerationEntries": 0
+      },
+      "C": {
+        "minMs": 63.6353,
+        "medianMs": 83.96575,
+        "maxMs": 139.067,
+        "samples": 6,
+        "medianAllocatedBytes": 669368,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 5,
+        "successfulReadBytes": 12445,
+        "enumerationEntries": 0
+      },
+      "aToBPercent": 28.30904347786325,
+      "bToCPercent": -0.2540994171394084,
+      "aToCPercent": 27.983010946248843,
+      "pairedBToCPercent": [
+        -30.898361706500577,
+        77.54578857462397,
+        1.9095453944657503,
+        -6.763676255625162,
+        -35.569368282073924,
+        135.95863865559653
+      ],
+      "cSlowerThanBRounds": 3
+    },
+    {
+      "totalHistory": 0,
+      "operation": "Backup",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 17.6183,
+        "medianMs": 29.47145,
+        "maxMs": 45.3841,
+        "samples": 6,
+        "medianAllocatedBytes": 359568,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 12.304,
+        "medianMs": 32.92705,
+        "maxMs": 41.7496,
+        "samples": 6,
+        "medianAllocatedBytes": 573640,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 3,
+        "successfulReadBytes": 7467,
+        "enumerationEntries": 0
+      },
+      "C": {
+        "minMs": 29.7117,
+        "medianMs": 38.00005,
+        "maxMs": 47.1777,
+        "samples": 6,
+        "medianAllocatedBytes": 316616,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 3,
+        "successfulReadBytes": 7467,
+        "enumerationEntries": 0
+      },
+      "aToBPercent": 11.725245958376673,
+      "bToCPercent": 15.40678560636315,
+      "aToCPercent": 28.93851507136569,
+      "pairedBToCPercent": [
+        26.66340295909486,
+        7.297384143936081,
+        49.766440405809796,
+        9.01881437353953,
+        -28.83356966294288,
+        283.4338426527959
+      ],
+      "cSlowerThanBRounds": 5
+    },
+    {
+      "totalHistory": 0,
+      "operation": "Restore",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "A": {
+        "minMs": 1.0146,
+        "medianMs": 1.073,
+        "maxMs": 1.1821,
+        "samples": 6,
+        "medianAllocatedBytes": 157136,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 1.1776,
+        "medianMs": 1.2408000000000001,
+        "maxMs": 1.8824,
+        "samples": 6,
+        "medianAllocatedBytes": 234576,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 1,
+        "successfulReadBytes": 2489,
+        "enumerationEntries": 0
+      },
+      "C": {
+        "minMs": 1.0894,
+        "medianMs": 1.17155,
+        "maxMs": 1.2323,
+        "samples": 6,
+        "medianAllocatedBytes": 169904,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 1,
+        "successfulReadBytes": 2489,
+        "enumerationEntries": 0
+      },
+      "aToBPercent": 15.638397017707373,
+      "bToCPercent": -5.581076724693745,
+      "aToCPercent": 9.18452935694316,
+      "pairedBToCPercent": [
+        -5.617164898746374,
+        -0.39605560944068197,
+        -0.764266304347816,
+        -10.070992240383037,
+        -13.027942542699911,
+        -39.42307692307692
+      ],
+      "cSlowerThanBRounds": 0
+    },
+    {
+      "totalHistory": 32,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "A": {
+        "minMs": 0.9252,
+        "medianMs": 0.9569,
+        "maxMs": 1.0552,
+        "samples": 6,
+        "medianAllocatedBytes": 156536,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 12.3051,
+        "medianMs": 12.838000000000001,
+        "maxMs": 17.8961,
+        "samples": 6,
+        "medianAllocatedBytes": 7194888,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 34,
+        "successfulReadBytes": 84642,
+        "enumerationEntries": 32
+      },
+      "C": {
+        "minMs": 8.6338,
+        "medianMs": 8.810400000000001,
+        "maxMs": 10.1548,
+        "samples": 6,
+        "medianAllocatedBytes": 2694072,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 34,
+        "successfulReadBytes": 84642,
+        "enumerationEntries": 32
+      },
+      "aToBPercent": 1241.623994147769,
+      "bToCPercent": -31.372487926468295,
+      "aToCPercent": 820.7231685651585,
+      "pairedBToCPercent": [
+        -40.79494775220548,
+        -22.69429578483393,
+        -28.62421072205289,
+        -29.835596622538617,
+        -29.885726589102156,
+        -51.27988779678254
+      ],
+      "cSlowerThanBRounds": 0
+    },
+    {
+      "totalHistory": 32,
+      "operation": "Save",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 43.833,
+        "medianMs": 91.4956,
+        "maxMs": 102.8486,
+        "samples": 6,
+        "medianAllocatedBytes": 3036784,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 54.1046,
+        "medianMs": 88.2255,
+        "maxMs": 326.4336,
+        "samples": 6,
+        "medianAllocatedBytes": 7898512,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 37,
+        "successfulReadBytes": 92112,
+        "enumerationEntries": 64
+      },
+      "C": {
+        "minMs": 76.6948,
+        "medianMs": 79.62835,
+        "maxMs": 97.4874,
+        "samples": 6,
+        "medianAllocatedBytes": 3203832,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 37,
+        "successfulReadBytes": 92112,
+        "enumerationEntries": 64
+      },
+      "aToBPercent": -3.574051648385279,
+      "bToCPercent": -9.744518308198879,
+      "aToCPercent": -12.970295839362766,
+      "pairedBToCPercent": [
+        -2.237143717634471,
+        11.330832348356367,
+        -10.278954385135929,
+        0.2172956965042605,
+        -76.5052372059739,
+        46.951830343445856
+      ],
+      "cSlowerThanBRounds": 3
+    },
+    {
+      "totalHistory": 32,
+      "operation": "Backup",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 17.1918,
+        "medianMs": 24.45545,
+        "maxMs": 33.1103,
+        "samples": 6,
+        "medianAllocatedBytes": 368568,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 28.0797,
+        "medianMs": 36,
+        "maxMs": 49.8368,
+        "samples": 6,
+        "medianAllocatedBytes": 7407384,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 35,
+        "successfulReadBytes": 87132,
+        "enumerationEntries": 48
+      },
+      "C": {
+        "minMs": 30.1617,
+        "medianMs": 37.078199999999995,
+        "maxMs": 47.0636,
+        "samples": 6,
+        "medianAllocatedBytes": 2840544,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 35,
+        "successfulReadBytes": 87132,
+        "enumerationEntries": 48
+      },
+      "aToBPercent": 47.20645091380449,
+      "bToCPercent": 2.994999999999992,
+      "aToCPercent": 51.61528411867291,
+      "pairedBToCPercent": [
+        -37.365761846667525,
+        16.688998752483485,
+        40.773939892520225,
+        25.357852512026092,
+        -14.330145511249215,
+        10.424253633771908
+      ],
+      "cSlowerThanBRounds": 4
+    },
+    {
+      "totalHistory": 32,
+      "operation": "Restore",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 36.5787,
+        "medianMs": 56.4009,
+        "maxMs": 81.1235,
+        "samples": 6,
+        "medianAllocatedBytes": 6238944,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 41.3433,
+        "medianMs": 68.88165,
+        "maxMs": 91.4265,
+        "samples": 6,
+        "medianAllocatedBytes": 11177000,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 52,
+        "successfulReadBytes": 129453,
+        "enumerationEntries": 64
+      },
+      "C": {
+        "minMs": 46.2544,
+        "medianMs": 75.7124,
+        "maxMs": 131.8916,
+        "samples": 6,
+        "medianAllocatedBytes": 3204584,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 52,
+        "successfulReadBytes": 129453,
+        "enumerationEntries": 64
+      },
+      "aToBPercent": 22.128636245166277,
+      "bToCPercent": 9.916646886362358,
+      "aToCPercent": 34.239701848729375,
+      "pairedBToCPercent": [
+        1.6499959288742927,
+        44.259705883961445,
+        56.05004302025443,
+        33.08897330914353,
+        -36.861646655418866,
+        60.24603744742196
+      ],
+      "cSlowerThanBRounds": 5
+    },
+    {
+      "totalHistory": 128,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "A": {
+        "minMs": 0.944,
+        "medianMs": 0.9975499999999999,
+        "maxMs": 1.1127,
+        "samples": 6,
+        "medianAllocatedBytes": 156536,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 43.1776,
+        "medianMs": 44.50015,
+        "maxMs": 61.147,
+        "samples": 6,
+        "medianAllocatedBytes": 27663512,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 130,
+        "successfulReadBytes": 323682,
+        "enumerationEntries": 128
+      },
+      "C": {
+        "minMs": 30.2908,
+        "medianMs": 30.5303,
+        "maxMs": 34.9695,
+        "samples": 6,
+        "medianAllocatedBytes": 10242776,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 130,
+        "successfulReadBytes": 323682,
+        "enumerationEntries": 128
+      },
+      "aToBPercent": 4360.944313568242,
+      "bToCPercent": -31.392815529835282,
+      "aToCPercent": 2960.528294321087,
+      "pairedBToCPercent": [
+        -50.46232848708849,
+        -22.403979931700334,
+        -29.229044689839167,
+        -43.98681032445664,
+        -30.40890594728619,
+        -30.570261891647053
+      ],
+      "cSlowerThanBRounds": 0
+    },
+    {
+      "totalHistory": 128,
+      "operation": "Save",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 56.4682,
+        "medianMs": 80.34174999999999,
+        "maxMs": 105.0186,
+        "samples": 6,
+        "medianAllocatedBytes": 9616528,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 96.7434,
+        "medianMs": 122.9449,
+        "maxMs": 134.135,
+        "samples": 6,
+        "medianAllocatedBytes": 28421632,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 133,
+        "successfulReadBytes": 331152,
+        "enumerationEntries": 256
+      },
+      "C": {
+        "minMs": 105.1645,
+        "medianMs": 121.22685,
+        "maxMs": 311.4098,
+        "samples": 6,
+        "medianAllocatedBytes": 10805624,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 133,
+        "successfulReadBytes": 331152,
+        "enumerationEntries": 256
+      },
+      "aToBPercent": 53.0274110285126,
+      "bToCPercent": -1.3974146141889632,
+      "aToCPercent": 50.88898362308516,
+      "pairedBToCPercent": [
+        -18.644383793936804,
+        172.63007958901918,
+        -8.866515078092963,
+        17.911341620377954,
+        2.612959205536103,
+        14.695369399876391
+      ],
+      "cSlowerThanBRounds": 4
+    },
+    {
+      "totalHistory": 128,
+      "operation": "Backup",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 18.9585,
+        "medianMs": 26.622349999999997,
+        "maxMs": 34.7178,
+        "samples": 6,
+        "medianAllocatedBytes": 394920,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 59.316,
+        "medianMs": 70.18289999999999,
+        "maxMs": 97.8123,
+        "samples": 6,
+        "medianAllocatedBytes": 27902360,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 131,
+        "successfulReadBytes": 326172,
+        "enumerationEntries": 192
+      },
+      "C": {
+        "minMs": 52.9716,
+        "medianMs": 61.92385,
+        "maxMs": 112.9133,
+        "samples": 6,
+        "medianAllocatedBytes": 10417472,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 131,
+        "successfulReadBytes": 326172,
+        "enumerationEntries": 192
+      },
+      "aToBPercent": 163.6239851102551,
+      "bToCPercent": -11.767895028561071,
+      "aToCPercent": 132.6009912723708,
+      "pairedBToCPercent": [
+        -35.726576839092715,
+        15.438753612786948,
+        -9.900877357792314,
+        -4.020573560749341,
+        -23.986505393394186,
+        -0.04282149841527971
+      ],
+      "cSlowerThanBRounds": 1
+    },
+    {
+      "totalHistory": 128,
+      "operation": "Restore",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 68.5884,
+        "medianMs": 89.9762,
+        "maxMs": 98.2094,
+        "samples": 6,
+        "medianAllocatedBytes": 23023712,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 93.0383,
+        "medianMs": 121.75865,
+        "maxMs": 138.784,
+        "samples": 6,
+        "medianAllocatedBytes": 41911152,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 196,
+        "successfulReadBytes": 488013,
+        "enumerationEntries": 256
+      },
+      "C": {
+        "minMs": 88.4705,
+        "medianMs": 99.2322,
+        "maxMs": 145.5957,
+        "samples": 6,
+        "medianAllocatedBytes": 11223448,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 196,
+        "successfulReadBytes": 488013,
+        "enumerationEntries": 256
+      },
+      "aToBPercent": 35.32317435055048,
+      "bToCPercent": -18.500903221249576,
+      "aToCPercent": 10.287164828032292,
+      "pairedBToCPercent": [
+        -21.779818205045697,
+        4.9081306202444,
+        -33.81520678414541,
+        -15.670098179391855,
+        -10.471338748909996,
+        9.334972801523666
+      ],
+      "cSlowerThanBRounds": 2
+    },
+    {
+      "totalHistory": 256,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "A": {
+        "minMs": 0.9528,
+        "medianMs": 1.04725,
+        "maxMs": 1.0818,
+        "samples": 6,
+        "medianAllocatedBytes": 156544,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 84.2504,
+        "medianMs": 86.93,
+        "maxMs": 111.6552,
+        "samples": 6,
+        "medianAllocatedBytes": 54960368,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 258,
+        "successfulReadBytes": 642462,
+        "enumerationEntries": 256
+      },
+      "C": {
+        "minMs": 59.3571,
+        "medianMs": 61.47485,
+        "maxMs": 72.6026,
+        "samples": 6,
+        "medianAllocatedBytes": 20312904,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 258,
+        "successfulReadBytes": 642462,
+        "enumerationEntries": 256
+      },
+      "aToBPercent": 8200.787777512534,
+      "bToCPercent": -29.282353617853452,
+      "aToCPercent": 5770.121747433755,
+      "pairedBToCPercent": [
+        -45.01196540779112,
+        -23.164256879913236,
+        -14.645727795458052,
+        -29.546803338619164,
+        -31.51566920062422,
+        -27.786492032225397
+      ],
+      "cSlowerThanBRounds": 0
+    },
+    {
+      "totalHistory": 256,
+      "operation": "Save",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 96.5727,
+        "medianMs": 112.0184,
+        "maxMs": 165.433,
+        "samples": 6,
+        "medianAllocatedBytes": 18387192,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 167.005,
+        "medianMs": 184.26595,
+        "maxMs": 295.2299,
+        "samples": 6,
+        "medianAllocatedBytes": 55789240,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 261,
+        "successfulReadBytes": 649935,
+        "enumerationEntries": 512
+      },
+      "C": {
+        "minMs": 130.5593,
+        "medianMs": 162.60645,
+        "maxMs": 205.7928,
+        "samples": 6,
+        "medianAllocatedBytes": 20946504,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 261,
+        "successfulReadBytes": 649935,
+        "enumerationEntries": 512
+      },
+      "aToBPercent": 64.4961452761332,
+      "bToCPercent": -11.754477699216814,
+      "aToCPercent": 45.16048256357883,
+      "pairedBToCPercent": [
+        -23.14300090990389,
+        16.4293303551728,
+        14.510583515463615,
+        -25.4057504897818,
+        -24.62787121087914,
+        -41.05742677147538
+      ],
+      "cSlowerThanBRounds": 2
+    },
+    {
+      "totalHistory": 256,
+      "operation": "Backup",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 21.0302,
+        "medianMs": 32.747150000000005,
+        "maxMs": 36.1482,
+        "samples": 6,
+        "medianAllocatedBytes": 430496,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 109.0649,
+        "medianMs": 118.34285,
+        "maxMs": 165.8287,
+        "samples": 6,
+        "medianAllocatedBytes": 55234320,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 259,
+        "successfulReadBytes": 644953,
+        "enumerationEntries": 384
+      },
+      "C": {
+        "minMs": 86.2532,
+        "medianMs": 114.8999,
+        "maxMs": 431.4743,
+        "samples": 6,
+        "medianAllocatedBytes": 20522704,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 259,
+        "successfulReadBytes": 644953,
+        "enumerationEntries": 384
+      },
+      "aToBPercent": 261.3836623950481,
+      "bToCPercent": -2.9093012378863636,
+      "aToCPercent": 250.86992303146988,
+      "pairedBToCPercent": [
+        -31.83260798643419,
+        -2.3228284866478766,
+        268.30800406998185,
+        -23.732975400044374,
+        50.195270635738055,
+        -14.468907962139966
+      ],
+      "cSlowerThanBRounds": 2
+    },
+    {
+      "totalHistory": 256,
+      "operation": "Restore",
+      "outcome": "Committed",
+      "error": "None",
+      "A": {
+        "minMs": 107.0144,
+        "medianMs": 126.4773,
+        "maxMs": 138.919,
+        "samples": 6,
+        "medianAllocatedBytes": 45406624,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 183.1093,
+        "medianMs": 190.5851,
+        "maxMs": 209.6855,
+        "samples": 6,
+        "medianAllocatedBytes": 82894576,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 388,
+        "successfulReadBytes": 966184,
+        "enumerationEntries": 512
+      },
+      "C": {
+        "minMs": 127.3047,
+        "medianMs": 143.60399999999998,
+        "maxMs": 849.7702,
+        "samples": 6,
+        "medianAllocatedBytes": 21919264,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 388,
+        "successfulReadBytes": 966184,
+        "enumerationEntries": 512
+      },
+      "aToBPercent": 50.687198414260905,
+      "bToCPercent": -24.650982684375656,
+      "aToCPercent": 13.541323225590673,
+      "pairedBToCPercent": [
+        305.25940038772353,
+        46.4946278244875,
+        -23.446597379466827,
+        -30.476114539239674,
+        -28.98736995718203,
+        -24.630164803419262
+      ],
+      "cSlowerThanBRounds": 2
+    },
+    {
+      "totalHistory": 512,
+      "operation": "Load",
+      "outcome": "ReadOnlyOrUnchanged",
+      "error": "None",
+      "A": {
+        "minMs": 1.0591,
+        "medianMs": 1.10595,
+        "maxMs": 1.7624,
+        "samples": 6,
+        "medianAllocatedBytes": 156544,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 174.6911,
+        "medianMs": 205.11194999999998,
+        "maxMs": 273.0258,
+        "samples": 6,
+        "medianAllocatedBytes": 109558008,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 514,
+        "successfulReadBytes": 1280158,
+        "enumerationEntries": 512
+      },
+      "C": {
+        "minMs": 119.8092,
+        "medianMs": 123.87465,
+        "maxMs": 134.2715,
+        "samples": 6,
+        "medianAllocatedBytes": 40457816,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 514,
+        "successfulReadBytes": 1280158,
+        "enumerationEntries": 512
+      },
+      "aToBPercent": 18446.222704462227,
+      "bToCPercent": -39.60632230350303,
+      "aToCPercent": 11100.74596500746,
+      "pairedBToCPercent": [
+        -46.22172502691616,
+        -25.20006127877665,
+        -30.922687357395784,
+        -47.61385329744898,
+        -29.20417811783199,
+        -56.117993244594466
+      ],
+      "cSlowerThanBRounds": 0
+    },
+    {
+      "totalHistory": 512,
+      "operation": "Save",
+      "outcome": "Refused",
+      "error": "TooLarge",
+      "A": {
+        "minMs": 64.9771,
+        "medianMs": 66.38659999999999,
+        "maxMs": 175.2117,
+        "samples": 6,
+        "medianAllocatedBytes": 35178872,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 176.3588,
+        "medianMs": 187.1946,
+        "maxMs": 234.7335,
+        "samples": 6,
+        "medianAllocatedBytes": 109776808,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 514,
+        "successfulReadBytes": 1280158,
+        "enumerationEntries": 768
+      },
+      "C": {
+        "minMs": 129.8591,
+        "medianMs": 139.0435,
+        "maxMs": 416.042,
+        "samples": 6,
+        "medianAllocatedBytes": 40678104,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 514,
+        "successfulReadBytes": 1280158,
+        "enumerationEntries": 768
+      },
+      "aToBPercent": 181.97648320594823,
+      "bToCPercent": -25.722483447706303,
+      "aToCPercent": 109.44512898687391,
+      "pairedBToCPercent": [
+        -26.935396950158363,
+        -28.911257124342015,
+        -28.02781123775159,
+        -18.2757537474739,
+        125.21479858302223,
+        -35.459275594182834
+      ],
+      "cSlowerThanBRounds": 1
+    },
+    {
+      "totalHistory": 512,
+      "operation": "Backup",
+      "outcome": "Refused",
+      "error": "TooLarge",
+      "A": {
+        "minMs": 9.9544,
+        "medianMs": 10.1182,
+        "maxMs": 13.4288,
+        "samples": 6,
+        "medianAllocatedBytes": 298096,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 176.0643,
+        "medianMs": 188.454,
+        "maxMs": 315.4649,
+        "samples": 6,
+        "medianAllocatedBytes": 109700968,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 514,
+        "successfulReadBytes": 1280158,
+        "enumerationEntries": 768
+      },
+      "C": {
+        "minMs": 129.4327,
+        "medianMs": 141.94369999999998,
+        "maxMs": 260.886,
+        "samples": 6,
+        "medianAllocatedBytes": 40599584,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 514,
+        "successfulReadBytes": 1280158,
+        "enumerationEntries": 768
+      },
+      "aToBPercent": 1762.5249550315275,
+      "bToCPercent": -24.6799218907532,
+      "aToCPercent": 1302.8552509339604,
+      "pairedBToCPercent": [
+        30.93531679113468,
+        -28.506848636916715,
+        41.59945769793887,
+        -16.682484751309612,
+        -28.697870638376077,
+        -58.97080784581738
+      ],
+      "cSlowerThanBRounds": 2
+    },
+    {
+      "totalHistory": 512,
+      "operation": "Restore",
+      "outcome": "Refused",
+      "error": "TooLarge",
+      "A": {
+        "minMs": 146.2012,
+        "medianMs": 153.29919999999998,
+        "maxMs": 178.0214,
+        "samples": 6,
+        "medianAllocatedBytes": 89772008,
+        "readMetricsAvailable": false,
+        "successfulReadFiles": null,
+        "successfulReadBytes": null,
+        "enumerationEntries": null
+      },
+      "B": {
+        "minMs": 268.7452,
+        "medianMs": 276.32655,
+        "maxMs": 301.7566,
+        "samples": 6,
+        "medianAllocatedBytes": 164463016,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 770,
+        "successfulReadBytes": 1917746,
+        "enumerationEntries": 1024
+      },
+      "C": {
+        "minMs": 171.8775,
+        "medianMs": 246.3288,
+        "maxMs": 391.4716,
+        "samples": 6,
+        "medianAllocatedBytes": 43040656,
+        "readMetricsAvailable": true,
+        "successfulReadFiles": 770,
+        "successfulReadBytes": 1917746,
+        "enumerationEntries": 1024
+      },
+      "aToBPercent": 80.25309329729053,
+      "bToCPercent": -10.855905811439403,
+      "aToCPercent": 60.68498726673071,
+      "pairedBToCPercent": [
+        -35.05225734913503,
+        -11.689892687904557,
+        -36.6954220268367,
+        45.666452833390146,
+        -7.87009770253878,
+        -10.551786680002351
+      ],
+      "cSlowerThanBRounds": 1
+    }
+  ]
+}
