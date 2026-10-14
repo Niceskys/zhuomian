@@ -92,6 +92,40 @@ public sealed class V3TransactionTests
             { Triggered = true; throw new IOException("generated fault"); }
         }
     }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void ActualWrongPublicationKeepsUnknownAndDistinguishesLostAuthorityFromDamagedMain(int write)
+    {
+        using var root = new OwnedDirectory();
+        using (var setup = WorkspaceV2Store.ForRecoverableTests(root.Root))
+        { Assert.True(setup.InitializeNew(V3AuthorityTests.Snapshot(1)).Succeeded); }
+        using (var faulted = WorkspaceV2Store.ForRecoverableTests(root.Root, new ChangeReadback(root.Root, write)))
+        { Assert.Equal(CommitState.Unknown, faulted.Save(V3AuthorityTests.Snapshot(10)).Commit); }
+        using var restarted = WorkspaceV2Store.ForRecoverableTests(root.Root);
+        Assert.Null(restarted.Load().Workspace);
+        var repair = restarted.RecoverAuthority();
+        Assert.Equal(write == 3, repair.Succeeded);
+        if (write == 3)
+        {
+            Assert.Equal(10, restarted.Load().Workspace!.Revision);
+            Assert.Single(Directory.GetFiles(root.Root, "damage-*.bin"));
+            Assert.Equal(StorageError.RevisionConflict, restarted.Save(V3AuthorityTests.Snapshot(10, true)).Error);
+        }
+        else { Assert.False(restarted.Save(V3AuthorityTests.Snapshot(20)).Succeeded); }
+    }
+    private sealed class ChangeReadback(string root, int target) : IV2FaultInjector
+    {
+        private int _writes;
+        public void Check(V2Stage stage)
+        {
+            if (stage == V2Stage.BeforeWrite) { _writes++; }
+            if (stage != V2Stage.AfterReadback || _writes != target) { return; }
+            string path = Directory.GetFiles(root, "stage-*.bin").Single();
+            byte[] bytes = File.ReadAllBytes(path); bytes[^1] ^= 1; File.WriteAllBytes(path, bytes);
+        }
+    }
     private sealed class Obstruct(string path) : IV2FaultInjector, IDisposable
     {
         private FileStream? _held;

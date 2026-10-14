@@ -189,4 +189,19 @@ public sealed class V3AuthorityTests
         Assert.Equal(StorageError.RevisionOverflow, store.RestoreRevisionTransaction(1).Transaction.Error);
         Assert.Equal(long.MaxValue, store.Load().Workspace!.Revision);
     }
+
+    [Fact]
+    public void BothSlotsCannotAuthorizeRepairPastAContradictoryWitness()
+    {
+        using var root = new OwnedDirectory(); using var store = WorkspaceV2Store.ForRecoverableTests(root.Root);
+        Assert.True(store.InitializeNew(Snapshot(1)).Succeeded); Assert.True(store.Save(Snapshot(10)).Succeeded);
+        string witness = Directory.GetFiles(root.Root, "root-*.bin")[0];
+        byte[] bytes = File.ReadAllBytes(witness); bytes[28] ^= 1;
+        SHA256.HashData(bytes.AsSpan(0, 68)).CopyTo(bytes, 68); File.WriteAllBytes(witness, bytes);
+        Assert.Equal(StorageError.IntegrityFailure, store.Load().Error);
+        File.Delete(Path.Combine(root.Root, "state-v2.bin"));
+        Assert.Equal(StorageError.IntegrityFailure, store.RecoverAuthority().Error);
+        Assert.False(store.Save(Snapshot(20)).Succeeded);
+        Assert.Equal(bytes, File.ReadAllBytes(witness));
+    }
 }

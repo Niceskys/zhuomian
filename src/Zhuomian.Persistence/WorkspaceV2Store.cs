@@ -30,6 +30,7 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
     private bool _referenceReads, _measure;
     private long _readFiles, _readBytes, _readTicks, _decodeTicks;
     private long _pageReadTicks, _witnessReadTicks, _witnessTicks, _hashTicks, _publishTicks, _enumerations;
+    private long _enumerationTicks, _witnessValidationTicks, _nativeReadOpenTicks, _dataReadTicks, _flushTicks, _atomicTicks;
     internal (long Files, long Bytes, double ReadMs, double DecodeMs) ReadMetrics =>
         (_readFiles, _readBytes, _readTicks * 1000d / Stopwatch.Frequency, _decodeTicks * 1000d / Stopwatch.Frequency);
     internal object Profile => new
@@ -41,9 +42,15 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         pageReadMs = Milliseconds(_pageReadTicks),
         witnessReadMs = Milliseconds(_witnessReadTicks),
         witnessTotalMs = Milliseconds(_witnessTicks),
+        enumerationMs = Milliseconds(_enumerationTicks),
+        witnessValidationMs = Milliseconds(_witnessValidationTicks),
+        nativeValidatedReadOpenMs = Milliseconds(_nativeReadOpenTicks),
+        fileDataReadMs = Milliseconds(_dataReadTicks),
         checksumMs = Milliseconds(_hashTicks),
         decodeMs = Milliseconds(_decodeTicks),
         publicationMs = Milliseconds(_publishTicks),
+        flushMs = Milliseconds(_flushTicks),
+        atomicRootPublicationMs = Milliseconds(_atomicTicks),
     };
     private static double Milliseconds(long ticks) => ticks * 1000d / Stopwatch.Frequency;
 
@@ -230,7 +237,10 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             string witness = family + Guid.NewGuid().ToString("N") + ".bin";
             if (_storage.Exists(witness)) { throw new StorageException(StorageError.IntegrityFailure); }
             submitted = true;
-            _storage.Publish(temp, destination, _storage.Exists(destination), witness);
+            bool replace = _storage.Exists(destination);
+            long atomicStart = _measure ? Stopwatch.GetTimestamp() : 0;
+            _storage.Publish(temp, destination, replace, witness);
+            if (_measure) { _atomicTicks += Stopwatch.GetTimestamp() - atomicStart; }
             _faults?.Check(reservation ? V2Stage.AfterReservation : V2Stage.AfterMain);
             if (!Read(destination).AsSpan().SequenceEqual(bytes)) { throw new StorageException(StorageError.IntegrityFailure); }
             return new(StorageError.None, reservation ? CommitState.NotCommitted : CommitState.Committed, revision);
@@ -275,6 +285,9 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             throw new StorageException(StorageError.RecoveryRequired);
         }
         var accepted = ParseRoot(Read(authority));
+        // Format 3 projects the proposed new B only for chain/selector validation.
+        // This does NOT prove B already happened: normal callers must also match actual main.
+        // Incomplete-main verification is private to explicit repair and submission resolution.
         var root = _version == 3 ? accepted with { Main = accepted.Count } : accepted;
         if (root.Count is < 1 or > MaxSegments || root.Main < 0 || root.Main > root.Count)
         { throw new StorageException(StorageError.InvalidStructure); }
@@ -352,11 +365,17 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         long started = _measure ? Stopwatch.GetTimestamp() : 0;
         if (_measure) { _enumerations++; }
         int count = 0;
-        foreach (string path in Directory.EnumerateFileSystemEntries(_storage.Root, "root-*"))
+        long enumerationStart = _measure ? Stopwatch.GetTimestamp() : 0;
+        using var entries = Directory.EnumerateFileSystemEntries(_storage.Root, "root-*").GetEnumerator();
+        if (_measure) { _enumerationTicks += Stopwatch.GetTimestamp() - enumerationStart; }
+        while (Next(entries))
         {
+            string path = entries.Current;
             if (++count > MaxSegments * 2) { throw new StorageException(StorageError.TooLarge); }
             // A witness is evidence of a replaced authority, never an independently chosen fallback.
-            using var reader = Reader(Read(Path.GetFileName(path)));
+            byte[] bytes = Read(Path.GetFileName(path));
+            long validationStart = _measure ? Stopwatch.GetTimestamp() : 0;
+            using var reader = Reader(bytes);
             CheckVersion(reader.ReadInt32());
             var witness = new Root(new Guid(reader.ReadBytes(16)), reader.ReadInt64(), reader.ReadBytes(32), reader.ReadInt64());
             End(reader);
@@ -370,8 +389,17 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             long selectedAfter = witness.Count == current.Count ? current.Main : previousSelections[index + 1];
             // An evidenced publication cannot become unpublished in this or the next generation.
             if (witness.Main > selectedAfter) { throw new StorageException(StorageError.RecoveryRequired); }
+            if (_measure) { _witnessValidationTicks += Stopwatch.GetTimestamp() - validationStart; }
         }
         if (_measure) { _witnessTicks += Stopwatch.GetTimestamp() - started; }
+    }
+
+    private bool Next(IEnumerator<string> entries)
+    {
+        long started = _measure ? Stopwatch.GetTimestamp() : 0;
+        bool next = entries.MoveNext();
+        if (_measure) { _enumerationTicks += Stopwatch.GetTimestamp() - started; }
+        return next;
     }
 
     private string Write(byte[] bytes)
@@ -388,7 +416,9 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             int half = bytes.Length / 2;
             stream.Write(bytes.AsSpan(0, half)); _faults?.Check(V2Stage.DuringWrite);
             stream.Write(bytes.AsSpan(half)); _faults?.Check(V2Stage.BeforeFlush);
+            long flushStart = _measure ? Stopwatch.GetTimestamp() : 0;
             stream.Flush(true);
+            if (_measure) { _flushTicks += Stopwatch.GetTimestamp() - flushStart; }
             _faults?.Check(V2Stage.AfterFlush);
         }
         _faults?.Check(V2Stage.BeforeReadback);
@@ -420,7 +450,10 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         if (OperatingSystem.IsWindows())
         {
             // Identical native no-reparse, single-link, final-path/identity checks and sharing.
-            stream = new(NativeStorage.Open(path, false, 0x80000000, 1, 3), FileAccess.Read, bufferSize: 1);
+            long openStart = _measure ? Stopwatch.GetTimestamp() : 0;
+            var handle = NativeStorage.Open(path, false, 0x80000000, 1, 3);
+            if (_measure) { _nativeReadOpenTicks += Stopwatch.GetTimestamp() - openStart; }
+            stream = new(handle, FileAccess.Read, bufferSize: 1);
         }
         else
         {
@@ -434,9 +467,11 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             if (length > PersistenceLimits.MaxFileBytes) { throw new StorageException(StorageError.TooLarge); }
             // One exact owned buffer; no growing MemoryStream/copy or 64 KiB pooled clear per page.
             byte[] bytes = new byte[checked((int)length)];
+            long dataStart = _measure ? Stopwatch.GetTimestamp() : 0;
             stream.ReadExactly(bytes);
             if (stream.ReadByte() != -1 || stream.Length != length)
             { throw new StorageException(StorageError.IntegrityFailure); }
+            if (_measure) { _dataReadTicks += Stopwatch.GetTimestamp() - dataStart; }
             return bytes;
         }
     }
