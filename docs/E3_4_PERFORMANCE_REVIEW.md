@@ -41,3 +41,36 @@ No quota change, new format, safe history compaction, production migration, clea
 2026-10-14, Debian GNU/Linux 13 x64, SDK 9.0.318: restore, complete Release solution build (zero warnings/errors), complete solution format verify and full xUnit passed **659/659 = 451 + 37 + 171**, zero failures/skips. Six focused new cases also passed; native unsupported-platform branches on Linux do not certify Windows. Additional complete probe build/format and PowerShell documentation validation pass. Original 637 test bodies and prior 16 history tests remain byte-unchanged against reviewed fa6338d.
 
 The first performance-probe build correctly failed CA1861 for a repeatedly allocated property-name array; changed to static readonly without disabling analyzers. An initial diagnostic matrix overlapped local build/test activity and pre-commit code, so it is excluded from authoritative results. The final runner refuses dirty measured source/probe trees and binds fixture/seed digests and compiled Persistence assembly hash. Committed-source quiet-host repeated measurements and Windows final-head evidence follow in the PR/results below. Existing 1000 attempts remain 256 committed / 744 refusals; no quota relief.
+
+## Committed-source repeated local results
+
+Reviewed SHA **fa6338d662e5e59efe01a6ce01b399b3551a95ba** vs implementation SHA **4ccbc0e82e7d4bdc236d4ab9e1939f5786cbe403**; full fixture, same Debian GNU/Linux 13 x64 host / SDK 9.0.318, five alternating paired rounds, with one full warmup matrix per process. No concurrent local build/test was run during these authoritative intervals. [Raw summary](evidence/e3-4-performance-local/summary.json) and all ten before/after round files are retained. 100 measured samples per version; setup/cleanup excluded. All exact seed digests, outcomes/revisions and logical read/file/byte/enumeration counts match. These timings are cloud-environment observations, not Windows 11 hardware results.
+
+Each timing cell is **min / median / max ms**, including unfavorable results. History is total records, evenly split between backup/prepared. At 512 (256 each), Save/Backup/Restore timings measure **TooLarge refusal**, not successful commits. Zero-history Restore is unchanged main, not a recovered commit.
+
+| History | Operation | Outcome | Before ms | After ms | Median change | Managed allocation median KiB before → after |
+|---:|---|---|---|---|---:|---|
+| 0 | Load | ReadOnlyOrUnchanged | 0.419 / 0.542 / 0.844 | 0.554 / 0.816 / 1.073 | +50.4% | 340.6 → 153.9 |
+| 0 | Save | Committed | 1.400 / 1.779 / 2.770 | 1.320 / 1.972 / 3.193 | +10.8% | 1006.9 → 627.6 |
+| 0 | Backup | Committed | 0.629 / 0.717 / 1.261 | 0.600 / 1.041 / 3.523 | +45.1% | 536.6 → 286.1 |
+| 0 | Restore | ReadOnlyOrUnchanged | 0.254 / 0.340 / 0.595 | 0.376 / 0.894 / 1.167 | +162.9% | 209.6 → 146.9 |
+| 32 | Load | ReadOnlyOrUnchanged | 9.830 / 12.930 / 18.790 | 12.230 / 13.790 / 15.050 | +6.7% | 6949.2 → 2559.2 |
+| 32 | Save | Committed | 11.229 / 14.737 / 32.472 | 9.711 / 14.735 / 16.729 | -0.0% | 7638.1 → 3064.2 |
+| 32 | Backup | Committed | 11.144 / 13.044 / 21.963 | 7.625 / 12.567 / 15.225 | -3.7% | 7155.8 → 2707.2 |
+| 32 | Restore | Committed | 15.934 / 17.484 / 31.123 | 8.305 / 14.669 / 30.526 | -16.1% | 10804.8 → 3031.2 |
+| 128 | Load | ReadOnlyOrUnchanged | 38.307 / 42.795 / 49.289 | 36.733 / 54.548 / 56.578 | +27.5% | 26750.0 → 9780.5 |
+| 128 | Save | Committed | 37.580 / 40.173 / 45.647 | 30.915 / 43.953 / 59.033 | +9.4% | 27540.0 → 10379.8 |
+| 128 | Backup | Committed | 36.959 / 44.538 / 49.553 | 22.512 / 29.429 / 52.566 | -33.9% | 27008.5 → 9973.4 |
+| 128 | Restore | Committed | 58.554 / 67.466 / 257.278 | 30.166 / 40.134 / 54.714 | -40.5% | 40565.5 → 10639.7 |
+| 256 | Load | ReadOnlyOrUnchanged | 68.352 / 76.866 / 115.193 | 51.170 / 61.010 / 99.005 | -20.6% | 53162.2 → 19410.8 |
+| 256 | Save | Committed | 79.981 / 81.892 / 89.800 | 58.126 / 62.781 / 75.856 | -23.3% | 54077.3 → 20135.2 |
+| 256 | Backup | Committed | 63.835 / 78.019 / 96.544 | 44.571 / 56.899 / 65.546 | -27.1% | 53482.4 → 19665.9 |
+| 256 | Restore | Committed | 89.112 / 107.135 / 152.774 | 56.651 / 65.449 / 78.698 | -38.9% | 80246.4 → 20787.0 |
+| 512 | Load | ReadOnlyOrUnchanged | 114.292 / 141.452 / 299.438 | 100.501 / 117.330 / 214.077 | -17.1% | 105956.8 → 38584.9 |
+| 512 | Save | Refused | 112.848 / 124.650 / 138.598 | 66.346 / 102.064 / 119.436 | -18.1% | 106280.5 → 38836.4 |
+| 512 | Backup | Refused | 110.627 / 121.452 / 136.950 | 66.706 / 95.953 / 111.723 | -21.0% | 106203.7 → 38762.1 |
+| 512 | Restore | Refused | 172.631 / 180.073 / 206.935 | 64.547 / 101.050 / 107.769 | -43.9% | 159176.9 → 40658.8 |
+
+At 256 total records, median Load/Save/Backup/Restore improve about 21%/23%/27%/39%. At the 512 total-record refusal boundary they improve about 17%/18%/21%/44%. Managed allocation falls materially (roughly 63–75% in these nonzero history cells), while actual logical read work stays identical. **Small-history timings and 128-record Load regress in this run**; the corresponding ranges/raw repetitions are not omitted. There is no universal speedup or SLA claim. Fixed setup/cache-bookkeeping costs and cloud scheduling/GC/I/O variation require review; small absolute sub-ms cells should not be presented only as favorable percentages. More measurements must retain their own trials, not silently replace this one. Windows repeats are required and recorded through final PR CI.
+
+Production migration stays disabled. The new namespace-barrier executable experiment verifies old refusal while that directory exists, with synthetic new root complete/corrupt/missing; it does not prove barrier loss, migration replay or v2 correctness. Both missing-barrier behavior and incomplete root/reservation coverage remain explicit E3-4B merge gates.
