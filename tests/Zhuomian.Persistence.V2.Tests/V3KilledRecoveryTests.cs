@@ -1,9 +1,11 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using Zhuomian.Core.WorkspaceModel;
 using Zhuomian.Persistence.Tests;
 
 namespace Zhuomian.Persistence.V2.Tests;
 
+[Collection("v2 read benchmark")]
 public sealed class V3KilledRecoveryTests
 {
     [Theory]
@@ -19,7 +21,7 @@ public sealed class V3KilledRecoveryTests
     [InlineData("recover", V2Stage.AfterMain)]
     public async Task RealTerminationPreservesTheIndependentlyExpectedAuthority(string operation, V2Stage stage)
     {
-        using var root = new OwnedDirectory();
+        using var root = new ProcessRoot();
         var empty = Workspace.Create(new Guid("00000001-0000-0000-0000-000000000000"));
         if (operation != "initialize")
         {
@@ -42,6 +44,7 @@ public sealed class V3KilledRecoveryTests
             child.Kill(entireProcessTree: true); await child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
         }
         finally { if (!child.HasExited) { child.Kill(entireProcessTree: true); child.WaitForExit(); } }
+        using (await OpenReleasedMutex(root.Root, 0)) { }
         long? floor = operation == "initialize" && stage == V2Stage.BeforeReservation ? null :
             operation == "save" && stage == V2Stage.BeforeReservation ? 0 : 10;
         var original = Directory.GetFiles(root.Root).Where(p => Path.GetFileName(p) is not "workspace.lock" and not "state-v2.bin")
@@ -58,6 +61,7 @@ public sealed class V3KilledRecoveryTests
             using var reader = Start(root.Root, "load", stage);
             Assert.Equal("None:" + floor, await reader.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30)));
             await reader.WaitForExitAsync(); Assert.Equal(0, reader.ExitCode);
+            using (await OpenReleasedMutex(root.Root, 0)) { }
             Assert.Equal(StorageError.RevisionConflict, restarted.Save(V3AuthorityTests.Snapshot(floor.Value)).Error);
             Assert.Equal(floor + 1, restarted.Restore().Workspace!.Revision);
         }
@@ -85,5 +89,51 @@ public sealed class V3KilledRecoveryTests
         info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "v2-fixture", "Zhuomian.Persistence.V2Fixture.dll"));
         info.ArgumentList.Add(root); info.ArgumentList.Add(stage.ToString()); info.ArgumentList.Add("v3-" + mode);
         return Process.Start(info)!;
+    }
+
+    // Process exit signalling is not a lease on NTFS handle quiescence. Wait for the
+    // independently observed native mutex, never rerun Save/Restore or an assertion.
+    private static async Task<FileStream> OpenReleasedMutex(string root, uint share)
+    {
+        var started = Stopwatch.StartNew(); string path = Path.Combine(root, "workspace.lock");
+        int attempts = 0;
+        while (true)
+        {
+            try
+            {
+                attempts++;
+                var stream = OperatingSystem.IsWindows() ?
+                    new FileStream(NativeStorage.Open(path, false, 0xC0000000, share, 3), FileAccess.ReadWrite) :
+                    new FileStream(path, FileMode.Open, FileAccess.ReadWrite, (FileShare)share);
+                try
+                {
+                    V2TransactionMatrixTests.WriteEvidence("v3-quiescence-" + Guid.NewGuid().ToString("N") + ".json", new
+                    { windowsNtfs = OperatingSystem.IsWindows(), attempts, waitMs = started.Elapsed.TotalMilliseconds, share, operationsRetried = 0 });
+                    return stream;
+                }
+                catch { stream.Dispose(); throw; }
+            }
+            catch (Exception e) when (started.Elapsed < TimeSpan.FromSeconds(5) &&
+                (e is Win32Exception native && native.NativeErrorCode is 32 or 33 ||
+                 e is IOException io && (io.HResult & 0xFFFF) is 32 or 33))
+            { await Task.Delay(10).ConfigureAwait(false); }
+        }
+    }
+
+    private sealed class ProcessRoot : IDisposable
+    {
+        private readonly OwnedDirectory _owned = new();
+        internal string Root => _owned.Root;
+        public void Dispose()
+        {
+            // Generated fixture cleanup only. A delete-sharing native guard prevents a
+            // new reader racing lock removal; the original fixture/helper is unchanged.
+            if (File.Exists(Path.Combine(Root, "workspace.lock")))
+            {
+                using (OpenReleasedMutex(Root, 4).GetAwaiter().GetResult())
+                { File.Delete(Path.Combine(Root, "workspace.lock")); }
+            }
+            _owned.Dispose();
+        }
     }
 }

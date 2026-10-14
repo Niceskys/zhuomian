@@ -312,6 +312,8 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             if (page.ReadInt64() != ordinal) { throw new StorageException(StorageError.IntegrityFailure); }
             head = page.ReadBytes(32);
             long previousMain = page.ReadInt64();
+            if (_version == 3 && previousMain != ordinal - 1)
+            { throw new StorageException(StorageError.IntegrityFailure); }
             previousSelections[checked((int)ordinal - 1)] = previousMain;
             int size = page.ReadInt32();
             if (size < 1 || size > PersistenceLimits.MaxFileBytes - 128) { throw new StorageException(StorageError.TooLarge); }
@@ -381,6 +383,11 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             End(reader);
             if (witness.Id != current.Id) { throw new StorageException(StorageError.WorkspaceConflict); }
             if (witness.Count < 1 || witness.Count > current.Count)
+            { throw new StorageException(StorageError.RecoveryRequired); }
+            // In format 3 a completed generation is never republished over itself.
+            // Same-generation witnesses therefore contradict a supposedly current A,
+            // or indicate an unresolved partial replacement. Never ignore that evidence.
+            if (_version == 3 && witness.Count == current.Count)
             { throw new StorageException(StorageError.RecoveryRequired); }
             int index = checked((int)witness.Count - 1);
             if (!witness.Head.AsSpan().SequenceEqual(heads[index]) ||

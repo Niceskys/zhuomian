@@ -5,14 +5,14 @@ param(
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'Format 3 evidence requires Windows NTFS.' }
 $suite = Get-Content -LiteralPath "$EvidenceDirectory/v2-platform.json" -Raw | ConvertFrom-Json
-if ($suite.total -lt 940 -or $suite.passed -ne $suite.total -or $suite.failed -ne 0 -or $suite.skipped -ne 0 -or $suite.v2Tests -lt 281) {
+if ($suite.total -lt 942 -or $suite.passed -ne $suite.total -or $suite.failed -ne 0 -or $suite.skipped -ne 0 -or $suite.v2Tests -lt 283) {
     throw 'Retained and new tests are not all passed.'
 }
 $performance = Get-Content -LiteralPath "$EvidenceDirectory/v3-performance.json" -Raw | ConvertFrom-Json
 $baseline = Get-Content -LiteralPath "$EvidenceDirectory/v3-baseline.json" -Raw | ConvertFrom-Json
 if ($baseline.sourceSha -ne '514a5594f594728d2093cb041ed3552472384472' -or
     $performance.baselineSha -ne $baseline.sourceSha -or -not $performance.windowsNtfs -or
-    $performance.realDistinctSavesPerImplementation -ne 1024 -or
+    $performance.sequentialBaselineSaves -ne 1024 -or $performance.sequentialFormat3Saves -ne 1024 -or
     @($performance.samples).Count -ne 135 -or @($performance.profiles).Count -ne 30) {
     throw 'Incomplete immutable baseline, actual capacity or repeated performance evidence.'
 }

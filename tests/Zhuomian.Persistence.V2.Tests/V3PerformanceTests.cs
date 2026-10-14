@@ -16,19 +16,18 @@ public sealed partial class V3PerformanceTests
     {
         string? baseline = Environment.GetEnvironmentVariable("E3_V2_BASELINE_DLL");
         if (OperatingSystem.IsWindows()) { Assert.False(string.IsNullOrEmpty(baseline)); }
-        using var oldRoot = new OwnedDirectory(); using var currentRoot = new OwnedDirectory(); using var newRoot = new OwnedDirectory();
+        using var oldRoot = new OwnedDirectory(); using var newRoot = new OwnedDirectory();
         using var before = new Probe(oldRoot.Root, baseline, false);
-        using var current = new Probe(currentRoot.Root, null, false);
         using var recoverable = new Probe(newRoot.Root, null, true);
-        Probe[] probes = [before, current, recoverable];
+        Probe[] writers = [before, recoverable];
         string[] labels = [baseline is null ? "local-current-control" : "514a5594", "current-format2", "current-format3"];
         List<object> samples = [], profiles = [], checkpoints = [];
-        foreach (var probe in probes) { probe.Initialize(WorkspaceCodec.Encode(V3AuthorityTests.Snapshot(0))); }
+        foreach (var probe in writers) { probe.Initialize(WorkspaceCodec.Encode(V3AuthorityTests.Snapshot(0))); }
         for (int n = 1; n <= 1024; n++)
         {
             byte[] payload = WorkspaceCodec.Encode(V3AuthorityTests.Snapshot(n));
             double saveMs = 0; long saveAllocation = 0;
-            foreach (var probe in probes)
+            foreach (var probe in writers)
             {
                 object desired = probe.Decode(payload);
                 long allocation = GC.GetAllocatedBytesForCurrentThread(); var timer = Stopwatch.StartNew();
@@ -60,6 +59,14 @@ public sealed partial class V3PerformanceTests
             });
             Assert.Equal(3 * n + 4, files.Length);
             if (n == 1000) { continue; }
+            // Same-protocol controls use an exact owned copy of the real baseline history.
+            // Only baseline and format 3 have sequential-save counts here; current format 2
+            // additionally retains its original independent 1024-save capacity test.
+            using var currentRoot = new OwnedDirectory();
+            foreach (string path in Directory.GetFiles(oldRoot.Root))
+            { if (Path.GetFileName(path) != "workspace.lock") { File.Copy(path, Path.Combine(currentRoot.Root, Path.GetFileName(path))); } }
+            using var current = new Probe(currentRoot.Root, null, false);
+            Probe[] probes = [before, current, recoverable];
             foreach (var probe in probes) { Assert.Equal(n, probe.Load()); }
             for (int round = 1; round <= 3; round++)
             {
@@ -68,9 +75,14 @@ public sealed partial class V3PerformanceTests
                     foreach (string operation in new[] { "Load", "Save", "Restore" })
                     {
                         using var clone = new OwnedDirectory();
-                        foreach (string path in Directory.GetFiles(probes[index].Root))
-                        { if (Path.GetFileName(path) != "workspace.lock") { File.Copy(path, Path.Combine(clone.Root, Path.GetFileName(path))); } }
-                        using var selected = new Probe(clone.Root, null, index == 2, index == 0 ? before.BaselineAssembly : null);
+                        string selectedRoot = probes[index].Root;
+                        if (operation != "Load")
+                        {
+                            foreach (string path in Directory.GetFiles(selectedRoot))
+                            { if (Path.GetFileName(path) != "workspace.lock") { File.Copy(path, Path.Combine(clone.Root, Path.GetFileName(path))); } }
+                            selectedRoot = clone.Root;
+                        }
+                        using var selected = new Probe(selectedRoot, null, index == 2, index == 0 ? before.BaselineAssembly : null);
                         object desired = selected.Decode(WorkspaceCodec.Encode(V3AuthorityTests.Snapshot(n + 1)));
                         long allocation = GC.GetAllocatedBytesForCurrentThread();
                         using var process = Process.GetCurrentProcess(); TimeSpan cpu = process.TotalProcessorTime;
@@ -98,9 +110,14 @@ public sealed partial class V3PerformanceTests
                 foreach (string operation in new[] { "Load", "Save", "Restore" })
                 {
                     using var clone = new OwnedDirectory(); string source = v3 ? newRoot.Root : currentRoot.Root;
-                    foreach (string path in Directory.GetFiles(source))
-                    { if (Path.GetFileName(path) != "workspace.lock") { File.Copy(path, Path.Combine(clone.Root, Path.GetFileName(path))); } }
-                    using var store = WorkspaceV2Store.ForProfile(clone.Root, v3);
+                    string selectedRoot = source;
+                    if (operation != "Load")
+                    {
+                        foreach (string path in Directory.GetFiles(source))
+                        { if (Path.GetFileName(path) != "workspace.lock") { File.Copy(path, Path.Combine(clone.Root, Path.GetFileName(path))); } }
+                        selectedRoot = clone.Root;
+                    }
+                    using var store = WorkspaceV2Store.ForProfile(selectedRoot, v3);
                     var desired = V3AuthorityTests.Snapshot(n + 1);
                     if (operation == "Load") { Assert.Equal(n, store.Load().Workspace!.Revision); }
                     else if (operation == "Save") { Assert.True(store.Save(desired).Succeeded); }
@@ -129,11 +146,13 @@ public sealed partial class V3PerformanceTests
         {
             baselineSha = baseline is null ? null : "514a5594f594728d2093cb041ed3552472384472",
             windowsNtfs = OperatingSystem.IsWindows(),
-            realDistinctSavesPerImplementation = 1024,
+            sequentialBaselineSaves = 1024,
+            sequentialFormat3Saves = 1024,
+            currentFormat2Control = "exact owned copies of actual baseline history; 15 real timed distinct Save calls, not a sequential-capacity claim",
             checkpoints,
             samples,
             profiles,
-            protocol = "warm Load; 3 ABC/CBA/ABC rounds; identical generated inputs; copies/Decode outside timers; all latency instrumentation disabled",
+            protocol = "warm Load on original/control roots; Save/Restore on owned clones; 3 ABC/CBA/ABC rounds; identical generated inputs; copies/Decode outside timers; all latency instrumentation disabled",
             scope = "format2 before/after same protocol; format2/3 workload comparison; logical metrics, not physical device I/O",
         });
     }
@@ -182,7 +201,8 @@ public sealed partial class V3PerformanceTests
         }
         private object Call(string name, params object?[] args) => _storeType.GetMethod(name)!.Invoke(_store, args)!;
         private static object? Property(object value, string name) => value.GetType().GetProperty(name)!.GetValue(value);
-        private static void Success(object result) => Assert.True((bool)Property(result, "Succeeded")!);
+        private static void Success(object result)
+        { Assert.True((bool)Property(result, "Succeeded")!); Assert.Equal("Committed", Property(result, "Commit")!.ToString()); }
         public void Dispose() => ((IDisposable)_store).Dispose();
     }
     private sealed class BaselineContext(string directory) : AssemblyLoadContext

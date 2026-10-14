@@ -204,4 +204,41 @@ public sealed class V3AuthorityTests
         Assert.False(store.Save(Snapshot(20)).Succeeded);
         Assert.Equal(bytes, File.ReadAllBytes(witness));
     }
+
+    [Fact]
+    public void AReplacedAuthorityWitnessPreventsTrustingAnOlderValidSlot()
+    {
+        using var root = new OwnedDirectory();
+        using (var setup = WorkspaceV2Store.ForRecoverableTests(root.Root))
+        { Assert.True(setup.InitializeNew(Snapshot(1)).Succeeded); Assert.True(setup.Save(Snapshot(10)).Succeeded); }
+        string authority = Path.Combine(root.Root, "authority-v3.bin"); byte[] old = File.ReadAllBytes(authority);
+        using (var pending = WorkspaceV2Store.ForRecoverableTests(root.Root, new Cut(V2Stage.AfterReservation)))
+        { Assert.False(pending.Save(Snapshot(20)).Succeeded); }
+        File.WriteAllBytes(authority, old);
+        using var restarted = WorkspaceV2Store.ForRecoverableTests(root.Root);
+        Assert.Equal(StorageError.RecoveryRequired, restarted.Load().Error);
+        Assert.False(restarted.RecoverAuthority().Succeeded);
+        Assert.False(restarted.Save(Snapshot(20, true)).Succeeded);
+    }
+
+    [Fact]
+    public void Format3CannotSkipTheRequiredPreviousMainPublication()
+    {
+        using var root = new OwnedDirectory(); using var store = WorkspaceV2Store.ForRecoverableTests(root.Root);
+        Assert.True(store.InitializeNew(Snapshot(1)).Succeeded); Assert.True(store.Save(Snapshot(10)).Succeeded);
+        string authority = Path.Combine(root.Root, "authority-v3.bin"); byte[] a = File.ReadAllBytes(authority);
+        string name = "segment-" + Convert.ToHexString(a.AsSpan(28, 32)) + ".bin";
+        byte[] page = File.ReadAllBytes(Path.Combine(root.Root, name)); BitConverter.GetBytes(0L).CopyTo(page, 60);
+        SHA256.HashData(page.AsSpan(0, page.Length - 32)).CopyTo(page, page.Length - 32);
+        byte[] head = SHA256.HashData(page);
+        File.WriteAllBytes(Path.Combine(root.Root, "segment-" + Convert.ToHexString(head) + ".bin"), page);
+        foreach (string slot in new[] { "authority-v3.bin", "state-v2.bin" })
+        {
+            string path = Path.Combine(root.Root, slot); byte[] bytes = File.ReadAllBytes(path); head.CopyTo(bytes, 28);
+            if (slot == "authority-v3.bin") { BitConverter.GetBytes(0L).CopyTo(bytes, 60); }
+            SHA256.HashData(bytes.AsSpan(0, 68)).CopyTo(bytes, 68); File.WriteAllBytes(path, bytes);
+        }
+        Assert.Equal(StorageError.IntegrityFailure, store.RecoverAuthority().Error);
+        Assert.False(store.Save(Snapshot(20)).Succeeded);
+    }
 }
