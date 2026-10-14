@@ -279,6 +279,9 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             if (!witness.Head.AsSpan().SequenceEqual(heads[index]) ||
                 (witness.Main != witness.Count && witness.Main != previousSelections[index]))
             { throw new StorageException(StorageError.IntegrityFailure); }
+            long selectedAfter = witness.Count == current.Count ? current.Main : previousSelections[index + 1];
+            // An evidenced publication cannot become unpublished in this or the next generation.
+            if (witness.Main > selectedAfter) { throw new StorageException(StorageError.RecoveryRequired); }
         }
     }
 

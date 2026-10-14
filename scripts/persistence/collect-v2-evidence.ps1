@@ -47,7 +47,7 @@ foreach ($file in Get-ChildItem -LiteralPath $ResultsDirectory -Filter '*.trx' -
         }
     }
 }
-if ($total -lt 887 -or $passed -ne $total -or $failed -ne 0 -or $skipped -ne 0 -or $v2 -lt 228 -or $originalV2 -lt 38 -or $killedCuts -ne 4 -or $newKilled -ne 81 -or $matrixCases -ne 81) {
+if ($total -lt 889 -or $passed -ne $total -or $failed -ne 0 -or $skipped -ne 0 -or $v2 -lt 230 -or $originalV2 -lt 38 -or $killedCuts -ne 4 -or $newKilled -ne 81 -or $matrixCases -ne 81) {
     throw "Incomplete suite: total=$total passed=$passed failed=$failed skipped=$skipped v2=$v2 cuts=$killedCuts."
 }
 [ordered]@{

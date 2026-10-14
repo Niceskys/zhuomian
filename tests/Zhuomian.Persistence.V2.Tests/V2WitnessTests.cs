@@ -41,6 +41,45 @@ public sealed class V2WitnessTests
         V2TransactionMatrixTests.AssertRetained(root, before);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void KnownMainPublicationCannotBeRolledBackToAReservationSelector(bool omitInNextPage)
+    {
+        using var root = new OwnedDirectory(); using var store = WorkspaceV2Store.ForTests(root.Root);
+        Assert.True(store.InitializeNew(V2TransactionMatrixTests.Snapshot(1)).Succeeded);
+        Assert.True(store.Save(V2TransactionMatrixTests.Snapshot(100)).Succeeded);
+        byte[] reservation = Directory.GetFiles(root.Root, "root-*.bin").Select(File.ReadAllBytes)
+            .Single(bytes => BitConverter.ToInt64(bytes, 20) == 2 && BitConverter.ToInt64(bytes, 60) == 1);
+        using (var fault = WorkspaceV2Store.ForTests(root.Root, new Cut()))
+        { Assert.False(fault.Save(V2TransactionMatrixTests.Snapshot(200)).Succeeded); }
+        string state = Path.Combine(root.Root, "state-v2.bin");
+        if (!omitInNextPage) { File.WriteAllBytes(state, reservation); }
+        else
+        {
+            byte[] authority = File.ReadAllBytes(state);
+            string pageName = "segment-" + Convert.ToHexString(authority.AsSpan(28, 32)) + ".bin";
+            byte[] page = File.ReadAllBytes(Path.Combine(root.Root, pageName));
+            BitConverter.GetBytes(1L).CopyTo(page, 60);
+            SHA256.HashData(page.AsSpan(0, page.Length - 32)).CopyTo(page, page.Length - 32);
+            byte[] hash = SHA256.HashData(page);
+            File.WriteAllBytes(Path.Combine(root.Root, "segment-" + Convert.ToHexString(hash) + ".bin"), page);
+            hash.CopyTo(authority, 28); BitConverter.GetBytes(1L).CopyTo(authority, 60);
+            SHA256.HashData(authority.AsSpan(0, authority.Length - 32)).CopyTo(authority, authority.Length - 32);
+            File.WriteAllBytes(state, authority);
+        }
+        var original = V2TransactionMatrixTests.Evidence(root);
+        Assert.Equal(StorageError.RecoveryRequired, store.Load().Error);
+        Assert.False(store.Save(V2TransactionMatrixTests.Snapshot(201)).Succeeded);
+        Assert.NotEqual(StorageError.None, store.Restore().Error);
+        V2TransactionMatrixTests.AssertRetained(root, original);
+    }
+
+    private sealed class Cut : IV2FaultInjector
+    {
+        public void Check(V2Stage stage) { if (stage == V2Stage.AfterReservation) { throw new IOException("generated"); } }
+    }
+
     [Fact]
     public void ADeletedRedundantWitnessDoesNotDeleteACommitmentFromTheVerifiedRootGraph()
     {
