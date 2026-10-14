@@ -87,6 +87,11 @@ jobs:
         run: |
           "E3_V2_EVIDENCE_DIR=$env:RUNNER_TEMP/v2-evidence" >> $env:GITHUB_ENV
 
+      - name: Build immutable reviewed v2 performance baseline
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: ./scripts/persistence/prepare-v2-round3-baseline.ps1 -OutputDirectory "$env:RUNNER_TEMP/v2-round3-baseline"
+
       - name: Restore and test .NET solution
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
@@ -113,6 +118,14 @@ jobs:
         run: |
           ./scripts/persistence/collect-v2-evidence.ps1 `
             -ResultsDirectory "$env:RUNNER_TEMP/test-results" `
+            -EvidenceDirectory "$env:E3_V2_EVIDENCE_DIR" `
+            -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
+
+      - name: Verify opt-in authority recovery and immutable performance comparison
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/persistence/collect-v3-evidence.ps1 `
             -EvidenceDirectory "$env:E3_V2_EVIDENCE_DIR" `
             -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
 

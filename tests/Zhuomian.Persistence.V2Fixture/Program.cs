@@ -2,20 +2,25 @@ using Zhuomian.Core.WorkspaceModel;
 using Zhuomian.Persistence;
 
 if (args.Length is not (3 or 4) || !Enum.TryParse<V2Stage>(args[1], out var stage)) { return 2; }
-using var store = WorkspaceV2Store.ForTests(args[0], args[2] == "load" ? null : new Pause(stage, args.Length == 4 ? int.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture) : 0));
-if (args[2] == "load")
+string mode = args[2];
+bool recoverable = mode.StartsWith("v3-", StringComparison.Ordinal);
+if (recoverable) { mode = mode[3..]; }
+var fault = mode == "load" ? null : new Pause(stage, args.Length == 4 ? int.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture) : 0);
+using var store = recoverable ? WorkspaceV2Store.ForRecoverableTests(args[0], fault) : WorkspaceV2Store.ForTests(args[0], fault);
+if (mode == "recover") { return store.RecoverAuthority().Succeeded ? 0 : 1; }
+if (mode == "load")
 {
     var loaded = store.Load();
     Console.WriteLine($"{loaded.Error}:{loaded.Workspace?.Revision}");
     return loaded.Error == StorageError.None ? 0 : 1;
 }
-if (args[2] == "initialize")
+if (mode == "initialize")
 {
     var empty = Workspace.Create(new Guid("00000001-0000-0000-0000-000000000000"));
     var initial = Workspace.FromSnapshot(empty.Id, empty.SchemaVersion, 10, empty.ItemStore, empty.Spaces.Values);
     return store.InitializeNew(initial).Succeeded ? 0 : 1;
 }
-if (args[2] == "restore") { return store.RestoreRevision(0).Error == StorageError.None ? 0 : 1; }
+if (mode == "restore") { return store.RestoreRevision(0).Error == StorageError.None ? 0 : 1; }
 var previous = store.Load().Workspace;
 if (previous is null) { return 3; }
 var next = Workspace.FromSnapshot(previous.Id, previous.SchemaVersion, 10, previous.ItemStore,

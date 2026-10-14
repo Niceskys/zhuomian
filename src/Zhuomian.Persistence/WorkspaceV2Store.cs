@@ -14,12 +14,14 @@ public enum V2Stage
     AfterCreate, AfterFlush, AfterReadback, BeforeSegment, AfterSegment,
 }
 public interface IV2FaultInjector { void Check(V2Stage stage); }
+public sealed record V2RestoreTransaction(StorageResult Transaction, RecoveryResult Recovery);
 
 /// <summary>Explicit independent engineering engine; never imports or falls back to v1.</summary>
 public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
 {
     private const string State = "state-v2.bin";
-    private const int Version = 2;
+    private const string Authority = "authority-v3.bin";
+    private readonly int _version;
     private const int MaxSegments = 16384;
     private readonly PhysicalStorage _storage;
     private readonly IV2FaultInjector? _faults;
@@ -27,8 +29,30 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
     private bool _disposed;
     private bool _referenceReads, _measure;
     private long _readFiles, _readBytes, _readTicks, _decodeTicks;
+    private long _pageReadTicks, _witnessReadTicks, _witnessTicks, _hashTicks, _publishTicks, _enumerations;
     internal (long Files, long Bytes, double ReadMs, double DecodeMs) ReadMetrics =>
         (_readFiles, _readBytes, _readTicks * 1000d / Stopwatch.Frequency, _decodeTicks * 1000d / Stopwatch.Frequency);
+    internal object Profile => new
+    {
+        logicalReadFiles = _readFiles,
+        logicalReadBytes = _readBytes,
+        enumerations = _enumerations,
+        validatedReadOpens = _readFiles, // Includes native identity/metadata validation, not all root/lock/write handles.
+        pageReadMs = Milliseconds(_pageReadTicks),
+        witnessReadMs = Milliseconds(_witnessReadTicks),
+        witnessTotalMs = Milliseconds(_witnessTicks),
+        checksumMs = Milliseconds(_hashTicks),
+        decodeMs = Milliseconds(_decodeTicks),
+        publicationMs = Milliseconds(_publishTicks),
+    };
+    private static double Milliseconds(long ticks) => ticks * 1000d / Stopwatch.Frequency;
+
+    internal static WorkspaceV2Store ForProfile(string root, bool recoverable)
+    {
+        var store = recoverable ? ForRecoverableTests(root) : ForTests(root);
+        store._measure = true;
+        return store;
+    }
 
     // Same native boundary/protocol, isolated read-only benchmarking of the previous reader.
     internal static WorkspaceV2Store ForReadBenchmark(string root, bool referenceReads)
@@ -39,8 +63,31 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         return store;
     }
 
-    private WorkspaceV2Store(string root, IV2FaultInjector? faults)
-    { _storage = new(root, null); _faults = faults; }
+    private WorkspaceV2Store(string root, IV2FaultInjector? faults, int version = 2)
+    { _storage = new(root, null); _faults = faults; _version = version; }
+
+    /// <summary>Opt-in format 3 candidate. Never upgrades an existing format 2 store.</summary>
+    public static WorkspaceV2Store CreateRecoverableEngineeringStore()
+    {
+        using var store = CreateIndependentEngineeringStore();
+        return new(store._storage.Root, null, 3);
+    }
+
+    internal static WorkspaceV2Store ForRecoverableTests(string root, IV2FaultInjector? faults = null)
+    {
+        using var validated = ForTests(root);
+        return new(root, faults, 3);
+    }
+
+    /// <summary>Explicit new publication of the latest accepted content, never selection of a witness.</summary>
+    public StorageResult RecoverAuthority() => Run(false, () =>
+    {
+        if (_version != 3) { return new(StorageError.UnsupportedVersion); }
+        var verified = Verify(allowIncompleteMain: true);
+        if (MainMatches(verified.Root))
+        { return new(StorageError.None, CommitState.Unchanged, verified.Latest.Revision); }
+        return PublishRoot(verified.Root, false, verified.Latest.Revision);
+    });
 
     public static WorkspaceV2Store CreateIndependentEngineeringStore()
     {
@@ -92,7 +139,10 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
     /// <summary>Explicitly republish the last selected immutable snapshot above every reserved revision.</summary>
     public RecoveryResult Restore() => RestoreRevision(null);
 
-    public RecoveryResult RestoreRevision(long? revision)
+    public RecoveryResult RestoreRevision(long? revision) => RestoreRevisionTransaction(revision).Recovery;
+
+    /// <summary>Includes main commit status, including Unknown, without changing the legacy projection.</summary>
+    public V2RestoreTransaction RestoreRevisionTransaction(long? revision)
     {
         Workspace? restored = null;
         var result = Run(false, () =>
@@ -105,8 +155,8 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
                 source.ItemStore, source.Spaces.Values, source.RemovedSpaces.Values);
             return Commit(restored, verified);
         });
-        return new(result.Succeeded ? RecoveryState.BackupRecovered : RecoveryState.Unrecoverable,
-            result.Error, result.Succeeded ? restored : null, readOnly: !result.Succeeded);
+        return new(result, new(result.Succeeded ? RecoveryState.BackupRecovered : RecoveryState.Unrecoverable,
+            result.Error, result.Succeeded ? restored : null, readOnly: !result.Succeeded));
     }
 
     private StorageResult Commit(Workspace snapshot, Verified? verified)
@@ -134,7 +184,7 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             long count = (root?.Count ?? 0) + 1;
             byte[] record = Pack(w =>
             {
-                w.Write(Version); w.Write(snapshot.Id.ToByteArray()); w.Write(count);
+                w.Write(_version); w.Write(snapshot.Id.ToByteArray()); w.Write(count);
                 w.Write(root?.Head ?? new byte[32]); w.Write(root?.Main ?? 0);
                 w.Write(payload.Length); w.Write(payload);
             });
@@ -167,18 +217,22 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
 
     private StorageResult PublishRoot(Root root, bool reservation, long revision)
     {
+        long publicationStart = _measure ? Stopwatch.GetTimestamp() : 0;
         bool submitted = false;
+        string destination = _version == 3 && reservation ? Authority : State;
         try
         {
             byte[] bytes = EncodeRoot(root);
             string temp = Write(bytes);
             _faults?.Check(reservation ? V2Stage.BeforeReservation : V2Stage.BeforeMain);
-            string witness = "root-" + Guid.NewGuid().ToString("N") + ".bin";
+            // Preserve damaged main bytes without treating them as a valid historical root.
+            string family = _version == 3 && !reservation && _storage.Exists(State) && !ValidMainHeader() ? "damage-" : "root-";
+            string witness = family + Guid.NewGuid().ToString("N") + ".bin";
             if (_storage.Exists(witness)) { throw new StorageException(StorageError.IntegrityFailure); }
             submitted = true;
-            _storage.Publish(temp, State, _storage.Exists(State), witness);
+            _storage.Publish(temp, destination, _storage.Exists(destination), witness);
             _faults?.Check(reservation ? V2Stage.AfterReservation : V2Stage.AfterMain);
-            if (!Read(State).AsSpan().SequenceEqual(bytes)) { throw new StorageException(StorageError.IntegrityFailure); }
+            if (!Read(destination).AsSpan().SequenceEqual(bytes)) { throw new StorageException(StorageError.IntegrityFailure); }
             return new(StorageError.None, reservation ? CommitState.NotCommitted : CommitState.Committed, revision);
         }
         catch (Exception e) when (Failure(e))
@@ -187,8 +241,10 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             {
                 try
                 {
-                    var actual = Verify();
-                    if (actual.Root.Count == root.Count && actual.Root.Main == root.Main &&
+                    var actual = Verify(allowIncompleteMain: _version == 3);
+                    if (_version == 3 && !Read(destination).AsSpan().SequenceEqual(EncodeRoot(root)))
+                    { return new(Error(e), CommitState.Unknown, revision); }
+                    if (actual.Root.Count == root.Count && (_version == 3 || actual.Root.Main == root.Main) &&
                         actual.Root.Head.AsSpan().SequenceEqual(root.Head))
                     {
                         // Reservation accepted but main failed: caller may retry identical content only.
@@ -201,15 +257,25 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             }
             return new(Error(e), CommitState.NotCommitted, revision);
         }
+        finally { if (_measure) { _publishTicks += Stopwatch.GetTimestamp() - publicationStart; } }
     }
 
-    private Verified Verify(long? recoveryRevision = null)
+    private Verified Verify(long? recoveryRevision = null, bool allowIncompleteMain = false)
     {
-        if (!_storage.Exists(State)) { throw new StorageException(StorageError.RecoveryRequired); }
-        using var reader = Reader(Read(State));
-        CheckVersion(reader.ReadInt32());
-        var root = new Root(new Guid(reader.ReadBytes(16)), reader.ReadInt64(), reader.ReadBytes(32), reader.ReadInt64());
-        End(reader);
+        if (_version == 2 && _storage.Exists(Authority)) { throw new StorageException(StorageError.UnsupportedVersion); }
+        string authority = _version == 3 ? Authority : State;
+        if (!_storage.Exists(authority))
+        {
+            if (_version == 3 && _storage.Exists(State))
+            {
+                byte[] existing = Read(State);
+                if (existing.Length < 4) { throw new StorageException(StorageError.UnsupportedVersion); }
+                CheckVersion(BitConverter.ToInt32(existing));
+            }
+            throw new StorageException(StorageError.RecoveryRequired);
+        }
+        var accepted = ParseRoot(Read(authority));
+        var root = _version == 3 ? accepted with { Main = accepted.Count } : accepted;
         if (root.Count is < 1 or > MaxSegments || root.Main < 0 || root.Main > root.Count)
         { throw new StorageException(StorageError.InvalidStructure); }
         byte[][] heads = new byte[checked((int)root.Count)][];
@@ -224,7 +290,7 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             _faults?.Check(V2Stage.BeforeReadback);
             heads[checked((int)ordinal - 1)] = head;
             byte[] bytes = Read(SegmentName(head));
-            if (!SHA256.HashData(bytes).AsSpan().SequenceEqual(head)) { throw new StorageException(StorageError.IntegrityFailure); }
+            if (!Hash(bytes).AsSpan().SequenceEqual(head)) { throw new StorageException(StorageError.IntegrityFailure); }
             readBytes += bytes.Length;
             if (readBytes > 512L * 1024 * 1024) { throw new StorageException(StorageError.TooLarge); }
             using var page = Reader(bytes);
@@ -257,12 +323,34 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             newerRevision = workspace.Revision;
         }
         if (head.Any(b => b != 0) || selected != 0) { throw new StorageException(StorageError.IntegrityFailure); }
+        if (_version == 3)
+        {
+            if (accepted.Main != previousSelections[^1]) { throw new StorageException(StorageError.IntegrityFailure); }
+            // A is the only reservation authority. Main is a separately published selection.
+            // Missing/damaged main may be republished only by the explicit recovery operation.
+            if (_storage.Exists(State))
+            {
+                byte[] mainBytes = Read(State);
+                if (ValidRootBytes(mainBytes))
+                {
+                    var main = ParseRoot(mainBytes);
+                    if (main.Id != root.Id || main.Count < 1 || main.Count > root.Count || main.Main != main.Count ||
+                        !main.Head.AsSpan().SequenceEqual(heads[checked((int)main.Count - 1)]) ||
+                        (main.Main != accepted.Main && main.Main != accepted.Count))
+                    { throw new StorageException(StorageError.IntegrityFailure); }
+                }
+                else { CheckDamagedMainVersion(mainBytes); }
+            }
+            if (!allowIncompleteMain && !MainMatches(root)) { throw new StorageException(StorageError.RecoveryRequired); }
+        }
         VerifyWitnesses(root, heads, previousSelections);
         return new(root, latest!, current, recovery, readBytes);
     }
 
     private void VerifyWitnesses(Root current, byte[][] heads, long[] previousSelections)
     {
+        long started = _measure ? Stopwatch.GetTimestamp() : 0;
+        if (_measure) { _enumerations++; }
         int count = 0;
         foreach (string path in Directory.EnumerateFileSystemEntries(_storage.Root, "root-*"))
         {
@@ -283,6 +371,7 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             // An evidenced publication cannot become unpublished in this or the next generation.
             if (witness.Main > selectedAfter) { throw new StorageException(StorageError.RecoveryRequired); }
         }
+        if (_measure) { _witnessTicks += Stopwatch.GetTimestamp() - started; }
     }
 
     private string Write(byte[] bytes)
@@ -315,7 +404,10 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         if (_measure)
         {
             _readFiles++; _readBytes += bytes.Length;
-            _readTicks += Stopwatch.GetTimestamp() - started;
+            long elapsed = Stopwatch.GetTimestamp() - started;
+            _readTicks += elapsed;
+            if (name.StartsWith("segment-", StringComparison.Ordinal)) { _pageReadTicks += elapsed; }
+            if (name.StartsWith("root-", StringComparison.Ordinal)) { _witnessReadTicks += elapsed; }
         }
         return bytes;
     }
@@ -379,8 +471,30 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
     }
 
     private static string SegmentName(byte[] digest) => "segment-" + Convert.ToHexString(digest) + ".bin";
-    private static byte[] EncodeRoot(Root root) => Pack(w =>
-    { w.Write(Version); w.Write(root.Id.ToByteArray()); w.Write(root.Count); w.Write(root.Head); w.Write(root.Main); });
+    private byte[] EncodeRoot(Root root) => Pack(w =>
+    { w.Write(_version); w.Write(root.Id.ToByteArray()); w.Write(root.Count); w.Write(root.Head); w.Write(root.Main); });
+
+    private Root ParseRoot(byte[] bytes)
+    {
+        using var reader = Reader(bytes);
+        CheckVersion(reader.ReadInt32());
+        var root = new Root(new Guid(reader.ReadBytes(16)), reader.ReadInt64(), reader.ReadBytes(32), reader.ReadInt64());
+        End(reader);
+        return root;
+    }
+
+    private bool ValidRootBytes(byte[] bytes) => bytes.Length == 100 &&
+        Hash(bytes.AsSpan(0, 68)).AsSpan().SequenceEqual(bytes.AsSpan(68));
+
+    private bool ValidMainHeader() => ValidRootBytes(Read(State));
+    private void CheckDamagedMainVersion(byte[] bytes)
+    {
+        // An unreadable version cannot be distinguished from a future format: refuse.
+        if (bytes.Length < 4) { throw new StorageException(StorageError.UnsupportedVersion); }
+        CheckVersion(BitConverter.ToInt32(bytes));
+        if (bytes.Length != 100) { throw new StorageException(StorageError.InvalidStructure); }
+    }
+    private bool MainMatches(Root root) => _storage.Exists(State) && Read(State).AsSpan().SequenceEqual(EncodeRoot(root));
     private static byte[] Pack(Action<BinaryWriter> write)
     {
         using var memory = new MemoryStream();
@@ -389,16 +503,23 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         memory.Write(SHA256.HashData(body));
         return memory.ToArray();
     }
-    private static BinaryReader Reader(byte[] bytes)
+    private byte[] Hash(ReadOnlySpan<byte> bytes)
     {
-        if (bytes.Length < 36 || !SHA256.HashData(bytes.AsSpan(0, bytes.Length - 32)).AsSpan().SequenceEqual(bytes.AsSpan(bytes.Length - 32)))
+        long started = _measure ? Stopwatch.GetTimestamp() : 0;
+        byte[] digest = SHA256.HashData(bytes);
+        if (_measure) { _hashTicks += Stopwatch.GetTimestamp() - started; }
+        return digest;
+    }
+    private BinaryReader Reader(byte[] bytes)
+    {
+        if (bytes.Length < 36 || !Hash(bytes.AsSpan(0, bytes.Length - 32)).AsSpan().SequenceEqual(bytes.AsSpan(bytes.Length - 32)))
         { throw new StorageException(StorageError.IntegrityFailure); }
         return new(new MemoryStream(bytes, 0, bytes.Length - 32, writable: false));
     }
     private static void End(BinaryReader reader)
     { if (reader.BaseStream.Position != reader.BaseStream.Length) { throw new StorageException(StorageError.InvalidStructure); } }
-    private static void CheckVersion(int version)
-    { if (version != Version) { throw new StorageException(StorageError.UnsupportedVersion); } }
+    private void CheckVersion(int version)
+    { if (version != _version) { throw new StorageException(StorageError.UnsupportedVersion); } }
     private static bool Failure(Exception e) => e is StorageException or IOException or UnauthorizedAccessException or Win32Exception or ArgumentException;
     private static StorageError Error(Exception e) => e switch
     {
