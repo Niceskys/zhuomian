@@ -14,7 +14,7 @@ public enum V2Stage
 public interface IV2FaultInjector { void Check(V2Stage stage); }
 
 /// <summary>Explicit independent engineering engine; never imports or falls back to v1.</summary>
-public sealed class WorkspaceV2Store : IWorkspaceStore
+public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
 {
     private const string State = "state-v2.bin";
     private const int Version = 2;
@@ -22,6 +22,7 @@ public sealed class WorkspaceV2Store : IWorkspaceStore
     private readonly PhysicalStorage _storage;
     private readonly IV2FaultInjector? _faults;
     private readonly object _gate = new();
+    private bool _disposed;
 
     private WorkspaceV2Store(string root, IV2FaultInjector? faults)
     { _storage = new(root, null); _faults = faults; }
@@ -256,10 +257,18 @@ public sealed class WorkspaceV2Store : IWorkspaceStore
         return name;
     }
 
+    /// <summary>Waits for an active call to finish. Files and recovery evidence are never deleted.</summary>
+    public void Dispose()
+    {
+        lock (_gate) { _disposed = true; }
+        GC.SuppressFinalize(this);
+    }
+
     private StorageResult Run(bool create, Func<StorageResult> action)
     {
         lock (_gate)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
             try
             {
                 using var pin = _storage.PinRoot(create);

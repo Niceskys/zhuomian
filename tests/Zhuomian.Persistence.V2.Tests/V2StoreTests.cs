@@ -265,6 +265,8 @@ public sealed class V2StoreTests(ITestOutputHelper output)
                 });
             }
         }
+        store.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => store.Load());
         store = Store(root); Assert.Equal(1024, store.Load().Workspace!.Revision);
         Assert.Equal(StorageError.StaleRevision, store.Save(Snapshot(256)).Error);
         Assert.Equal(StorageError.RevisionConflict, store.Save(Snapshot(1024, different: true)).Error);

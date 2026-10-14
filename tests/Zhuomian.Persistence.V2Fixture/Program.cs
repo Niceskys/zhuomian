@@ -2,7 +2,7 @@ using Zhuomian.Core.WorkspaceModel;
 using Zhuomian.Persistence;
 
 if (args.Length != 3 || !Enum.TryParse<V2Stage>(args[1], out var stage)) { return 2; }
-var store = WorkspaceV2Store.ForTests(args[0], args[2] == "load" ? null : new Pause(stage));
+using var store = WorkspaceV2Store.ForTests(args[0], args[2] == "load" ? null : new Pause(stage));
 if (args[2] == "load")
 {
     var loaded = store.Load();
