@@ -194,22 +194,35 @@ public sealed class V2StoreTests(ITestOutputHelper output)
     public void Continuous1024RealSavesRetainVerifiedHistoryAndRestartRecovery()
     {
         using var root = new OwnedDirectory(); var store = Store(root);
+        var initialSnapshot = Snapshot(0);
         var createTimer = Stopwatch.StartNew();
-        Assert.True(store.InitializeNew(Snapshot(0)).Succeeded);
+        Assert.True(store.InitializeNew(initialSnapshot).Succeeded);
         double initializeMs = createTimer.Elapsed.TotalMilliseconds;
         List<object> checkpoints = [];
         var initialTimer = Stopwatch.StartNew(); Assert.Equal(StorageError.None, store.Load().Error);
         double initialLoadMs = initialTimer.Elapsed.TotalMilliseconds;
         initialTimer.Restart(); Assert.Equal(CommitState.Unchanged, store.Backup().Commit);
         double initialBackupMs = initialTimer.Elapsed.TotalMilliseconds;
+        double initialRestoreMs;
+        using (var initialRecovery = new OwnedDirectory())
+        {
+            foreach (string path in Directory.GetFiles(root.Root))
+            { if (Path.GetFileName(path) != "workspace.lock") { File.Copy(path, Path.Combine(initialRecovery.Root, Path.GetFileName(path))); } }
+            var recovery = Store(initialRecovery); initialTimer.Restart();
+            var result = recovery.RestoreRevision(0); initialRestoreMs = initialTimer.Elapsed.TotalMilliseconds;
+            Assert.Equal(StorageError.None, result.Error); Assert.Equal(1, result.Workspace!.Revision);
+        }
         int success = 0;
+        double firstSaveMs = 0;
         for (int revision = 1; revision <= 1024; revision++)
         {
+            var desired = Snapshot(revision);
             long allocation = GC.GetAllocatedBytesForCurrentThread(); var timer = Stopwatch.StartNew();
-            var result = store.Save(Snapshot(revision)); double saveMs = timer.Elapsed.TotalMilliseconds;
+            var result = store.Save(desired); double saveMs = timer.Elapsed.TotalMilliseconds;
             long saveAllocation = GC.GetAllocatedBytesForCurrentThread() - allocation;
             Assert.True(result.Succeeded, $"Save {revision}: {result.Error}/{result.Commit}");
             Assert.Equal(CommitState.Committed, result.Commit); success++;
+            if (revision == 1) { firstSaveMs = saveMs; }
             if (revision is 32 or 128 or 256 or 512 or 1000 or 1024)
             {
                 timer.Restart(); allocation = GC.GetAllocatedBytesForCurrentThread();
@@ -222,7 +235,8 @@ public sealed class V2StoreTests(ITestOutputHelper output)
                 using var recoveryRoot = new OwnedDirectory();
                 foreach (string path in Directory.GetFiles(root.Root))
                 { if (Path.GetFileName(path) != "workspace.lock") { File.Copy(path, Path.Combine(recoveryRoot.Root, Path.GetFileName(path))); } }
-                timer.Restart(); var checkpointRestore = Store(recoveryRoot).RestoreRevision(0);
+                var recoveryStore = Store(recoveryRoot);
+                timer.Restart(); var checkpointRestore = recoveryStore.RestoreRevision(0);
                 double restoreMs = timer.Elapsed.TotalMilliseconds;
                 Assert.Equal(StorageError.None, checkpointRestore.Error); Assert.Equal(revision + 1, checkpointRestore.Workspace!.Revision);
                 timer.Restart(); Assert.Equal(StorageError.StaleRevision, store.Save(Snapshot(0)).Error);
@@ -256,6 +270,7 @@ public sealed class V2StoreTests(ITestOutputHelper output)
         Assert.Equal(StorageError.RevisionConflict, store.Save(Snapshot(1024, different: true)).Error);
         Assert.Equal(CommitState.Unchanged, store.Save(Snapshot(1024)).Commit);
         var restoreTimer = Stopwatch.StartNew(); var restored = store.RestoreRevision(256);
+        double finalRestoreMs = restoreTimer.Elapsed.TotalMilliseconds;
         Assert.Equal(StorageError.None, restored.Error); Assert.Equal(1025, restored.Workspace!.Revision);
         Assert.Equal("revision-256", restored.Workspace.Spaces[Samples.SpaceA].Name);
         Assert.Equal(1025, Store(root).Load().Workspace!.Revision);
@@ -265,10 +280,13 @@ public sealed class V2StoreTests(ITestOutputHelper output)
             windowsNtfs = OperatingSystem.IsWindows(),
             filesystem = new DriveInfo(Path.GetPathRoot(root.Root)!).DriveFormat,
             saves = success,
+            initializeMs,
+            firstSaveMs,
+            initialRestoreMs,
             initialLoadMs,
             initialBackupMs,
             checkpoints,
-            restoreMs = restoreTimer.Elapsed.TotalMilliseconds,
+            restoreMs = finalRestoreMs,
             restoredRevision = 1025,
             physicalPowerLossTested = false,
             fullAcceptance = false

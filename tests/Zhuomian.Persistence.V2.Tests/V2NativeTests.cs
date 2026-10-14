@@ -170,7 +170,8 @@ public sealed class V2NativeTests
         Assert.Equal(1, Store(root).Load().Workspace!.Revision);
     }
     private sealed class Io(V2Stage target, int code) : IV2FaultInjector
-    { public void Check(V2Stage stage) { if (stage == target) { throw new IOException("generated", unchecked((int)0x80070000) | code); } } }
+    { public void Check(V2Stage stage) { if (stage == target) { if (code == 112) { throw new System.ComponentModel.Win32Exception(code); }
+                throw new IOException("generated", unchecked((int)0x80070000) | code); } } }
     private sealed class Rename(string root) : IV2FaultInjector
     {
         public void Check(V2Stage stage)

@@ -305,6 +305,7 @@ public sealed class WorkspaceV2Store : IWorkspaceStore
         UnauthorizedAccessException => StorageError.AccessDenied,
         Win32Exception native when native.NativeErrorCode is 32 or 33 => StorageError.Busy,
         Win32Exception native when native.NativeErrorCode == 5 => StorageError.AccessDenied,
+        Win32Exception native when native.NativeErrorCode is 112 or 39 => StorageError.DiskFull,
         IOException io when (io.HResult & 0xFFFF) is 32 or 33 => StorageError.Busy,
         IOException io when (io.HResult & 0xFFFF) is 112 or 39 => StorageError.DiskFull,
         ArgumentException => StorageError.InvalidStructure,
