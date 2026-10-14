@@ -12,6 +12,7 @@
     <Using Include="Xunit" />
     <ProjectReference Include="../../src/Zhuomian.Persistence/Zhuomian.Persistence.csproj" />
     <ProjectReference Include="../Zhuomian.Persistence.LockFixture/Zhuomian.Persistence.LockFixture.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Zhuomian.Persistence.V2Fixture/Zhuomian.Persistence.V2Fixture.csproj" ReferenceOutputAssembly="false" />
     <None Include="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="CopyLockFixture" AfterTargets="Build">
@@ -19,5 +20,11 @@
       <LockFixtureFiles Include="../Zhuomian.Persistence.LockFixture/bin/$(Configuration)/net9.0/*" />
     </ItemGroup>
     <Copy SourceFiles="@(LockFixtureFiles)" DestinationFolder="$(OutDir)lock-fixture" />
+  </Target>
+  <Target Name="CopyV2Fixture" AfterTargets="Build">
+    <ItemGroup>
+      <V2FixtureFiles Include="../Zhuomian.Persistence.V2Fixture/bin/$(Configuration)/net9.0/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(V2FixtureFiles)" DestinationFolder="$(OutDir)v2-fixture" />
   </Target>
 </Project>

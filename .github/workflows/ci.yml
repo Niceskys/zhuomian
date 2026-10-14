@@ -82,6 +82,11 @@ jobs:
         shell: pwsh
         run: ./scripts/test-ci-dotnet-exit-codes.ps1
 
+      - name: Configure generated v2 evidence
+        shell: pwsh
+        run: |
+          "E3_V2_EVIDENCE_DIR=$env:RUNNER_TEMP/v2-evidence" >> $env:GITHUB_ENV
+
       - name: Restore and test .NET solution
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
@@ -159,4 +164,12 @@ jobs:
         with:
           name: test-results
           path: '${{ runner.temp }}/test-results/*.trx'
+          if-no-files-found: error
+
+      - name: Upload generated v2 capacity evidence
+        if: always() && steps.solution.outputs.found == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: v2-evidence
+          path: '${{ runner.temp }}/v2-evidence/*.json'
           if-no-files-found: error

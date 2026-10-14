@@ -24,3 +24,5 @@ Use four-digit sequential names such as `0001-desktop-host-strategy.md` and star
 - [ADR-0010: Conservative storage lifecycle](0010-storage-lifecycle.md) — Proposed
 
 - [ADR-0011: Safe history compaction gates](0011-safe-history-compaction.md) — Proposed
+
+- [ADR-0012: Independent v2 transaction core](0012-independent-v2-storage.md) — Proposed

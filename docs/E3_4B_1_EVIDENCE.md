@@ -1,0 +1,32 @@
+# E3-4B-1 independent v2 engineering evidence
+
+Status: transaction-core increment, acceptance incomplete; Draft only. Base main b3b278b0759d5c0af55e224b250c27c33a6bbb10 includes E3-4A. [ADR-0012](ADR/0012-independent-v2-storage.md) is Proposed. This implements actual Initialize/Save/Load/Backup/RestoreRevision, not a codec-only or architecture-only deliverable. v1 production source and original test bodies remain unchanged. E2 Drafts #31/#32/#33 have no dependency or write from this work.
+
+## Reproduction and artifacts
+
+Run `dotnet restore`, `dotnet build -c Release`, `dotnet format --verify-no-changes`, `dotnet test -c Release --no-build`. Windows CI uses its existing full solution commands and strict exit gates. Local Linux cross-compilation additionally needs `-p:EnableWindowsTargeting=true`; plain restore was attempted and refused NETSDK1100 for existing Windows spikes. Linux cannot certify NTFS. SDK installation first failed for the latest-version discovery endpoint and /opt permissions; explicit SDK 9.0.315 installed into the workspace succeeded. No secrets were read.
+
+`V2StoreTests.Continuous1024RealSavesRetainVerifiedHistoryAndRestartRecovery` initializes a synthetic revision 0, then calls the real Save method 1024 times with distinct revisions. Every Save must succeed/Committed. Load and Backup each freshly validate the whole linked graph. Checkpoints 32/128/256/512/1000/1024 record success/refusal counts, selected revision, real file count/bytes/free space, Save/Load/Backup/Restore times, refused Save time, managed Save/Load allocation and complete-history outcome. Restore timing at checkpoints uses only copied generated files in separate owned roots, normal Restore validation/publication and no alteration of the original Save sequence. Cloning never substitutes for Save. Final recreation loads 1024, rejects stale/equal-conflicting input, accepts Unchanged identical retry and restores the actually published revision 256 as new revision 1025.
+
+Set `E3_V2_EVIDENCE_DIR` to a trusted evidence directory to retain `v2-capacity.json`. Windows workflow sets it under RUNNER_TEMP and uploads only generated JSON as `v2-evidence`; complete TRX remains in `test-results`. No raw Workspace or personal paths enter artifacts. Tests run on owned generated temporary roots, not the user's default root. Timing is single-run checkpoint sampling, not repeated statistical acceptance or a v1/v2 performance-improvement claim.
+
+## Actual development results and repairs
+
+First Linux Release build failed two new-test nullable/options analyzer checks (zero warnings, two errors); fixed without weakening tests. First v2 run: 28 passed, two failed, zero skipped. Both failures exposed orphan immutable-page collision after pre-reservation crash. The fix freshly native-reads and compares a colliding page, reuses only exact bytes, keeps staging and still requires ordinary reservation publication. Focused fault rerun: 29/29 passed. The capacity case separately completed all 1024 real Saves on Linux, zero refusals, final 1024 loaded and RestoreRevision(256) produced 1025. This first run is preliminary Linux logic evidence; final post-fix full results and Windows results are recorded below when available.
+
+## Failure and security coverage
+
+Deterministic split writes, Flush request, exact readback, before/after reservation and main root publication; structured simulated disk-full and I/O failure. Post-main unreadable verification yields Unknown; fresh restart resolves actual committed state. Burned reservation rejects conflicting content and raises Restore floor. Gaps, foreign IDs, equal retry/conflict, revision overflow, checksummed but contradictory graph selectors/ordinals/GUIDs, future formats and missing/damaged dependencies refuse mutation.
+
+Owned child process is actually terminated at four cut points (before/after A and B). A second new process loads the durable state; the parent tests Busy for Save and Restore while the child owns the lock. Windows-only additions exercise native hard-linked root/lock/history page, real junction, dangerous aliases, directory rename denial and release, state replacement sharing denial and actual write ACL denial with fixture ACL restoration. Symbolic leaf/root tests execute on each platform. Original legacy-executable isolation and all existing native tests continue in CI unchanged.
+
+These tests do not cover every possible namespace replacement interleaving or real hardware failure. No physical power-cut or full-device experiment was performed.
+
+## Open blocking gates and rollback
+
+- Damaged/missing authoritative-root recovery from witnesses with complete reservation proof: **not implemented**. Preserve all files and refuse; never select an older root by filename or fall back to v1.
+- Exhaustive initialization/Restore crash cuts, every native identity substitution interleaving, physical disk-full, real device/cache/filter durability and Windows 11 user-device acceptance: **unverified**.
+- Repeated full performance protocol and bottleneck profiling: **incomplete**. Full graph scans are linear per operation, quadratic across sequential saves. At 1024 transient managed allocation is substantial; bounded live memory is not low cumulative allocation. Backup is verified Unchanged, not a newly created independent physical backup. Do not mix it with v1 committed Backup timing.
+- Future user migration, damaged-root repair, default namespace acceptance, product deployment, UI and independent security acceptance: **not enabled or closed**.
+
+Rollback: revert this independent code/test/CI addition while preserving all v1/v2 files. Keep v1 defaults unchanged. No data deletion, reverse migration, redirection or root-witness copying is a supported rollback step. No automatic merge or product-release claim. The full E3-4B-1 core success condition and independent engineering merge gate are **not declared reached** while recovery and evidence gates remain open.
