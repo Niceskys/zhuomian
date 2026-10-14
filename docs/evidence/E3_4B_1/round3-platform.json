@@ -1,0 +1,18 @@
+{
+  "commitSha": "984204fa3a6df41d28e23639320e453a0a908fd0",
+  "baselineSha": "514a5594f594728d2093cb041ed3552472384472",
+  "totalTests": 942,
+  "passed": 942,
+  "failed": 0,
+  "skipped": 0,
+  "optInBinaryFormat": 3,
+  "realDistinctSaves": 1024,
+  "singleMainRepairImplemented": true,
+  "authoritySlotRepairImplemented": false,
+  "targetedKilledCuts": 10,
+  "targetedWriteCuts": 12,
+  "mainLossCases": 4,
+  "physicalPowerLossTested": false,
+  "productDefaultEnabled": false,
+  "adr": "Proposed"
+}

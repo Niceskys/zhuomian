@@ -71,7 +71,7 @@ Checkpoints 256/512/1000/1024 record success/refusal, current revision, complete
 
 This is a Persistence diagnostic microbenchmark, not product performance calibration. Format-2 before/after is same protocol; format-2/3 is a workload comparison with different acceptance semantics. Three pairs reveal medians/unfavorable samples and variability, not a universal latency guarantee. Full traversal remains O(n), cumulative Save work O(n²). Bounded multi-record segments/compact authority logs/trusted-generation indices/raw-preserving compression are deferred to E3-4B-2: exact coverage and commit proof must precede any source retirement. Packing alongside originals alone does not reduce disk use.
 
-Windows execution results and final numeric comparisons are pending until the completed run is inspected. Local Linux results cannot substitute for NTFS. The original round-2 collector stays strict and describes format 2; the additive format-3 collector requires its own real NTFS capacity, 135 latency samples, 30 profiles and targeted recovery evidence. No unexecuted validation is marked passed.
+Completed Windows results and numeric comparisons are recorded below. Local Linux results cannot substitute for NTFS. The original round-2 collector stays strict and describes format 2; the additive format-3 collector requires its own real NTFS capacity, 135 latency samples, 30 profiles and targeted recovery evidence. No unexecuted validation is marked passed.
 
 ### Development failures retained
 
@@ -88,3 +88,73 @@ The new killed-process class is now serialized with filesystem benchmarks. It sy
 **C — Windows 11 product:** not reached. Requires B plus real Windows 11 devices/profiles/storage/filter/full-volume/durability acceptance for declared guarantees, installation/update/rollback and all applicable E2/E4/E5 product integration gates. Windows Server CI and killed children cannot certify these.
 
 Rollback code independently, preserve every v1/v2/format-3 file, keep v1 defaults. Old format-2 engines must refuse format-3 authority, including missing main. Do not redirect old clients, delete the new slot, copy an older witness over authority, reverse-import or initialize over evidence. Disable the engineering caller when reverting. E3-4B-2 should prioritize bounded multi-record future segments and fewer future witness opens with a complete source/coverage/publication proof; no unreviewed GC or migration.
+
+## Completed Windows evidence (implementation 984204f)
+
+Validated production/test SHA: `984204fa3a6df41d28e23639320e453a0a908fd0`. Windows run [38611024433](https://github.com/Niceskys/zhuomian/actions/runs/38611024433) **completed/success**. Windows Server 2025 build 10.0.26100.0, SDK 9.0.319/runtime 9.0.21, x64, fixed NTFS. Restore/Release build/full format/all xUnit/strict v2+format-3 collectors/immutable legacy compatibility/all six frozen A/B/C rounds/native v1 collector passed. Build 0 warnings/0 errors. **942/942**, 451 Core + 37 Launch + 171 v1 + 283 v2; 0 failures/skips. Original 889 remain, **53 new tests**. Local Linux full 942/942 also passed; its conditional native cases are not NTFS evidence and full format reports unloaded unchanged Windows-spike references despite exit 0.
+
+[Raw format-3 capacity, 135 latency samples and 30 profiles](evidence/E3_4B_1/round3-windows.json) and [SHA-bound platform summary](evidence/E3_4B_1/round3-platform.json) are generated fixtures only. [v2-evidence artifact](https://github.com/Niceskys/zhuomian/actions/runs/38611024433/artifacts/11920920097), digest `5d578990f25e3857a1a664ae95c8cf7ca1bb6479e12fc604d2a8daab8ef797ee`; [full TRX](https://github.com/Niceskys/zhuomian/actions/runs/38611024433/artifacts/11920727442), digest `435e51ed8e64de9e6390606abdaa77768dae74ede5f1ad06f8ffb4f3bfa4ad92`. Raw synthetic matrix/termination/native/quiescence and original format-2 measurements remain in those artifacts. Signed artifact downloads into this executor are restricted; the generated metrics were inspected through the completed GitHub job log, not a claimed ZIP inspection.
+
+### Actual format-3 capacity
+
+All **1024 distinct-content real Save calls returned Committed; zero refusals**. At every point full graph verification passed. Final fresh-instance Load=1024; stale/conflicting retry rejects, exact retry Unchanged, RestoreRevision(256)=1025 with actual revision-256 content. Both intact-slot/main-loss cases before/after B restore accepted 10 and subsequent Restore uses 11. Missing/corrupt/foreign/future authority, history damage, incompatible/mixed inputs, conflicting witnesses and old A substitution with surviving contrary evidence reject. Ten real killed cuts, twelve exception rows, two actual wrong-byte A/B publications, native post-B Unknown, authority symlink/hardlink and all original NTFS tests passed. Original 81 exception/81 killed matrices plus four original killed cuts remain.
+
+| Saves / success / revision | Rejects | Pages / witnesses / files | Logical bytes | File allocation bytes | Free bytes | Save / Load ms | Save / Load managed bytes |
+|---|---:|---|---:|---:|---:|---|---|
+| 32 / 32 / 32 | 0 | 33 / 64 / 100 | 92512 | 142032 | 30071762944 | 99.53 / 9.66 | 2701192 / 2631944 |
+| 128 / 128 / 128 | 0 | 129 / 256 / 388 | 361754 | 555216 | 30067527680 | 88.31 / 32.61 | 10271344 / 10200832 |
+| 256 / 256 / 256 | 0 | 257 / 512 / 772 | 720922 | 1106128 | 30072901632 | 219.09 / 62.29 | 20363248 / 20291408 |
+| 512 / 512 / 512 | 0 | 513 / 1024 / 1540 | 1439258 | 2207952 | 30067191808 | 302.25 / 122.80 | 40547056 / 40473344 |
+| 1000 / 1000 / 1000 | 0 | 1001 / 2000 / 3004 | 2808588 | 4308304 | 30059741184 | 270.42 / 241.19 | 79019984 / 78946328 |
+| 1024 / 1024 / 1024 | 0 | 1025 / 2048 / 3076 | 2875980 | 4411600 | 30059544576 | 272.85 / 257.47 | 80912336 / 80839952 |
+
+These are single sequential checkpoints, not medians. 1024 remains **3076 files / 2,875,980 logical bytes / 4,411,600 data allocation bytes**, same 3n+4 growth/count as format 2. Allocation excludes MFT/directory/journal/volume costs; free-space fluctuations include unrelated hosted-runner activity.
+
+### Repeated latency and regressions
+
+Values are median **[worst] ms**, three samples per cell. Same-protocol comparison is 514a5594→current format 2. Format 3 is a different-protocol workload comparison. No physical-device I/O or product threshold calibration is claimed.
+
+| History | Operation | 514a5594 format 2 | Current format 2 | Current format 3 |
+|---|---|---:|---:|---:|
+| 32 | Load | 8.67 [9.20] | 9.08 [9.27] | 9.06 [9.32] |
+| 32 | Save | 96.60 [257.73] | 96.78 [160.01] | 94.22 [161.36] |
+| 32 | Restore | 179.51 [206.48] | 92.56 [107.39] | 77.01 [198.21] |
+| 128 | Load | 32.09 [33.39] | 33.38 [33.39] | 33.57 [34.14] |
+| 128 | Save | 149.53 [361.88] | 210.55 [456.35] | 163.57 [228.96] |
+| 128 | Restore | 242.53 [848.09] | 212.63 [250.91] | 203.36 [1024.67] |
+| 256 | Load | 64.14 [65.53] | 64.72 [67.76] | 69.04 [91.23] |
+| 256 | Save | 338.59 [389.91] | 162.24 [285.79] | 187.96 [581.43] |
+| 256 | Restore | 289.55 [379.66] | 319.66 [467.55] | 146.27 [962.10] |
+| 512 | Load | 136.74 [144.23] | 125.89 [143.66] | 128.72 [133.95] |
+| 512 | Save | 433.47 [942.29] | 812.92 [868.74] | 295.24 [474.98] |
+| 512 | Restore | 340.98 [812.92] | 402.46 [420.74] | 209.34 [237.43] |
+| 1024 | Load | 272.15 [290.46] | 261.33 [290.83] | 259.20 [277.32] |
+| 1024 | Save | 691.24 [1200.66] | 857.75 [1640.52] | 1883.19 [1973.08] |
+| 1024 | Restore | 661.80 [983.33] | 586.80 [1624.54] | 408.68 [712.91] |
+
+**No overall speedup is established.** At 1024, same-protocol Load median improves 4.0%, Save regresses **24.1%**, Restore improves 11.3%; worst current-format-2 Save/Restore exceed 1.6s. Format-3 Save median **1883.19ms**, versus current-format-2 857.75ms (**+119.5%**); format-3 Restore median 408.68ms versus 586.80ms, and Load 259.20ms versus 261.33ms. Save variability is large: format-3 661.86–1973.08ms. Smaller scales also show mixed outcomes (e.g. format-2 Save at 512 +87.5%). Single sequential 1024 Save 272.85ms is not interchangeable with warmed cloned mutating samples. Hosted filesystem/open/Flush/publication waits are visible but causal attribution of every adverse sample is **unclosed**; it is not valid to dismiss the regression as noise or promise user latency. Three samples are diagnostic, not stable tail acceptance.
+
+1024 managed Load medians: baseline 80,834,224 B; current format 2 80,833,808 B; format 3 80,836,072 B. This round establishes no meaningful allocation reduction. The root/page organization remains the dominant growing cost; no compaction or reduced integrity checks were used.
+
+### Native cost attribution at 1024
+
+Separate instrumented operations, not the latency sample above. Times overlap; for example total publication contains root Flush/atomic work, all-write Flush also includes the dependency, and read-open timing is part of page/witness reads.
+
+| Format / operation | Files / bytes / enumerations | Page read / witness read ms | Enum / witness validation ms | Validated native open / data read ms | Read SHA / decode ms | Root publication / all Flush / atomic root ms |
+|---|---|---|---|---|---|---|
+| 2 / Load | 3075 / 2875980 / 1 | 74.73 / 111.05 | 3.66 / 2.56 | 133.62 / 30.41 | 5.92 / 58.56 | 0.00 / 0.00 / 0.00 |
+| 2 / Save | 3081 / 2881596 / 1 | 79.19 / 115.20 | 4.18 / 2.66 | 139.18 / 28.27 | 6.19 / 64.77 | 1086.18 / 916.00 / 413.39 |
+| 2 / Restore | 3081 / 2881590 / 1 | 258.21 / 119.68 | 3.77 / 2.70 | 322.58 / 32.40 | 6.34 / 63.84 | 15.93 / 175.47 / 1.40 |
+| 3 / Load | 3076 / 2876080 / 1 | 79.65 / 115.41 | 3.70 / 2.63 | 140.57 / 32.62 | 5.99 / 60.06 | 0.00 / 0.00 / 0.00 |
+| 3 / Save | 3083 / 2881796 / 1 | 239.06 / 112.29 | 3.61 / 2.61 | 295.11 / 32.50 | 6.46 / 68.51 | 23.61 / 37.40 / 1.43 |
+| 3 / Restore | 3083 / 2881790 / 1 | 98.29 / 114.19 | 272.64 / 2.66 | 157.50 / 29.73 | 6.27 / 73.11 | 168.92 / 699.77 / 1.41 |
+
+Fresh opens/metadata validation dominate steady Load's measured I/O portion (3076 validated reads; native open 140.57ms versus data/EOF 32.62ms), with 60.06ms payload decode and 5.99ms page/root SHA. Enumeration can also stall (instrumented format-3 Restore enum 272.64ms versus ~3.7ms Load). Mutating waits vary sharply (format-2 instrumented Save Flush 916.00ms/atomic root 413.39ms versus format-3 Save Flush 37.40ms/atomic root 1.43ms). These separate samples expose bottlenecks/variation, not an explanation that proves the 1883ms paired median harmless. Native syscall CPU/disk decomposition, all pin/lock/write handle counts and repeat-host tail attribution remain open. Full verification is O(n) per operation and cumulative sequential Save work O(n²).
+
+### Final review judgment and open work
+
+**A:** scoped recovery/commitment/capacity/native/process/compatibility evidence is sufficient to submit this restricted, unenabled increment to independent code review. Fail Closed for authority loss is an explicit boundary, not an unsafe fallback. **Unconditional independent merge readiness is not declared:** independent review and explicit acceptance of the measured performance regression/remaining I/O attribution are still pending. The user decides merge; PR remains Draft. This distinguishes permission to review from a product-release or automatic merge recommendation.
+
+**B/C:** default storage and Windows 11 product gates are not met. Open: authority-slot loss/all-contrary-evidence rollback, directory/device loss and actual full-device/power/filter guarantees; pending-data publication UX/API acceptance; safe authorized old-format import/downgrade; sustained bounded future segment/witness organization and performance/tail acceptance; independent physical backup/export design; Windows 11 real-profile/device plus applicable E2/E4/E5 integration/installation/rollback acceptance. The candidate never enables Apply/export, migration/default/UI or external Item writes. Recovery cannot restore a previous user selection while skipping a pending reservation's B in format 3; that proposed prefix semantics needs explicit default/API acceptance.
+
+E3-4B-2 should first reproduce and attribute adverse NTFS mutating waits, then design bounded multi-record future pages/compact authority evidence with an exact coverage/source/commit/restart proof. Reduce future metadata opens without hiding historical promises. No automatic migration, source retirement, Witness deletion or GC is authorized. Revert code independently, disable the engineering caller, retain all version-2/version-3/v1 data; old clients must refuse incompatible records, never delete authority or initialize over them.
