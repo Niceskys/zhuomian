@@ -41,3 +41,7 @@ if ($total -lt 696 -or $passed -ne $total -or $failed -ne 0 -or $skipped -ne 0 -
     damagedRootRepairImplemented = $false; physicalPowerLossTested = $false
     engineeringMergeGateReached = $false; productReleaseGateReached = $false
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'v2-platform.json') -Encoding utf8
+
+# Generated measurements only, never Workspace bytes or personal paths.
+Get-Content -LiteralPath (Join-Path $EvidenceDirectory 'v2-capacity.json') -Raw
+Get-Content -LiteralPath (Join-Path $EvidenceDirectory 'v2-platform.json') -Raw
