@@ -133,7 +133,12 @@ public sealed class WorkspaceV2Store : IWorkspaceStore
                 if (!_storage.Read(name).AsSpan().SequenceEqual(record))
                 { throw new StorageException(StorageError.IntegrityFailure); }
             }
-            else { _storage.Publish(segment, name, false); }
+            else
+            {
+                _storage.Publish(segment, name, false);
+                if (!_storage.Read(name).AsSpan().SequenceEqual(record))
+                { throw new StorageException(StorageError.IntegrityFailure); }
+            }
             root = new(snapshot.Id, count, hash, root?.Main ?? 0);
             var reserved = PublishRoot(root, reservation: true, snapshot.Revision);
             if (!reserved.Succeeded) { return reserved; }
@@ -208,7 +213,9 @@ public sealed class WorkspaceV2Store : IWorkspaceStore
             long previousMain = page.ReadInt64();
             int size = page.ReadInt32();
             if (size < 1 || size > PersistenceLimits.MaxFileBytes - 128) { throw new StorageException(StorageError.TooLarge); }
-            var decoded = WorkspaceCodec.Decode(page.ReadBytes(size));
+            byte[] payload = page.ReadBytes(size);
+            if (payload.Length != size) { throw new StorageException(StorageError.IntegrityFailure); }
+            var decoded = WorkspaceCodec.Decode(payload);
             End(page);
             if (decoded.Error != StorageError.None || decoded.Workspace is null || decoded.IsReadOnly)
             { throw new StorageException(decoded.Error == StorageError.None ? StorageError.ReadOnly : decoded.Error); }

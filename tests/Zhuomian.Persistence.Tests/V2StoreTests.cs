@@ -143,6 +143,7 @@ public sealed class V2StoreTests(ITestOutputHelper output)
     [InlineData("ordinal")]
     [InlineData("future")]
     [InlineData("selector")]
+    [InlineData("length")]
     public void InternallyChecksummedButInconsistentGraphRefusesMutation(string kind)
     {
         using var root = new OwnedDirectory(); var store = Store(root);
@@ -155,6 +156,7 @@ public sealed class V2StoreTests(ITestOutputHelper output)
             if (kind == "foreign") { Guid.NewGuid().ToByteArray().CopyTo(bytes, 4); }
             if (kind == "ordinal") { BitConverter.GetBytes(2L).CopyTo(bytes, 20); }
             if (kind == "future") { BitConverter.GetBytes(99).CopyTo(bytes, 0); }
+            if (kind == "length") { BitConverter.GetBytes(bytes.Length).CopyTo(bytes, 68); }
             SHA256.HashData(bytes.AsSpan(0, bytes.Length - 32)).CopyTo(bytes, bytes.Length - 32);
             byte[] digest = SHA256.HashData(bytes);
             File.WriteAllBytes(Path.Combine(root.Root, "segment-" + Convert.ToHexString(digest) + ".bin"), bytes);
