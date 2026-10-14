@@ -114,11 +114,11 @@ jobs:
           path: '${{ runner.temp }}/history-evidence/*.json'
           if-no-files-found: error
 
-      - name: Measure paired reviewed-SHA history performance
+      - name: Measure immutable A B C history performance
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
         run: |
-          ./scripts/persistence/test-history-performance.ps1 -OutputDirectory "$env:RUNNER_TEMP/history-performance"
+          ./scripts/persistence/test-history-three-version-performance.ps1 -OutputDirectory "$env:RUNNER_TEMP/history-performance"
 
       - name: Upload repeated history performance samples
         if: always() && steps.solution.outputs.found == 'true'

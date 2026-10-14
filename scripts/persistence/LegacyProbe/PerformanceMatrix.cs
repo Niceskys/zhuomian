@@ -66,9 +66,11 @@ internal static class PerformanceMatrix
             var beforeFiles = Directory.GetFiles(root);
             long beforeBytes = beforeFiles.Sum(p => new FileInfo(p).Length);
             var next = At(perFamily + 2); // Domain fixture construction excluded.
-            long[] Metrics()
+            long[]? Metrics()
             {
-                var value = typeof(WorkspaceFileStore).GetProperty("ReadMetrics", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(store)!;
+                var property = typeof(WorkspaceFileStore).GetProperty("ReadMetrics", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (property is null) { return null; } // Immutable E3-3 has no read instrumentation.
+                var value = property.GetValue(store)!;
                 return MetricProperties
                     .Select(p => (long)value.GetType().GetProperty(p)!.GetValue(value)!).ToArray();
             }
@@ -113,9 +115,10 @@ internal static class PerformanceMatrix
                 observedRevision,
                 elapsedMs,
                 allocatedBytes,
-                successfulReadFiles = afterReads[0] - beforeReads[0],
-                successfulReadBytes = afterReads[1] - beforeReads[1],
-                enumerationEntries = afterReads[2] - beforeReads[2],
+                readMetricsAvailable = afterReads is not null,
+                successfulReadFiles = afterReads is null ? (long?)null : afterReads[0] - beforeReads![0],
+                successfulReadBytes = afterReads is null ? (long?)null : afterReads[1] - beforeReads![1],
+                enumerationEntries = afterReads is null ? (long?)null : afterReads[2] - beforeReads![2],
                 beforeFiles = beforeFiles.Length,
                 beforeBytes,
                 afterFiles = Directory.GetFiles(root).Length,

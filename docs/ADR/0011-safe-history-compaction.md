@@ -8,7 +8,7 @@
 
 ## Context and scope decision
 
-Latest main is ec43366ab3b86b54bac9e311b5f7d9ebb2fa9b6d, the squash merge of #36. ADR number checked against main and read-only trees of open Drafts #31–#33; no 0011 collision. ADR-0009 and ADR-0010 remain Proposed. This independent E3-4A increment implements history content checks and executable compatibility/capacity evidence. It **does not implement compaction, a new format, or migration**, and does not claim completion of E3-4. The 256-file restriction remains a merge/daily-use integration gate.
+Latest main is ec43366ab3b86b54bac9e311b5f7d9ebb2fa9b6d, the squash merge of #36. ADR number checked against main and read-only trees of open Drafts #31–#33; no 0011 collision. ADR-0009 and ADR-0010 remain Proposed. This independent E3-4A increment implements history content checks and executable compatibility/capacity evidence. It **does not implement compaction, a new format, or migration**, and does not claim completion of E3-4. The 256-file restriction remains a sustained-storage and daily-use integration gate; E3-4B completion is outside PR #37’s E3-4A acceptance scope.
 
 A single production compaction PR would combine a new disk reader, raw-preserving migration, old-client fence, native directory ownership, generation publication, archive retirement and crash recovery. None can be justified by a main format bump alone. Split E3-4A (this independently reversible v1 safety increment) from a subsequent protocol/migration increment and E3-4B (long-term archive management). Do not approve a lossy retention policy implicitly. This PR tightens refusals on contradictory/unreadable history; it does not change accepted snapshot content or Item authority.
 
@@ -87,3 +87,9 @@ Rollback: revert this increment only; leave every file intact. Disk format/schem
 2026-10-14: [performance review](../E3_4_PERFORMANCE_REVIEW.md) specifies fresh reads plus bounded exact-byte Decode/content-commitment reuse within one locked operation. No cache survives the call; all native opens, scan quotas, Encode validation/roundtrip and raw manifest identity binding remain. Six additional negative tests cover cross-operation/process changes, same-length/time replacement, same-operation reread corruption and native hardlink checks. This optimizes CPU/allocation work without skipping history or improving the 256 quota.
 
 [E3-4B implementation review](../E3_4B_PROTOCOL_REVIEW.md) details raw segments, complete coverage, separate reservation/main generation commits, migration replay and a dual legacy-barrier candidate. Namespace loss/old-client isolation and crash proofs remain unresolved implementation gates; no destructive migration or cleanup is enabled. This ADR stays Proposed.
+
+## Final E3-4A scope and pending compatibility recommendations
+
+PR #37 is **E3-4A — history consistency protection and safe performance optimization**. Its final review freezes production/test trees at b25f9ce and compares exact A/B/C versions with six balanced-order Windows NTFS rounds. It does not deliver E3-4B, v2, archival/migration transactions, cleanup or quota relief. This ADR remains **Proposed**; automated evidence does not accept it.
+
+The [pending compatibility review](../E3_4B_PROTOCOL_REVIEW.md#pending-independent-namespace-recommendation) prioritizes an independent future namespace with no automatic dependence on v1 history. This recommendation does not authorize implementation, data migration or discard the existing v1 reader/fixtures. Any future formal-user migration needs its own authorization, lossless fixture/crash/rollback tests and acceptance. Previously described same-namespace barriers remain an unselected alternative with unresolved loss cases.
