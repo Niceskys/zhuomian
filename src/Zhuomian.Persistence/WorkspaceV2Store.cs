@@ -325,13 +325,13 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         if (OperatingSystem.IsWindows())
         {
             // Identical native no-reparse, single-link, final-path/identity checks and sharing.
-            stream = new(NativeStorage.Open(path, false, 0x80000000, 1, 3), FileAccess.Read);
+            stream = new(NativeStorage.Open(path, false, 0x80000000, 1, 3), FileAccess.Read, bufferSize: 1);
         }
         else
         {
             if ((File.GetAttributes(path) & (FileAttributes.ReparsePoint | FileAttributes.Directory)) != 0)
             { throw new StorageException(StorageError.UnsafePath); }
-            stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 1);
         }
         using (stream)
         {
