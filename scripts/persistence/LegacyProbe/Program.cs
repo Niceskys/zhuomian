@@ -7,9 +7,19 @@ using System.Text.Json.Nodes;
 using Zhuomian.Core.WorkspaceModel;
 using Zhuomian.Persistence;
 
-if (args.Length is not (2 or 3)) { throw new ArgumentException("Expected owned fixture and source SHA."); }
+if (args.Length is not (2 or 3 or 4)) { throw new ArgumentException("Expected owned fixture and source SHA."); }
 byte[] fixture = File.ReadAllBytes(args[0]);
 var first = WorkspaceCodec.Decode(fixture).Workspace ?? throw new InvalidOperationException("Full v1 fixture required.");
+if (args.Length == 3 && args[2] == "namespace-fence")
+{
+    NamespaceFenceProbe.Run(first, args[1]);
+    return;
+}
+if (args.Length == 4 && args[2] == "matrix")
+{
+    PerformanceMatrix.Run(first, fixture, args[1], int.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture));
+    return;
+}
 if (args.Length == 3 && args[2] == "capacity")
 {
     string root = Path.Combine(Path.GetTempPath(), "zhuomian-persistence-" + Guid.NewGuid().ToString("N"));

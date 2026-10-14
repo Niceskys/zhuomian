@@ -1,0 +1,43 @@
+# PR #37 performance follow-up
+
+Reviewed baseline: fa6338d662e5e59efe01a6ce01b399b3551a95ba. Same PR/branch; no main merge or #31–#33 changes. [ADR-0011](ADR/0011-safe-history-compaction.md) remains Proposed. [E3-4B protocol review](E3_4B_PROTOCOL_REVIEW.md) is a candidate only; no migration/cleanup is enabled.
+
+## Cost analysis and implemented optimization
+
+All operations hold the existing process gate, native root/ancestor pins and exclusive workspace.lock. PhysicalStorage performs unchanged wildcard enumeration/metadata quota checks and fresh native read opens (final path/kind/single-link, deny write/delete sharing), then bounded full file reads. No file read, handle validation, family traversal or budget is skipped.
+
+| Operation | Existing repeated work at the reviewed SHA | Follow-up |
+|---|---|---|
+| Save | Main read in ReadHistory and again for predecessor; all backup/prepared decoded/canonicalized; Archive re-enumerates before adding files | Every read remains; exact duplicates reuse Decode/canonical digest inside this operation |
+| Load | Primary main plus second main read in ReadHistory; both full history families | All reads/checks remain; CPU/allocation duplicates reused |
+| Backup | Main decode then again in ReadHistory; both histories; archive quota enumeration | Same reads/publication; equivalent bytes reuse prior validation |
+| Restore/recovered Load | Primary/backup selection, then main/backups again plus prepared; canonicalization in both passes | Both passes remain fresh; identical rereads reuse validated objects/digests |
+| Inventory/plan validation | Native capture held handles, raw SHA256, Decode, canonical content hash for main/history | Same namespace/native manifest; raw SHA reused from exact-byte session Decode, canonical digest shared for duplicate bytes |
+
+HistoryCommitments previously calls WorkspaceCodec.Encode for every observed snapshot. Encode performs snapshot validation, canonical DTO serialization, payload SHA256/envelope serialization and a complete Decode roundtrip. This is additional to the initial file Decode/checksum/JSON/tree/domain work. Backup/prepared pairs often contain exact duplicates; Restore adds a second pass. These duplicate CPU/allocations were the optimization target; filesystem I/O remains the floor. PhysicalStorage also allocated a new 64 KiB buffer for every read at the baseline; the follow-up uses ArrayPool with clearArray=true in finally on success/failure. Returned JSON is an independently owned MemoryStream copy, never the rented buffer. Count/length bounds and all reads remain unchanged; cleared return prevents private configuration residue in the pool.
+
+HistoryReadSession is created inside each Save/Backup/Recover/Inventory invocation after locking; never stored on WorkspaceFileStore, never durable or shared across processes. It retains at most 8 MiB raw bytes and 513 distinct entries. Key: freshly computed exact-byte SHA256, followed by **SequenceEqual on full bytes**, so digest equality alone cannot authorize a hit. A retained immutable RecoveryResult reuses its canonical digest only after complete original Encode validation/roundtrip. Cache saturation merely forces full validation. No codec check is removed. Large uncached results are not retained by the digest map. Native reads happen before session lookup; failed/linked/unreadable sources cannot use an earlier result. Fingerprints/identity in plans still bind every capture separately.
+
+Cross-operation/process/restart: new session each time, so fresh reads revalidate new bytes. Within one operation: every reread also performs native open/full read/hash/byte comparison; replacement/corruption does not match the earlier record and is fully decoded. Six new public-behavior cases cover warm-store and restarted-store corruption, identical length/time different content, foreign Workspace replacement, same-Restore corruption before reread, actual child-process history mutation, and Windows same-byte hardlink refusal. Existing same-byte native identity plan tests remain unchanged. Privileged/kernel/same-account hostile filesystem mutation is still not a new security isolation claim.
+
+## Paired repeated measurement protocol
+
+[Runner](../scripts/persistence/test-history-performance.ps1) builds immutable reviewed SHA fa6338d and current source against the **same** [probe](../scripts/persistence/LegacyProbe/PerformanceMatrix.cs), fixture, SDK/runtime and environment. Five paired rounds alternate before/after order. Each process executes a full warmup matrix, then twenty measured operations. Setup, snapshot creation, JIT warmup and fixture cleanup are outside intervals; actual operation includes root pin/lock/read/verification/flush/publication. Full v1 fixture has four kinds, sharing, removed records and asset references; resource references are data only.
+
+History means total backup + prepared records: **0, 32, 128, 256**, split evenly. Add **512 total / 256 per family** for actual quota refusals. Main has revision perFamily+1; historical pairs cover revisions 1..perFamily, with exact byte duplicates; Save requests perFamily+2. Every mutation receives a fresh root, so repeated samples never accidentally change history depth. Zero-history Restore returns unchanged valid main; label it ReadOnlyOrUnchanged, not a successful restored commit. At per-family 256, Save/Backup/Restore refuse TooLarge; report these separately from successful commits. Load still validates readable history.
+
+Raw round JSON contains fixture digest, SHA, OS/runtime/architecture, file counts/lengths, disk capacity/free space, outcome/revision/error, elapsed ms, managed thread allocations and logical read/enumeration deltas. Summary provides min/median/max per cell. The runner fails on mismatched fixture, acceptance, revision, before/after file/byte counts, logical read bytes/files or enumeration counts. There are no timing thresholds, silent retries, fake quota success or performance-related test skips. Logical lengths/reads are not device I/O or NTFS allocation, and single-run cell medians are not product percentile/hardware claims.
+
+Existing 1000-attempt xUnit/tooling remains byte-unchanged in HistorySafetyTests: expected 256 committed / 744 refused, original assets exact, Restore TooLarge. Original 637 tests and prior 16 history cases remain unchanged; six follow-up cases give **659 = 451 + 37 + 171**. Collector separately enforces original counts, 16 existing history cases and six new safety cases. Full restore/Release/format/xUnit/Windows NTFS/doc/performance-tool/exit-code gates remain, with raw paired performance artifacts added. Windows Server CI does not close Windows 11 user/device gates.
+
+## Results and review limits
+
+Actual local/Windows run IDs, measured tables and retained raw samples will be recorded after execution. The earlier approximately 41% regression compared E3-3 against E3-4A; follow-up measurements compare reviewed E3-4A against its optimization. These are distinct baselines and must not be interchanged. CPU work may improve while native I/O remains unchanged; no guaranteed timing improvement is claimed before measurement.
+
+No quota change, new format, safe history compaction, production migration, cleanup, Apply/Export permission or hardware durability is delivered. Revert the follow-up without deleting any data. Discarding all operation-local reuse must yield the same validated acceptance decisions. Root/index loss and legacy-barrier loss remain gates in the E3-4B design.
+
+## Completed local implementation gates
+
+2026-10-14, Debian GNU/Linux 13 x64, SDK 9.0.318: restore, complete Release solution build (zero warnings/errors), complete solution format verify and full xUnit passed **659/659 = 451 + 37 + 171**, zero failures/skips. Six focused new cases also passed; native unsupported-platform branches on Linux do not certify Windows. Additional complete probe build/format and PowerShell documentation validation pass. Original 637 test bodies and prior 16 history tests remain byte-unchanged against reviewed fa6338d.
+
+The first performance-probe build correctly failed CA1861 for a repeatedly allocated property-name array; changed to static readonly without disabling analyzers. An initial diagnostic matrix overlapped local build/test activity and pre-commit code, so it is excluded from authoritative results. The final runner refuses dirty measured source/probe trees and binds fixture/seed digests and compiled Persistence assembly hash. Committed-source quiet-host repeated measurements and Windows final-head evidence follow in the PR/results below. Existing 1000 attempts remain 256 committed / 744 refusals; no quota relief.

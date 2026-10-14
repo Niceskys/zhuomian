@@ -81,3 +81,9 @@ Production storage remains fixed local Windows NTFS only; Linux is an owned-fixt
 [Evidence and explicit unmet gates](../E3_4_HISTORY_SAFETY_EVIDENCE.md) records the full original 637 tests and 16 additional cases, immutable legacy processes, same-protocol capacity attempts, real native fault tests, command exit gates and uploaded artifacts. Original C# test bodies remain unchanged. No tests skipped/disabled. Failures remain recorded. No independent human security approval is implied by these automated tests.
 
 Rollback: revert this increment only; leave every file intact. Disk format/schema remain v1. E3-2/E3-3 can still read the same bytes, but reverting loses the stronger historical conflict refusals; returning to an older executable is not a safety recommendation for contradictory histories. There is no migration to reverse, and no cleanup step. Keep all ADRs Proposed and PR Draft; no automatic merge.
+
+## PR #37 follow-up: bounded operation-local verified reuse
+
+2026-10-14: [performance review](../E3_4_PERFORMANCE_REVIEW.md) specifies fresh reads plus bounded exact-byte Decode/content-commitment reuse within one locked operation. No cache survives the call; all native opens, scan quotas, Encode validation/roundtrip and raw manifest identity binding remain. Six additional negative tests cover cross-operation/process changes, same-length/time replacement, same-operation reread corruption and native hardlink checks. This optimizes CPU/allocation work without skipping history or improving the 256 quota.
+
+[E3-4B implementation review](../E3_4B_PROTOCOL_REVIEW.md) details raw segments, complete coverage, separate reservation/main generation commits, migration replay and a dual legacy-barrier candidate. Namespace loss/old-client isolation and crash proofs remain unresolved implementation gates; no destructive migration or cleanup is enabled. This ADR stays Proposed.

@@ -24,6 +24,9 @@ foreach ($head in $heads) {
         $parsed = $json | ConvertFrom-Json
         if ($parsed.cases.Count -ne 12 -or @($parsed.cases | Where-Object rollback).Count -ne 3) { throw 'Incomplete compatibility matrix.' }
         $json | Set-Content -LiteralPath (Join-Path $OutputDirectory "$head.json") -Encoding utf8
+        $fence = dotnet (Join-Path $probe 'bin/Release/net9.0/LegacyProbe.dll') $fixture $head namespace-fence
+        if ($LASTEXITCODE -ne 0) { throw 'Actual old-code directory-barrier experiment failed.' }
+        $fence | Set-Content -LiteralPath (Join-Path $OutputDirectory "namespace-fence-$head.json") -Encoding utf8
         if ($head -eq 'ec43366ab3b86b54bac9e311b5f7d9ebb2fa9b6d') {
             $capacity = dotnet (Join-Path $probe 'bin/Release/net9.0/LegacyProbe.dll') $fixture $head capacity
             if ($LASTEXITCODE -ne 0) { throw 'Baseline capacity assertions failed.' }

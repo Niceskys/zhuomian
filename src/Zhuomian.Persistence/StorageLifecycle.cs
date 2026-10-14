@@ -101,6 +101,7 @@ public sealed partial class WorkspaceFileStore : IStorageLifecycle
         var counts = new Dictionary<StorageFileKind, int>();
         var sizes = new Dictionary<StorageFileKind, long>();
         var contents = new HistoryCommitments();
+        var session = new HistoryReadSession();
         var generations = new HashSet<long>();
         long? minimum = null, maximum = null, prepared = null;
         long bytes = 0, scannedBytes = 0;
@@ -145,9 +146,8 @@ public sealed partial class WorkspaceFileStore : IStorageLifecycle
                         else
                         {
                             scannedBytes += capture.Length;
-                            hash = Convert.ToHexString(SHA256.HashData(capture.Bytes));
+                            var decoded = session.Decode(capture.Bytes, out hash);
                             hashes[id] = hash;
-                            var decoded = WorkspaceCodec.Decode(capture.Bytes);
                             entryError = decoded.Error;
                             validation = decoded.Error == StorageError.UnsupportedVersion ? StorageValidation.UnsupportedVersion :
                                 decoded.Workspace is null ? StorageValidation.Corrupt :
@@ -163,7 +163,7 @@ public sealed partial class WorkspaceFileStore : IStorageLifecycle
                                 if (kind == StorageFileKind.Prepared) { prepared = Math.Max(prepared ?? 0, revision.Value); }
                                 if (kind is StorageFileKind.Main or StorageFileKind.Backup or StorageFileKind.Prepared)
                                 {
-                                    entryError = contents.Observe(decoded.Workspace);
+                                    entryError = contents.Observe(decoded, session);
                                 }
                             }
                         }
