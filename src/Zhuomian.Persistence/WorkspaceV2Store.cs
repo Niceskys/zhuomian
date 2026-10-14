@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using Zhuomian.Core.WorkspaceModel;
 
@@ -10,6 +11,7 @@ public enum V2Stage
 {
     BeforeWrite, DuringWrite, BeforeFlush, BeforeReadback,
     BeforeReservation, AfterReservation, BeforeMain, AfterMain,
+    AfterCreate, AfterFlush, AfterReadback, BeforeSegment, AfterSegment,
 }
 public interface IV2FaultInjector { void Check(V2Stage stage); }
 
@@ -23,6 +25,19 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
     private readonly IV2FaultInjector? _faults;
     private readonly object _gate = new();
     private bool _disposed;
+    private bool _referenceReads, _measure;
+    private long _readFiles, _readBytes, _readTicks, _decodeTicks;
+    internal (long Files, long Bytes, double ReadMs, double DecodeMs) ReadMetrics =>
+        (_readFiles, _readBytes, _readTicks * 1000d / Stopwatch.Frequency, _decodeTicks * 1000d / Stopwatch.Frequency);
+
+    // Same native boundary/protocol, isolated read-only benchmarking of the previous reader.
+    internal static WorkspaceV2Store ForReadBenchmark(string root, bool referenceReads)
+    {
+        var store = ForTests(root);
+        store._referenceReads = referenceReads;
+        store._measure = true;
+        return store;
+    }
 
     private WorkspaceV2Store(string root, IV2FaultInjector? faults)
     { _storage = new(root, null); _faults = faults; }
@@ -132,13 +147,15 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             {
                 // A pre-reservation crash may leave this exact immutable dependency.
                 // Fresh native read validates identity and bytes; never overwrite a collision.
-                if (!_storage.Read(name).AsSpan().SequenceEqual(record))
+                if (!Read(name).AsSpan().SequenceEqual(record))
                 { throw new StorageException(StorageError.IntegrityFailure); }
             }
             else
             {
+                _faults?.Check(V2Stage.BeforeSegment);
                 _storage.Publish(segment, name, false);
-                if (!_storage.Read(name).AsSpan().SequenceEqual(record))
+                _faults?.Check(V2Stage.AfterSegment);
+                if (!Read(name).AsSpan().SequenceEqual(record))
                 { throw new StorageException(StorageError.IntegrityFailure); }
             }
             root = new(snapshot.Id, count, hash, root?.Main ?? 0);
@@ -161,7 +178,7 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             submitted = true;
             _storage.Publish(temp, State, _storage.Exists(State), witness);
             _faults?.Check(reservation ? V2Stage.AfterReservation : V2Stage.AfterMain);
-            if (!_storage.Read(State).AsSpan().SequenceEqual(bytes)) { throw new StorageException(StorageError.IntegrityFailure); }
+            if (!Read(State).AsSpan().SequenceEqual(bytes)) { throw new StorageException(StorageError.IntegrityFailure); }
             return new(StorageError.None, reservation ? CommitState.NotCommitted : CommitState.Committed, revision);
         }
         catch (Exception e) when (Failure(e))
@@ -189,12 +206,14 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
     private Verified Verify(long? recoveryRevision = null)
     {
         if (!_storage.Exists(State)) { throw new StorageException(StorageError.RecoveryRequired); }
-        using var reader = Reader(_storage.Read(State));
+        using var reader = Reader(Read(State));
         CheckVersion(reader.ReadInt32());
         var root = new Root(new Guid(reader.ReadBytes(16)), reader.ReadInt64(), reader.ReadBytes(32), reader.ReadInt64());
         End(reader);
         if (root.Count is < 1 or > MaxSegments || root.Main < 0 || root.Main > root.Count)
         { throw new StorageException(StorageError.InvalidStructure); }
+        byte[][] heads = new byte[checked((int)root.Count)][];
+        long[] previousSelections = new long[heads.Length];
         byte[] head = root.Head;
         Workspace? latest = null, current = null, recovery = null;
         long newerRevision = 0;
@@ -203,7 +222,8 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         for (long ordinal = root.Count; ordinal >= 1; ordinal--)
         {
             _faults?.Check(V2Stage.BeforeReadback);
-            byte[] bytes = _storage.Read(SegmentName(head));
+            heads[checked((int)ordinal - 1)] = head;
+            byte[] bytes = Read(SegmentName(head));
             if (!SHA256.HashData(bytes).AsSpan().SequenceEqual(head)) { throw new StorageException(StorageError.IntegrityFailure); }
             readBytes += bytes.Length;
             if (readBytes > 512L * 1024 * 1024) { throw new StorageException(StorageError.TooLarge); }
@@ -213,11 +233,14 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             if (page.ReadInt64() != ordinal) { throw new StorageException(StorageError.IntegrityFailure); }
             head = page.ReadBytes(32);
             long previousMain = page.ReadInt64();
+            previousSelections[checked((int)ordinal - 1)] = previousMain;
             int size = page.ReadInt32();
             if (size < 1 || size > PersistenceLimits.MaxFileBytes - 128) { throw new StorageException(StorageError.TooLarge); }
             byte[] payload = page.ReadBytes(size);
             if (payload.Length != size) { throw new StorageException(StorageError.IntegrityFailure); }
+            long decodeStart = _measure ? Stopwatch.GetTimestamp() : 0;
             var decoded = WorkspaceCodec.Decode(payload);
+            if (_measure) { _decodeTicks += Stopwatch.GetTimestamp() - decodeStart; }
             End(page);
             if (decoded.Error != StorageError.None || decoded.Workspace is null || decoded.IsReadOnly)
             { throw new StorageException(decoded.Error == StorageError.None ? StorageError.ReadOnly : decoded.Error); }
@@ -234,7 +257,29 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             newerRevision = workspace.Revision;
         }
         if (head.Any(b => b != 0) || selected != 0) { throw new StorageException(StorageError.IntegrityFailure); }
+        VerifyWitnesses(root, heads, previousSelections);
         return new(root, latest!, current, recovery, readBytes);
+    }
+
+    private void VerifyWitnesses(Root current, byte[][] heads, long[] previousSelections)
+    {
+        int count = 0;
+        foreach (string path in Directory.EnumerateFileSystemEntries(_storage.Root, "root-*"))
+        {
+            if (++count > MaxSegments * 2) { throw new StorageException(StorageError.TooLarge); }
+            // A witness is evidence of a replaced authority, never an independently chosen fallback.
+            using var reader = Reader(Read(Path.GetFileName(path)));
+            CheckVersion(reader.ReadInt32());
+            var witness = new Root(new Guid(reader.ReadBytes(16)), reader.ReadInt64(), reader.ReadBytes(32), reader.ReadInt64());
+            End(reader);
+            if (witness.Id != current.Id) { throw new StorageException(StorageError.WorkspaceConflict); }
+            if (witness.Count < 1 || witness.Count > current.Count)
+            { throw new StorageException(StorageError.RecoveryRequired); }
+            int index = checked((int)witness.Count - 1);
+            if (!witness.Head.AsSpan().SequenceEqual(heads[index]) ||
+                (witness.Main != witness.Count && witness.Main != previousSelections[index]))
+            { throw new StorageException(StorageError.IntegrityFailure); }
+        }
     }
 
     private string Write(byte[] bytes)
@@ -247,14 +292,58 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             new FileStream(NativeStorage.Open(path, false, 0x40000000, 0, 1), FileAccess.Write) :
             new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
         {
+            _faults?.Check(V2Stage.AfterCreate);
             int half = bytes.Length / 2;
             stream.Write(bytes.AsSpan(0, half)); _faults?.Check(V2Stage.DuringWrite);
             stream.Write(bytes.AsSpan(half)); _faults?.Check(V2Stage.BeforeFlush);
             stream.Flush(true);
+            _faults?.Check(V2Stage.AfterFlush);
         }
         _faults?.Check(V2Stage.BeforeReadback);
-        if (!_storage.Read(name).AsSpan().SequenceEqual(bytes)) { throw new StorageException(StorageError.IntegrityFailure); }
+        if (!Read(name).AsSpan().SequenceEqual(bytes)) { throw new StorageException(StorageError.IntegrityFailure); }
+        _faults?.Check(V2Stage.AfterReadback);
         return name;
+    }
+
+    private byte[] Read(string name)
+    {
+        long started = _measure ? Stopwatch.GetTimestamp() : 0;
+        byte[] bytes = ReadCore(name);
+        if (_measure)
+        {
+            _readFiles++; _readBytes += bytes.Length;
+            _readTicks += Stopwatch.GetTimestamp() - started;
+        }
+        return bytes;
+    }
+
+    private byte[] ReadCore(string name)
+    {
+        if (_referenceReads) { return _storage.Read(name); }
+        string path = _storage.PathFor(name);
+        FileStream stream;
+        if (OperatingSystem.IsWindows())
+        {
+            // Identical native no-reparse, single-link, final-path/identity checks and sharing.
+            stream = new(NativeStorage.Open(path, false, 0x80000000, 1, 3), FileAccess.Read);
+        }
+        else
+        {
+            if ((File.GetAttributes(path) & (FileAttributes.ReparsePoint | FileAttributes.Directory)) != 0)
+            { throw new StorageException(StorageError.UnsafePath); }
+            stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+        using (stream)
+        {
+            long length = stream.Length;
+            if (length > PersistenceLimits.MaxFileBytes) { throw new StorageException(StorageError.TooLarge); }
+            // One exact owned buffer; no growing MemoryStream/copy or 64 KiB pooled clear per page.
+            byte[] bytes = new byte[checked((int)length)];
+            stream.ReadExactly(bytes);
+            if (stream.ReadByte() != -1 || stream.Length != length)
+            { throw new StorageException(StorageError.IntegrityFailure); }
+            return bytes;
+        }
     }
 
     /// <summary>Waits for an active call to finish. Files and recovery evidence are never deleted.</summary>
