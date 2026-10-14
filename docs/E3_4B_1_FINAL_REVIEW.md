@@ -1,0 +1,86 @@
+# E3-4B-1 final engineering review
+
+Starting review SHA: `a80541885608bc27652af61741ba729ad8571aa0`.
+Production validation tree: `984204fa3a6df41d28e23639320e453a0a908fd0`.
+PR [#38](https://github.com/Niceskys/zhuomian/pull/38) remains Draft; no merge is authorized.
+main remains `b3b278b0759d5c0af55e224b250c27c33a6bbb10`.
+[ADR-0012](ADR/0012-independent-v2-storage.md) remains Proposed.
+
+This round changes **no production file or disk protocol**. It reviews the existing core and extends the existing performance fixture/strict evidence collector. All 942 tests, original assertions, 135 latency samples, 30 separate profiles, native tests and termination matrices remain. No new transaction fault cuts are added. The additional measurements do not replace any of the actual 1024 sequential Saves. Final tested SHA and Windows results will be appended after execution; no pending measurement is a pass.
+
+## Evidence audit and the two-second Save
+
+All 135 latency rows and 30 profiles in [the adverse round-3 run](evidence/E3_4B_1/round3-windows.json) were reviewed. Original 1024 format-3 Save samples were **1973.0773, 661.8649, 1883.1911 ms** (median 1883.1911); their process CPU times were **250, 250, 265.625 ms**. The long elapsed interval was not accompanied by proportionally more process CPU. This supports a wait/descheduling component, not a specific device or syscall diagnosis. Process CPU includes all test-host threads, has coarse granularity and is not a wall-time decomposition.
+
+The completed final-document [CI 38618614491](https://github.com/Niceskys/zhuomian/actions/runs/38618614491) independently repeats **the same production, tests and measurement protocol**, with **942/942**, no failures/skips, full Release/format/native/legacy checks successful. Its [complete 135 rows and 30 profiles](evidence/E3_4B_1/round3-final-ci-windows.json) are retained, not substituted for the adverse run. At 1024, format-3 Save was **366.2875, 377.7378, 351.6390 ms**, median **366.2875**. Baseline format-2 Save median **374.3423**, current format-2 **356.6344 ms**. Thus the unchanged protocol can run substantially below two seconds on hosted NTFS; neither a fixed two-second format-3 cost nor a stable speedup is established. Different runs have different hosts; these are replication observations, not a controlled code-optimization comparison.
+
+Third-round methodology findings:
+
+- Copies and Decode are outside the operation timer. No copy/fixture build is directly charged to Save. However, immediately preceding thousands of File.Copy creates/metadatas may affect subsequent Flush/replace waits; exclusion from the timer does not isolate filesystem state.
+- Load runs on original/control roots; Save/Restore use fresh copies. The sequential 272.8549ms Save uses the growing original directory. These workloads have different metadata/cache/writeback conditions and cannot be interchanged.
+- The baseline assembly/load context is reused across clones; there is no per-sample cold-assembly penalty. All variants have already executed many Saves by 1024. Load warmup precedes each checkpoint; small-checkpoint first Restore/JIT effects cannot be generalized to 1024.
+- ABC/CBA/ABC has only three samples per cell and unequal first-position counts. It is diagnostic, not stable tail evidence. The serialized benchmark collection and serial solution project execution remove intentional test-suite concurrency, not hosted-runner/filter/volume contention.
+- Original managed allocation capture includes Process bookkeeping; elapsed excludes it. New measurements move allocation capture after that setup. Original reflection/result assertions remain inside operation time consistently for all variants.
+- Critically, the 30 stage profiles are **different operations** from the 135 latency rows. A profile with 37ms Flush does not explain a separate 1973ms Save. Other profiles expose substantial waits (format-2 Save Flush 916ms, atomic root publication 413ms; format-3 Restore enumeration 273ms and Flush 700ms), but cannot identify the original bad sample's cause.
+
+No production integrity check was removed to improve a timing. Original adverse results remain valid observations. Exact causal assignment of their uninstrumented wait to Flush, replace, native open, GC, filesystem filter, scheduling or host resources is unavailable from those old rows.
+
+## Repeat measurement protocol
+
+`V3FinalReviewMeasurements` extends the existing real-history fixture: **seven paired groups at 1024**, one diagnostic control group at each of 32/128/256/512, **231 additional real operations**. Each group rotates implementation, operation and condition order. Each Load/Save/Restore has a fresh owned clone. All copies, construction, Decode, optional warmup and post-operation independent full Load/disk accounting are outside the timer. Sources were built by the existing actual sequential Save loop, not fabricated pages. Every Save must return Committed, every resulting revision is independently loaded and checked.
+
+Three unchanged-binary variants share `uninstrumented-fresh`: immutable `514a5594` format 2, current format 2, current format 3. Current variants additionally share `profiled-fresh` and `profiled-warm`; the latter first performs a complete verified Load on the clone with a separate uninstrumented instance. Counters therefore contain only the timed operation. This is a controlled warmup condition, **not** a cold-cache reset, device barrier or proof the host is idle. Profiling conditions are reported separately; they cannot silently stand in for the uninstrumented comparison. Fine baseline metrics are unavailable and represented by null, never fabricated zero. Existing production profiler is reused unchanged.
+
+Each row records wall time, process CPU, current-thread allocation, per-generation GC count deltas, process GC pause delta, preparation/warmup duration, same-operation profile where available, actual file count/logical bytes/per-file NTFS AllocationSize/free space and expected revision. GC counters are process-wide; they do not establish that all pauses were caused by this operation. Seven samples support descriptive median/min/max and nearest-rank P90 (rank 7, equal to max), **not a stable tail guarantee**. Smaller controls have one sample and no percentile claims. This persistence diagnostic intentionally differs from product 60s/300s calibration; no UI frames or product thresholds are certified.
+
+Timing inclusion: page/witness reads include validated native opens and data reads; witness total includes enumeration/read/parse; root publication includes root serialization, Write/Flush/readback/atomic publication/post-read; all-Write Flush also contains the dependency flush, outside root publication. Atomic publication is nested in root publication. Read SHA excludes Workspace envelope hashing inside Decode and write serialization hashing. These fields **must not be added as disjoint durations**. Native open time includes identity/final-path checks and kernel waits, not isolated disk metadata CPU. Counts describe successful logical read opens, not every root/lock/write handle or physical device I/O. Unmeasured pin/lock/create/close/serialization and scheduling gaps remain.
+
+## Transaction correctness review
+
+The acceptance/publication proof remains the format-3 proof in [round 3](E3_4B_1_ROUND3.md), checked against actual `InitializeNew`, `Commit`, `PublishRoot`, `Verify`, `VerifyWitnesses`, `RecoverAuthority`, Load and both Restore projections.
+
+| Durable state | Meaning and permitted behavior |
+|---|---|
+| No data, empty owned lock | Only explicit InitializeNew creates a Workspace. Unknown/stage/orphan data cannot initialize over it. |
+| Dependency/staging only before A | New content is not accepted. Existing intact A/B can still serve old main; partial initial store refuses. |
+| A accepted, B absent/old/damaged | authority-v3.bin binds exact Workspace/count/head/prior selection; the complete chain binds every accepted revision/content. Normal Load/Save/Backup/Restore refuse with no stale Workspace. Explicit repair alone may publish latest accepted content. |
+| Matching A/B | Full chain and every extant Witness must verify before Normal Load, mutation, Unchanged or Backup. |
+| Submission outcome uncertain | Readback/full proof/exact destination may resolve actual B as Committed; unreadable or inconsistent outcome remains Unknown. An exception is not evidence of non-commitment. |
+| Authority/chain/conflicting evidence untrusted | Fail Closed; no candidate/max/time/filename selection and no empty initialization. |
+
+**A** is one atomic namespace publication of `authority-v3.bin`; **B** independently publishes `state-v2.bin`. New dependencies are flushed/read back before A; A precedes B. No claim of multi-file atomicity. `NotCommitted` describes **main**, not absence of a burned reservation; callers must not infer revision reuse from it. Within matching valid A/B, lower revisions are stale, equal different canonical content conflicts, exact equal returns Unchanged. Verification occurs before that equality fast path. Higher revisions require prior B; the ordinal prefix rule (prior-main=ordinal−1) proves every earlier accepted generation was selected. Gaps in revision numbers remain legal. Restore creates revision latest trusted reservation+1; maximum long refuses without overflow. The detailed `RestoreRevisionTransaction` exposes Unknown; the legacy RecoveryResult projection remains insufficient for a production caller needing that distinction.
+
+`RecoverAuthority` is always an **explicit new B transaction**, including when old A-only content has never been selected before. It does not infer or report that old B succeeded. Load and ordinary writes never call it. A/full dependencies/all extant root witnesses are proved first; matching main returns Unchanged, otherwise a new B is flushed/read back/published. A is not changed. Before-B termination retains the same accepted floor; after-B termination has matching main; repetition verifies then returns Unchanged. Corrupt old main is retained as `damage-*`; supported valid old main is retained as `root-*`. Existing real child tests, independent expected floors, exact retained bytes, real post-B sharing/Unknown and wrong-byte-publication tests exercise these paths. No new fault cut is needed merely to repeat their names.
+
+| Evidence after failure | Recovery boundary |
+|---|---|
+| Only main absent | Explicit new B allowed with intact A/full chain/consistent Witnesses. |
+| Main exactly 100 bytes, readable version 3, checksum bad | Same, preserving damaged bytes. Truncation/extension/unknown header is not disposable corruption. |
+| A accepted/B not completed | Same; accepted snapshot becomes main **now**. User-facing confirmation/Unknown/pending-data semantics remain a default-enablement decision. |
+| Valid immediately previous main | Normal calls refuse; explicit new B allowed if proven member/selector. Older-than-prior or conflicting valid main refuses. |
+| A absent/corrupt, missing/corrupt page, conflicting/foreign Witness/main | No trusted Workspace returned; mutation and repair refuse. No older read-only fallback is exposed. |
+| Old valid A substituted with its replacement witness surviving | Same-generation/newer witness refuses; floor cannot silently decrease. |
+| Old valid A and all contrary evidence simultaneously lost/replaced | Cannot distinguish a self-consistent older graph from a genuinely old state. Outside single-main-loss proof, not authenticated anti-rollback. |
+| Format 2/3 mixed, future or unsupported data | Refuse without upgrade, deletion or initialization. Actual immutable old client isolation is retained. |
+
+There is **no generally available read-only older Workspace** when authority is unproved: API returns null/Unrecoverable/readOnly rather than pretending an old selection is authoritative. Damaged bytes remain available for future controlled forensic tooling, not current trusted Load. NTFS native identity/single-link/no-reparse/fixed-root/pinned-directory checks and the root-local cross-process lock remain unchanged. SHA binds accidental-corruption evidence, not a hostile same-account replacement of the whole graph. Process termination is not physical power testing; Flush(true), controller/media/filter/directory durability and every partial File.Replace effect are not proved.
+
+## Growth, limits and rollback
+
+Normal format 3 after n distinct Saves: n+1 pages, 2n root witnesses, A/main/lock = **3n+4**, 3076 at 1024. Each operation fully traverses O(n) history/witnesses; cumulative n Saves is O(n²). About 81MB transient managed allocation at 1024 is substantial; bounded live state is not low cumulative allocation. Recovery/failure retries can add retained stage/orphan/damage/root files beyond that formula. There is no automatic cleanup and no total-volume retention quota.
+
+Code budgets are **16384 accepted pages including initialization** (at most 16383 later distinct Saves from a new revision-0 store), **512MiB aggregate page bytes**, **8MiB per file** (payload ≤8MiB−128), **32768 enumerated Witnesses** and codec collection/depth budgets. Actual disk/ACL limits may stop earlier. New count/payload/aggregate refusals return TooLarge **before dependency/A publication**; existing oversized/invalid graph/Witness verification refuses before mutation. No rejection advances authority, deletes history or silently discards content. A later genuine IO failure after A is instead NotCommitted/Unknown under the A/B rules, not a quota refusal. Extra failure evidence can exhaust witness/disk budgets and stop service; no unlimited sustainable-capacity claim is made. Full 16384-page and exhausted-device performance/availability are not validated by the 1024 test.
+
+Backup(Unchanged) verifies **same-directory logical history only**; it provides no independent physical copy, directory/device-loss recovery or v1 physical-backup equivalence. Main-only damage has the explicit repair scope above; authority-slot damage can still cause total service refusal despite raw history remaining. No app production source references either engineering factory outside WorkspaceV2Store itself; v1 CreateDefault is unchanged. There is no automatic format upgrade, import, v1 access, Apply, external Export, source-Item modification or deletion path.
+
+Rollback disables engineering callers and reverts code while retaining every v1/format2/format3 file. It does not downgrade data or permit an old client to write it. Never delete authority, copy an old Witness into place, initialize over evidence, redirect the default directory or reverse-import an unverified subset. This increment is independently removable because no product/default consumer was connected.
+
+## Decision criteria and next work
+
+Final recommendation will be recorded with completed repeat results. Scope A may accept explicit Fail Closed availability limits and finite O(n) history costs in an **unenabled engineering core**, provided no unsafe rollback, silent overwrite, undeclared migration/destruction or P0 safety defect is found. These limits must be accepted as engineering restrictions, not declared product-ready. A pass cannot authorize B or C.
+
+**B — formal default storage: not met.** Requires accepted namespace/protocol/API/version policy; pending-A/explicit recovery/Unknown UX; sustainable retention and latency/resource budgets; safe authorized migration/downgrade; physical backup and loss recovery strategy; robust quota/disk-full operations and caller integration. No self-authored Proposed ADR closes these decisions.
+
+**C — Windows 11 product: not met.** Requires B plus real Windows 11 hardware/storage/filter/profile/lifecycle and declared durability validation, installation/update/rollback, UI/resource/focus/security integration and applicable E2/E4/E5 acceptance. Server CI/Process.Kill does not satisfy this.
+
+E3-4B-2 inputs: retain adverse and repeat raw samples; target future metadata-open/file growth with bounded multi-record segments and compact authority evidence, exact source/coverage/commit/restart/compatibility proofs first. Measure CPU/decode/allocation and same-operation native waits, introduce explicit resource/latency backpressure policy and physical-backup strategy. No Witness deletion, hidden cache trust, weakened SHA/history check, automatic migration or unproved garbage collection is authorized.

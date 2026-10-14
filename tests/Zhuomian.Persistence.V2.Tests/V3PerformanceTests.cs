@@ -21,7 +21,7 @@ public sealed partial class V3PerformanceTests
         using var recoverable = new Probe(newRoot.Root, null, true);
         Probe[] writers = [before, recoverable];
         string[] labels = [baseline is null ? "local-current-control" : "514a5594", "current-format2", "current-format3"];
-        List<object> samples = [], profiles = [], checkpoints = [];
+        List<object> samples = [], profiles = [], checkpoints = [], finalReviewSamples = [];
         foreach (var probe in writers) { probe.Initialize(WorkspaceCodec.Encode(V3AuthorityTests.Snapshot(0))); }
         for (int n = 1; n <= 1024; n++)
         {
@@ -125,6 +125,7 @@ public sealed partial class V3PerformanceTests
                     profiles.Add(new { saves = n, format = v3 ? 3 : 2, operation, metrics = store.Profile });
                 }
             }
+            MeasureFinalReview(probes, labels, n, finalReviewSamples);
         }
         recoverable.Dispose();
         using var restarted = WorkspaceV2Store.ForRecoverableTests(newRoot.Root);
@@ -155,6 +156,20 @@ public sealed partial class V3PerformanceTests
             protocol = "warm Load on original/control roots; Save/Restore on owned clones; 3 ABC/CBA/ABC rounds; identical generated inputs; copies/Decode outside timers; all latency instrumentation disabled",
             scope = "format2 before/after same protocol; format2/3 workload comparison; logical metrics, not physical device I/O",
         });
+        V2TransactionMatrixTests.WriteEvidence("v3-final-review.json", new
+        {
+            collectedAtUtc = DateTimeOffset.UtcNow,
+            windowsBuild = Environment.OSVersion.VersionString,
+            runtime = RuntimeInformation.FrameworkDescription,
+            architecture = RuntimeInformation.ProcessArchitecture.ToString(),
+            processorCount = Environment.ProcessorCount,
+            baselineSha = baseline is null ? null : "514a5594f594728d2093cb041ed3552472384472",
+            windowsNtfs = OperatingSystem.IsWindows(),
+            filesystem = new DriveInfo(Path.GetPathRoot(newRoot.Root)!).DriveFormat,
+            samples = finalReviewSamples,
+            protocol = "7 paired groups at 1024, one control group at 32/128/256/512; rotated variant/operation/condition order; fresh owned clones for all operations; copy and optional verified Load warmup outside timer; same-operation profiles only for current binaries",
+            limitations = "instrumented and uninstrumented conditions separate; baseline has no fine profiler, null is unavailable rather than zero; warm Load is not a disk-cache flush or host-quiescence proof; logical reads not device IO; small-sample percentiles not stable tail guarantees",
+        });
     }
 
     private sealed class Probe : IDisposable
@@ -164,7 +179,7 @@ public sealed partial class V3PerformanceTests
         private readonly Assembly? _baselineAssembly;
         internal Assembly? BaselineAssembly => _baselineAssembly;
         internal string Root { get; }
-        internal Probe(string root, string? baseline, bool v3, Assembly? existingBaseline = null)
+        internal Probe(string root, string? baseline, bool v3, Assembly? existingBaseline = null, bool profile = false)
         {
             Root = root;
             _baselineAssembly = existingBaseline;
@@ -176,9 +191,10 @@ public sealed partial class V3PerformanceTests
             var assembly = _baselineAssembly ?? typeof(WorkspaceV2Store).Assembly;
             _storeType = assembly.GetType("Zhuomian.Persistence.WorkspaceV2Store")!;
             _codecType = assembly.GetType("Zhuomian.Persistence.WorkspaceCodec")!;
-            _store = _storeType.GetMethod(v3 ? "ForRecoverableTests" : "ForTests", BindingFlags.NonPublic | BindingFlags.Static)!
-                .Invoke(null, [root, null])!;
+            _store = _storeType.GetMethod(profile ? "ForProfile" : v3 ? "ForRecoverableTests" : "ForTests", BindingFlags.NonPublic | BindingFlags.Static)!
+                .Invoke(null, profile ? [root, v3] : [root, null])!;
         }
+        internal object? Metrics => _storeType.GetProperty("Profile", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(_store);
         internal object Decode(byte[] payload) => Property(_codecType.GetMethod("Decode")!.Invoke(null, [new ReadOnlyMemory<byte>(payload)])!, "Workspace")!;
         internal void Initialize(byte[] payload) => Success(Call("InitializeNew", Decode(payload)));
         internal void Save(byte[] payload) => Success(Call("Save", Decode(payload)));
