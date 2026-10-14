@@ -13,7 +13,7 @@ public sealed class V2StoreTests(ITestOutputHelper output)
     private static readonly JsonSerializerOptions EvidenceOptions = new() { WriteIndented = true };
     private static Workspace Snapshot(long revision, Guid? id = null, bool different = false)
     {
-        var full = Samples.Full();
+        var full = Samples.Full().RenameSpace(Samples.SpaceA, "revision-" + revision);
         return Workspace.FromSnapshot(id ?? full.Id, full.SchemaVersion, revision, full.ItemStore,
             different ? [] : full.Spaces.Values, full.RemovedSpaces.Values);
     }
@@ -106,6 +106,7 @@ public sealed class V2StoreTests(ITestOutputHelper output)
         Assert.Equal(StorageError.RecoveryRequired, store.RestoreRevision(100).Error);
         var restored = store.RestoreRevision(1);
         Assert.Equal(StorageError.None, restored.Error); Assert.Equal(101, restored.Workspace!.Revision);
+        Assert.Equal("revision-1", restored.Workspace.Spaces[Samples.SpaceA].Name);
         Assert.Equal(StorageError.StaleRevision, store.Save(Snapshot(100)).Error);
     }
 
@@ -256,6 +257,7 @@ public sealed class V2StoreTests(ITestOutputHelper output)
         Assert.Equal(CommitState.Unchanged, store.Save(Snapshot(1024)).Commit);
         var restoreTimer = Stopwatch.StartNew(); var restored = store.RestoreRevision(256);
         Assert.Equal(StorageError.None, restored.Error); Assert.Equal(1025, restored.Workspace!.Revision);
+        Assert.Equal("revision-256", restored.Workspace.Spaces[Samples.SpaceA].Name);
         Assert.Equal(1025, Store(root).Load().Workspace!.Revision);
         var evidence = new
         {
