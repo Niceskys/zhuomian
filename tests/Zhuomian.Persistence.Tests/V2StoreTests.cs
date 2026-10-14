@@ -37,6 +37,15 @@ public sealed class V2StoreTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void NonemptyCoordinationFileIsUncertainDataAndRefusesInitialization()
+    {
+        using var root = new OwnedDirectory();
+        string path = Path.Combine(root.Root, "workspace.lock"); File.WriteAllBytes(path, [1, 2, 3]);
+        Assert.Equal(StorageError.RecoveryRequired, Store(root).InitializeNew(Snapshot(1)).Error);
+        Assert.Equal(new byte[] { 1, 2, 3 }, File.ReadAllBytes(path)); Assert.Single(Directory.GetFiles(root.Root));
+    }
+
+    [Fact]
     public void GapsConflictsForeignIdsAndOverflowAreRefusedCorrectly()
     {
         using var root = new OwnedDirectory(); var store = Store(root);
@@ -180,7 +189,9 @@ public sealed class V2StoreTests(ITestOutputHelper output)
     public void Continuous1024RealSavesRetainVerifiedHistoryAndRestartRecovery()
     {
         using var root = new OwnedDirectory(); var store = Store(root);
+        var createTimer = Stopwatch.StartNew();
         Assert.True(store.InitializeNew(Snapshot(0)).Succeeded);
+        double initializeMs = createTimer.Elapsed.TotalMilliseconds;
         List<object> checkpoints = [];
         var initialTimer = Stopwatch.StartNew(); Assert.Equal(StorageError.None, store.Load().Error);
         double initialLoadMs = initialTimer.Elapsed.TotalMilliseconds;
@@ -223,6 +234,7 @@ public sealed class V2StoreTests(ITestOutputHelper output)
                     totalFiles = files.Length,
                     dataBytes = files.Sum(p => new FileInfo(p).Length),
                     freeBytes = disk.AvailableFreeSpace,
+                    diskTotalBytes = disk.TotalSize,
                     saveMs,
                     loadMs,
                     backupMs,
@@ -245,6 +257,7 @@ public sealed class V2StoreTests(ITestOutputHelper output)
         {
             platform = Environment.OSVersion.VersionString,
             windowsNtfs = OperatingSystem.IsWindows(),
+            filesystem = new DriveInfo(Path.GetPathRoot(root.Root)!).DriveFormat,
             saves = success,
             initialLoadMs,
             initialBackupMs,

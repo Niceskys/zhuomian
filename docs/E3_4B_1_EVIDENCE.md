@@ -30,3 +30,9 @@ These tests do not cover every possible namespace replacement interleaving or re
 - Future user migration, damaged-root repair, default namespace acceptance, product deployment, UI and independent security acceptance: **not enabled or closed**.
 
 Rollback: revert this independent code/test/CI addition while preserving all v1/v2 files. Keep v1 defaults unchanged. No data deletion, reverse migration, redirection or root-witness copying is a supported rollback step. No automatic merge or product-release claim. The full E3-4B-1 core success condition and independent engineering merge gate are **not declared reached** while recovery and evidence gates remain open.
+
+## First Windows run and native alias repair
+
+Run [38550676853](https://github.com/Niceskys/zhuomian/actions/runs/38550676853) at f4845cc: restore, full Release build (0 warnings/0 errors), full format, docs/performance tooling succeeded. Tests: 693 passed, one failed, zero skipped (451 Core, 37 Launch, 205/206 Persistence). The 1024-Save case passed on actual NTFS and emitted checkpoint evidence. One new native alias assertion failed because the internal v2 factory normalized the root before PhysicalStorage could inspect its raw trailing dot/space spelling. Changed it to pass the original root through the existing raw validation, matching the v1 factory. Assertions are unchanged. Later evidence uploads for legacy/performance/native summaries failed because their generating steps were correctly not run after the test failure; no empty artifact was synthesized. The failed run and successful capacity evidence are retained, not treated as an overall CI pass.
+
+Post-fix additions include genuine Windows post-main sharing denial/Unknown, nonempty coordination-file initialization refusal, and a strict Windows collector requiring all 696 tests, 37 v2 cases, four terminated-child cuts and verified NTFS 1024/checkpoints. Final verification remains pending below.

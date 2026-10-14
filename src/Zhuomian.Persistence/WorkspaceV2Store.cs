@@ -39,13 +39,14 @@ public sealed class WorkspaceV2Store : IWorkspaceStore
         if (!full.StartsWith(Path.GetFullPath(Path.GetTempPath()), StringComparison.Ordinal) ||
             !Path.GetFileName(full).StartsWith("zhuomian-persistence-", StringComparison.Ordinal))
         { throw new ArgumentException("Owned test root required."); }
-        return new(full, faults);
+        return new(root, faults);
     }
 
     /// <summary>Only this explicit request may create state; any existing data refuses initialization.</summary>
     public StorageResult InitializeNew(Workspace snapshot) => Run(true, () =>
     {
-        if (Directory.EnumerateFileSystemEntries(_storage.Root).Any(p => Path.GetFileName(p) != "workspace.lock"))
+        if (new FileInfo(_storage.PathFor("workspace.lock")).Length != 0 ||
+            Directory.EnumerateFileSystemEntries(_storage.Root).Any(p => Path.GetFileName(p) != "workspace.lock"))
         { return new(StorageError.RecoveryRequired); }
         return Commit(snapshot, null);
     });
@@ -148,9 +149,10 @@ public sealed class WorkspaceV2Store : IWorkspaceStore
             byte[] bytes = EncodeRoot(root);
             string temp = Write(bytes);
             _faults?.Check(reservation ? V2Stage.BeforeReservation : V2Stage.BeforeMain);
+            string witness = "root-" + Guid.NewGuid().ToString("N") + ".bin";
+            if (_storage.Exists(witness)) { throw new StorageException(StorageError.IntegrityFailure); }
             submitted = true;
-            _storage.Publish(temp, State, _storage.Exists(State),
-                "root-" + Guid.NewGuid().ToString("N") + ".bin");
+            _storage.Publish(temp, State, _storage.Exists(State), witness);
             _faults?.Check(reservation ? V2Stage.AfterReservation : V2Stage.AfterMain);
             if (!_storage.Read(State).AsSpan().SequenceEqual(bytes)) { throw new StorageException(StorageError.IntegrityFailure); }
             return new(StorageError.None, reservation ? CommitState.NotCommitted : CommitState.Committed, revision);

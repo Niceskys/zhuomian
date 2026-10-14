@@ -105,6 +105,15 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $($solution.FullName) (exit $LASTEXITCODE)." }
           }
 
+      - name: Verify actual v2 native capacity and crash evidence
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/persistence/collect-v2-evidence.ps1 `
+            -ResultsDirectory "$env:RUNNER_TEMP/test-results" `
+            -EvidenceDirectory "$env:E3_V2_EVIDENCE_DIR" `
+            -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
+
       - name: Execute immutable legacy compatibility and same-protocol capacity comparison
         if: steps.solution.outputs.found == 'true'
         shell: pwsh

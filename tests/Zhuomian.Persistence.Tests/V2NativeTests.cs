@@ -136,6 +136,28 @@ public sealed class V2NativeTests
         Assert.True(Store(root).Save(Snapshot(2)).Succeeded);
     }
 
+    [Fact]
+    public void WindowsActualPostPublicationSharingDenialReportsUnknown()
+    {
+        if (!OperatingSystem.IsWindows()) { return; }
+        using var root = new OwnedDirectory(); Assert.True(Store(root).InitializeNew(Snapshot(1)).Succeeded);
+        using (var fault = new BlockRead(Path.Combine(root.Root, "state-v2.bin")))
+        { Assert.Equal(CommitState.Unknown, Store(root, fault).Save(Snapshot(2)).Commit); }
+        Assert.Equal(2, Store(root).Load().Workspace!.Revision);
+        Assert.Equal(CommitState.Unchanged, Store(root).Save(Snapshot(2)).Commit);
+    }
+    private sealed class BlockRead(string state) : IV2FaultInjector, IDisposable
+    {
+        private FileStream? _held;
+        public void Check(V2Stage stage)
+        {
+            if (stage != V2Stage.AfterMain) { return; }
+            _held = new(state, FileMode.Open, FileAccess.Read, FileShare.None);
+            throw new IOException();
+        }
+        public void Dispose() => _held?.Dispose();
+    }
+
     [Theory]
     [InlineData(V2Stage.DuringWrite, 112, StorageError.DiskFull)]
     [InlineData(V2Stage.BeforeFlush, 29, StorageError.IoFailure)]
