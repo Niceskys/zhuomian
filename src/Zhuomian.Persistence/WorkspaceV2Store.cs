@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Zhuomian.Core.WorkspaceModel;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Zhuomian.Persistence.V2Fixture")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Zhuomian.Persistence.V2.Tests")]
 namespace Zhuomian.Persistence;
 
 public enum V2Stage

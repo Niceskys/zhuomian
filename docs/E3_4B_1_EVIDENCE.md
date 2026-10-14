@@ -44,3 +44,7 @@ Post-fault-repair full run: 696/696 passed, zero failures/skips (451 Core, 37 La
 ## Parser review repair
 
 Final code review found BinaryReader.ReadBytes can return fewer bytes than the declared payload length. The segment parser now requires exact length before Decode, with an additional internally checksummed truncated-length negative fixture. New immutable dependencies are also freshly native-read at their final segment path before reservation publication. Existing test expectations remain unchanged. Current suite expectation is original 659 plus 38 v2 cases (697 total); prior 696 results remain attributed to their earlier tree.
+
+## Independent v2 test assembly
+
+The existing native evidence collector intentionally requires exactly 171 v1 Persistence cases. Rather than changing that baseline assertion, v2 cases now reside in a separate `Zhuomian.Persistence.V2.Tests` project, compiled with linked unmodified generated-fixture helpers. Every original test project file, test body and v1 collector is byte-identical to main. The solution still runs 451 Core + 37 Launch + 171 v1 Persistence + 38 v2 = 697. The v2 collector separately verifies its assembly and all 1024 checkpoint evidence. Earlier runs with combined test assemblies are retained as historical development results, not current final-assembly evidence.

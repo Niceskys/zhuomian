@@ -22,7 +22,7 @@ foreach ($file in Get-ChildItem -LiteralPath $ResultsDirectory -Filter '*.trx' -
     $total += [int]$counters.total; $passed += [int]$counters.passed
     $failed += [int]$counters.failed; $skipped += [int]$counters.notExecuted
     foreach ($result in $trx.TestRun.Results.UnitTestResult) {
-        if ($result.testName -match '\.V2(Store|Native)Tests\.') {
+        if ($result.testName -match '^Zhuomian\.Persistence\.V2\.Tests\.V2(Store|Native)Tests\.') {
             if ($result.outcome -ne 'Passed') { throw 'v2 failure or skip.' }
             $v2++
             if ($result.testName -match 'KilledChildReleasesMutex') { $killedCuts++ }

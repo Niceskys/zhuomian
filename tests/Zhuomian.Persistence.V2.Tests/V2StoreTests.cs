@@ -4,7 +4,9 @@ using System.Text.Json;
 using Xunit.Abstractions;
 using Zhuomian.Core.WorkspaceModel;
 
-namespace Zhuomian.Persistence.Tests;
+using Zhuomian.Persistence.Tests;
+
+namespace Zhuomian.Persistence.V2.Tests;
 
 public sealed class V2StoreTests(ITestOutputHelper output)
 {
