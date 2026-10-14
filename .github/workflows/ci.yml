@@ -99,7 +99,9 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "dotnet build failed for $($solution.FullName) (exit $LASTEXITCODE)." }
             dotnet format $solution.FullName --no-restore --verify-no-changes
             if ($LASTEXITCODE -ne 0) { throw "dotnet format failed for $($solution.FullName) (exit $LASTEXITCODE)." }
-            dotnet test $solution.FullName --no-build --configuration Release `
+            # Serialize projects so the unchanged v1 killed-owner cleanup is not
+            # competing with the larger v2 native file/process benchmark workload.
+            dotnet test $solution.FullName --no-build --configuration Release -m:1 `
               --logger "trx;LogFilePrefix=test-results" `
               --results-directory "$env:RUNNER_TEMP\test-results"
             if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $($solution.FullName) (exit $LASTEXITCODE)." }

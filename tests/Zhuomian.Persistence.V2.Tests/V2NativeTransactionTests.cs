@@ -44,6 +44,11 @@ public sealed class V2NativeTransactionTests
         var before = V2TransactionMatrixTests.Evidence(root);
         byte[]? state = operation == "Restore" ? File.ReadAllBytes(Path.Combine(root.Root, "state-v2.bin")) : null;
         var directory = new DirectoryInfo(root.Root);
+        // Establish a persisted, protected fixture DACL before capturing the baseline.
+        // NTFS otherwise adds AUTO_INHERITED on the first DACL write, including restoration.
+        var prepared = directory.GetAccessControl(AccessControlSections.Access);
+        prepared.SetAccessRuleProtection(isProtected: true, preserveInheritance: true);
+        directory.SetAccessControl(prepared);
         string original = directory.GetAccessControl(AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access);
         using var identity = WindowsIdentity.GetCurrent(); var denied = directory.GetAccessControl();
         denied.AddAccessRule(new FileSystemAccessRule(identity.User!, FileSystemRights.CreateFiles, AccessControlType.Deny));
