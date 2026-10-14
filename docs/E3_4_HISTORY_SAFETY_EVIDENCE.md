@@ -2,7 +2,7 @@
 
 Baseline: latest main ec43366ab3b86b54bac9e311b5f7d9ebb2fa9b6d, confirmed #36 squash merge. Independent feature/e3-4-safe-history-compaction, target main. #31/#32/#33 remain separate unchanged Drafts. [ADR-0011](ADR/0011-safe-history-compaction.md) is Proposed; ADR-0009/0010 remain Proposed.
 
-**E3-4 is not complete. The 256 quota is not relieved.** This delivers actual C# history conflict checks, native-bound reads, 16 new external-behavior tests, an executable immutable-old-code compatibility harness and reproducible capacity evidence. It does not deliver production archives, a new format, v1→v2 migration, archive crash recovery, or daily-use acceptance. Those are explicit merge/integration gates, not passing tests.
+**E3-4 is not complete. The 256 quota is not relieved.** This delivers actual C# history conflict checks, native-bound reads, 16 new external-behavior tests, an executable immutable-old-code compatibility harness and reproducible capacity evidence. It does not deliver production archives, a new format, v1→v2 migration, archive crash recovery, or daily-use acceptance. Those are explicit E3-4B/sustained-storage and daily-use integration gates, not passing tests. They are outside the final PR #37 E3-4A acceptance scope; see the [final performance review](E3_4_PERFORMANCE_REVIEW.md).
 
 ## Implemented support matrix
 
@@ -28,7 +28,7 @@ The commitment model is in [HistoryCommitments](../src/Zhuomian.Persistence/Hist
 
 [Runner](../scripts/persistence/test-legacy-history-compatibility.ps1) uses git archive on immutable SHAs and generated temporary roots. It also builds the same capacity executable against baseline and current code, in Release: same 1000 sequential tiny-workspace Save calls, same checkpoints 256/257/512/1000, same Load/Restore calls. Failed saves are measured and reported, not omitted. Current xUnit additionally records successful logical read files/bytes and wildcard enumeration entries; a separate retained-byte estimate is labeled as an estimate, not measured device I/O. File bytes are logical lengths, not allocated NTFS cluster size. Total/free volume bytes are environment observations, not configured reservation capacity.
 
-CI retains every original docs/performance-tool/native-exit/restore/Release/complete-format/xUnit/native-evidence gate. Checkout includes immutable history. Collector requires 451 Core + 37 Launching + 165 Persistence = **653**, checks original 103 persistence and original 46 lifecycle cases independently and requires all 16 new cases plus actual capacity output. TRX, platform/native-fault outcomes, old-client matrices and capacity before/after JSON upload only generated fixture results; no personal configs or paths.
+Historical initial E3-4A evidence (before six optimization tests): CI retains every original docs/performance-tool/native-exit/restore/Release/complete-format/xUnit/native-evidence gate. Checkout includes immutable history. Collector requires 451 Core + 37 Launching + 165 Persistence = **653**, checks original 103 persistence and original 46 lifecycle cases independently and requires all 16 new cases plus actual capacity output. TRX, platform/native-fault outcomes, old-client matrices and capacity before/after JSON upload only generated fixture results; no personal configs or paths.
 
 Local commands (.NET 9.0.318, Linux x64):
 

@@ -1,0 +1,46 @@
+{
+  "runId": 38508926649,
+  "jobId": 115672705239,
+  "headSha": "7fd3ac808dc4c2619e5323850b7df371452a64d2",
+  "rawSource": "Exact E3_4_TRIPLE_RAW JSON records and complete summary from completed GitHub job logs; reformatted JSON, artifact ZIP not unpacked.",
+  "platform": "Windows Server 2025 (windows-2025-vs2026), build 10.0.26100.0, X64, SDK 9.0.319, runtime 9.0.21, NTFS",
+  "tests": {
+    "Core": 451,
+    "Launching": 37,
+    "Persistence": 171,
+    "failed": 0,
+    "skipped": 0
+  },
+  "artifacts": [
+    {
+      "id": 11869566575,
+      "name": "test-results",
+      "size": 151598,
+      "digest": "sha256:93d2dc312207214450c74124ba3c2711252b225f0c40c051748bcb6ee733c52a"
+    },
+    {
+      "id": 11869406990,
+      "name": "launch-platform",
+      "size": 471,
+      "digest": "sha256:db20e1ef3ecc4b0b3bea85c64a4d9dca31bbd5584fd1a3a73ecd1fa732316937"
+    },
+    {
+      "id": 11869303137,
+      "name": "persistence-platform",
+      "size": 5993,
+      "digest": "sha256:127db207b42624a28650a33a7118a650574a7038b1adc61334ccda5187e1eb64"
+    },
+    {
+      "id": 11869178782,
+      "name": "history-performance",
+      "size": 37298,
+      "digest": "sha256:4142c939fc368de7a037ed3a4268a5f9c37503474d8f0e32ac4604beb92e2d99"
+    },
+    {
+      "id": 11868923262,
+      "name": "history-evidence",
+      "size": 3569,
+      "digest": "sha256:fbf7a4ad063818c376742ec11b44d7d9ce382536c83d4b4def1a5a91f09011dd"
+    }
+  ]
+}

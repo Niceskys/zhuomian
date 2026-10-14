@@ -85,8 +85,56 @@ The final-head production and test trees must be byte-identical to C. Source com
 
 Compare A→B for safety cost, B→C for recovered CPU/allocation cost and A→C for net code change only within this identical workload. At 512 total / 256 per family, mutation results are quota refusal, while Load is read-only; at zero history Restore is unchanged. No 1000-success claim follows from timing quota refusal. Seed snapshots are generated through each unchanged v1 codec from the same complete domain fixture; exact encoded seed hashes must match. Raw unknown/partial/damaged v1 preservation is tested separately by the existing unchanged negative/compatibility fixtures, not inferred from these timing samples.
 
-Windows NTFS results and a stability assessment of the previously observed +56.2% 32-history Save regression will be added after CI. This is a cloud CI experiment, not Windows 11 desktop/hardware acceptance or a physical device latency bound.
+Windows NTFS results and a stability assessment of the previously observed +56.2% 32-history Save regression are recorded below. This is a cloud CI experiment, not Windows 11 desktop/hardware acceptance or a physical device latency bound.
 
 ### Local six-round rehearsal retained
 
 The same pinned A/B/C sources completed the six-round protocol on Debian GNU/Linux 13 x64 / SDK 9.0.318 before the runner commit. [All 18 raw rounds and summary](evidence/e3-4-three-version-local/summary.json) are retained separately; no sample is removed. This checks the framework and is not Windows NTFS evidence. At 32-history Save medians A/B/C are **7.402 / 11.932 / 14.903 ms** (A→B +61.2%, B→C +24.9%, A→C +101.4%). At 256-history Save they are **47.624 / 78.903 / 92.700 ms** (+65.7%, +17.5%, +94.7%). These unfavorable Linux results are also retained; they cannot be substituted for the requested Windows comparison or used to declare the earlier Windows +56.2% reproducible.
+
+## Windows NTFS six-round three-version results
+
+[Run 38508926649](https://github.com/Niceskys/zhuomian/actions/runs/38508926649), job 115672705239, branch head 7fd3ac808dc4c2619e5323850b7df371452a64d2; native suite tested PR merge 0bb5d52c57d5beb11f54f10e25165c5f74b3d440. **Windows Server 2025 / windows-2025-vs2026**, build 10.0.26100.0, X64, SDK 9.0.319/runtime 9.0.21, NTFS. All restore/Release (zero warnings/errors)/complete format/xUnit/native/doc/tool/exit-code/legacy/capacity and immutable-protocol gates passed. **659/659 = 451 Core + 37 Launching + 171 Persistence**, zero failures/skips. Existing 637, prior 16 and six optimization cases remain unchanged. This review changes no production/test bytes relative to C.
+
+[All 18 Windows raw rounds and summary](evidence/e3-4-three-version-windows/summary.json) are retained in the repository. They were extracted as exact JSON records from completed CI logs and reformatted; ZIPs were not unpacked. [Provenance and artifact hashes](evidence/e3-4-three-version-windows/provenance.json) bind run/head/job/platform. Uploaded history-performance contains the original raw files; TRX, native platform/fault, legacy/capacity and launch metadata are separate artifacts. Six balanced orders, 120 samples/version, matching seeds/outcomes/revisions and unchanged B/C logical I/O. Physical device I/O is not measured.
+
+Each timing cell is **min / median / max ms**; changes compare cell medians only within this one same-environment/same-fixture experiment. No adverse sample removed. History is total records; at 512, only Load is read-only and mutations are **TooLarge refusals**. At zero, Restore is unchanged main.
+
+| History | Operation / outcome | A ms | B ms | C ms | A→B | B→C | A→C |
+|---:|---|---|---|---|---:|---:|---:|
+| 0 | Load / ReadOnlyOrUnchanged | 0.996 / 1.035 / 1.117 | 1.513 / 1.603 / 2.376 | 1.391 / 1.622 / 2.581 | +54.9% | +1.1% | +56.6% |
+| 0 | Save / Committed | 35.208 / 65.607 / 110.722 | 37.542 / 84.180 / 114.827 | 63.635 / 83.966 / 139.067 | +28.3% | -0.3% | +28.0% |
+| 0 | Backup / Committed | 17.618 / 29.471 / 45.384 | 12.304 / 32.927 / 41.750 | 29.712 / 38.000 / 47.178 | +11.7% | +15.4% | +28.9% |
+| 0 | Restore / ReadOnlyOrUnchanged | 1.015 / 1.073 / 1.182 | 1.178 / 1.241 / 1.882 | 1.089 / 1.172 / 1.232 | +15.6% | -5.6% | +9.2% |
+| 32 | Load / ReadOnlyOrUnchanged | 0.925 / 0.957 / 1.055 | 12.305 / 12.838 / 17.896 | 8.634 / 8.810 / 10.155 | +1241.6% | -31.4% | +820.7% |
+| 32 | Save / Committed | 43.833 / 91.496 / 102.849 | 54.105 / 88.225 / 326.434 | 76.695 / 79.628 / 97.487 | -3.6% | -9.7% | -13.0% |
+| 32 | Backup / Committed | 17.192 / 24.455 / 33.110 | 28.080 / 36.000 / 49.837 | 30.162 / 37.078 / 47.064 | +47.2% | +3.0% | +51.6% |
+| 32 | Restore / Committed | 36.579 / 56.401 / 81.124 | 41.343 / 68.882 / 91.427 | 46.254 / 75.712 / 131.892 | +22.1% | +9.9% | +34.2% |
+| 128 | Load / ReadOnlyOrUnchanged | 0.944 / 0.998 / 1.113 | 43.178 / 44.500 / 61.147 | 30.291 / 30.530 / 34.969 | +4360.9% | -31.4% | +2960.5% |
+| 128 | Save / Committed | 56.468 / 80.342 / 105.019 | 96.743 / 122.945 / 134.135 | 105.165 / 121.227 / 311.410 | +53.0% | -1.4% | +50.9% |
+| 128 | Backup / Committed | 18.959 / 26.622 / 34.718 | 59.316 / 70.183 / 97.812 | 52.972 / 61.924 / 112.913 | +163.6% | -11.8% | +132.6% |
+| 128 | Restore / Committed | 68.588 / 89.976 / 98.209 | 93.038 / 121.759 / 138.784 | 88.471 / 99.232 / 145.596 | +35.3% | -18.5% | +10.3% |
+| 256 | Load / ReadOnlyOrUnchanged | 0.953 / 1.047 / 1.082 | 84.250 / 86.930 / 111.655 | 59.357 / 61.475 / 72.603 | +8200.8% | -29.3% | +5770.1% |
+| 256 | Save / Committed | 96.573 / 112.018 / 165.433 | 167.005 / 184.266 / 295.230 | 130.559 / 162.606 / 205.793 | +64.5% | -11.8% | +45.2% |
+| 256 | Backup / Committed | 21.030 / 32.747 / 36.148 | 109.065 / 118.343 / 165.829 | 86.253 / 114.900 / 431.474 | +261.4% | -2.9% | +250.9% |
+| 256 | Restore / Committed | 107.014 / 126.477 / 138.919 | 183.109 / 190.585 / 209.685 | 127.305 / 143.604 / 849.770 | +50.7% | -24.7% | +13.5% |
+| 512 | Load / ReadOnlyOrUnchanged | 1.059 / 1.106 / 1.762 | 174.691 / 205.112 / 273.026 | 119.809 / 123.875 / 134.272 | +18446.2% | -39.6% | +11100.7% |
+| 512 | Save / Refused | 64.977 / 66.387 / 175.212 | 176.359 / 187.195 / 234.733 | 129.859 / 139.043 / 416.042 | +182.0% | -25.7% | +109.4% |
+| 512 | Backup / Refused | 9.954 / 10.118 / 13.429 | 176.064 / 188.454 / 315.465 | 129.433 / 141.944 / 260.886 | +1762.5% | -24.7% | +1302.9% |
+| 512 | Restore / Refused | 146.201 / 153.299 / 178.021 | 268.745 / 276.327 / 301.757 | 171.877 / 246.329 / 391.472 | +80.3% | -10.9% | +60.7% |
+
+### Stability, costs and merge recommendation
+
+The old Windows 32-history Save **+56.2%** observation (run 38501844109; B 84.5965 → C 132.1649 ms; C maximum 522.6159 ms) remains recorded in PR history and its artifacts. Earlier run 38501366071 had -45.4% at that cell. In this six-round comparison B→C is **-9.7%** (88.2255 → 79.62835 ms), with **3 slower / 3 faster** pairs. Individual paired changes are **-2.24%, +11.33%, -10.28%, +0.22%, -76.51%, +46.95%**. B ranges 54.105–326.434 ms, C 76.695–97.487 ms. **The specific +56.2% regression is not stably reproduced**, but speedup is not guaranteed. Ranges are observed sample ranges, not confidence intervals; cloud-host variation remains. Linux’s +24.9% at 32-history Save is retained separately and cannot be pooled with NTFS timings.
+
+There are still adverse cells: zero-history Backup B→C **+15.4%** (5/6 pairs slower; +5.073 ms at the median), and 32-history Restore **+9.9%** (5/6 slower; +6.831 ms). Exact-byte cache/hash bookkeeping has fixed costs; measured wall time also includes native opens, lock, write/flush/publication and OS/GC scheduling. This experiment does not isolate those phases, so it cannot prove that flush or cache bookkeeping alone caused a particular tail. Preserve these costs for review rather than claiming universal speedup.
+
+At 256 total records, B→C Load/Save/Backup/Restore median changes are **-29.3% / -11.8% / -2.9% / -24.7%** and allocation reductions **63.0% / 62.5% / 62.8% / 73.6%**. The exact logical read work remains **258/261/259/388 files** and **642462/649935/644953/966184 bytes** respectively. This supports recovered duplicate CPU/allocation cost, not skipped I/O.
+
+Compared with main A, final C still costs **+60.43 ms Load, +50.59 ms Save, +82.15 ms Backup, +17.13 ms Restore** at 256 records (A→C **+5770.1% / +45.2% / +250.9% / +13.5%**). A returned a valid main without scanning history and Backup checked main only; B/C verify every backup/prepared identity/revision/content and canonicalize understood coverage, with additional native file handles and reads. A→B is the safety coverage cost; B→C reduces duplicate validation allocations while retaining it. A has no read counters, so no A read-volume number is fabricated. Native operation-local reuse cannot remove the remaining full-history I/O floor.
+
+These differences are material engineering costs, not proof of unacceptable or imperceptible desktop behavior. The sampled small configuration has synchronous operations taking tens to hundreds of ms; UI/background scheduling and daily device latency are untested. Sustained daily use is independently blocked by the unchanged 256 quota. Cloud CI cannot certify Windows 11 user hardware, physical power failure, long device/filter/cache operation or UI integration.
+
+**Recommendation: E3-4A can be reviewed for an independent engineering merge**, conditional on human review accepting the explicit extra validation cost and scoped safety contract. Its source/test freeze, reversible v1 behavior and complete native gates justify separating it from E3-4B. It is not a product/daily-use release approval, ADR acceptance or permission to merge automatically. Keep PR Draft. No new validated integrity acceptance regression was found by the retained negative tests; this is not exhaustive security certification. Legacy namespace/barrier loss, future v2/migration/archival crash proofs and quota relief remain E3-4B blockers outside this PR acceptance.
+
+Local final-review restore initially failed NETSDK1100 on Linux because Windows-targeting was not enabled; corrected only the validation environment (`EnableWindowsTargeting=true`) and reran complete restore/Release/format/xUnit successfully, 659/659, zero warnings/errors/failures/skips. Linux native unsupported-platform branches are not Windows evidence. Final-head CI evidence is linked in PR #37 after the evidence-only commit.
+
