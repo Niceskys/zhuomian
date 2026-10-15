@@ -87,7 +87,8 @@ public static class NativeSmoke
                 }
             }
             catch (Exception ex) { failure = ex; }
-        }) { IsBackground = true };
+        })
+        { IsBackground = true };
         worker.Start(); Require(worker.Join(TimeSpan.FromSeconds(5)) && failure is null, "owner_thread_guard");
         using var process = Process.GetCurrentProcess();
         for (int state = 0; state < 2; state++)

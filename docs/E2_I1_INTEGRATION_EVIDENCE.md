@@ -32,7 +32,9 @@ First integrated Windows run: [38672328095](https://github.com/Niceskys/zhuomian
 
 Native negative-path deadlines now use an injected frozen clock, so the active deadline cannot expire due to machine scheduling. Pointer leave/cancel message paths also recheck the work area before updating geometry. Public runtime defaults still use the monotonic clock.
 
-Fresh corrected full Windows CI, exact tested commit, Release warning/error counts, smoke and artifact URLs: **pending corrected commit run**. Original #31 CI is provenance only and cannot satisfy this increment. Every failed integrated run remains in history.
+Second integrated Windows run: [38672710560](https://github.com/Niceskys/zhuomian/actions/runs/38672710560), source `6f66e858f212cb29a6763852f3b2ee6af95cb8b1`: pinned fetch and immutable baseline preparation passed; complete solution Release build had **0 warnings / 0 errors**. Complete format correctly failed on the Thread initializer newline in NativeSmoke.cs. The actual source formatting was fixed using project-based dotnet format; no test ran after that strict failure, and no test/assertion was weakened.
+
+Fresh corrected full Windows CI, exact tested commit, smoke and artifact URLs: **pending corrected commit run**. Original #31 CI is provenance only and cannot satisfy this increment. Every failed integrated run remains in history.
 
 The generated package must contain EXE/self-contained runtime, launcher, README, Proposed ADR, this evidence record, BUILD.json with head/merge provenance, dependency/runtime notices, actual ci-native-smoke.log and SHA256SUMS.txt. TRX and E3 evidence remain separate artifacts. Diagnostic startup/resource/timer/GDI numbers are not product performance.
 
