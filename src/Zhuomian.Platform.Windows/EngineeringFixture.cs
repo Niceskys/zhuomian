@@ -13,7 +13,7 @@ public static class EngineeringFixture
     public static Guid ItemId { get; } = Guid.Parse("20000000-0000-0000-0000-000000000001");
     public static Workspace Create() => Workspace.Create(Guid.Parse("30000000-0000-0000-0000-000000000001"))
         .CreateSpace(HoverId, "A / Hover 20ms", new(ActivationMode.Hover))
-        .CreateSpace(ClickId, "B / Click - instantaneous", new(ActivationMode.Click))
+        .CreateSpace(ClickId, "B / Click - continuous candidate", new(ActivationMode.Click))
         .AddItemToSpace(HoverId, new UrlItem(ItemId, new("FAKE Item - counter only"), new("https://example.invalid/")))
         .AddReference(ClickId, ItemId);
     public static LogicalRect SavedBounds(Guid id) => id == HoverId ? new(40, 60, 300, 200) : new(380, 60, 300, 200);

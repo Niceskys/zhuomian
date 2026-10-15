@@ -85,10 +85,11 @@ internal static class NativeMethods
     [DllImport("wtsapi32.dll")][return: MarshalAs(UnmanagedType.Bool)] internal static extern bool WTSUnRegisterSessionNotification(nint window);
     [DllImport("dwmapi.dll")] internal static extern int DwmGetWindowAttribute(nint window, uint attribute, out int value, int size);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.Bool)] internal static extern bool SystemParametersInfoW(uint action, uint parameter, ref HighContrast contrast, uint flags);
-    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] internal static extern bool UpdateWindow(nint window);
     [DllImport("user32.dll")] internal static extern int GetWindowRgn(nint window, nint region);
     [DllImport("gdi32.dll")][return: MarshalAs(UnmanagedType.Bool)] internal static extern bool PtInRegion(nint region, int x, int y);
     [DllImport("user32.dll")] internal static extern uint GetGuiResources(nint process, uint flags);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SystemParametersInfoW")][return: MarshalAs(UnmanagedType.Bool)] internal static extern bool ReadSystemBoolean(uint action, uint parameter, [MarshalAs(UnmanagedType.Bool)] out bool value, uint flags);
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] internal static extern bool UpdateWindow(nint window);
     [DllImport("user32.dll")] internal static extern uint GetSysColor(int index);
     [DllImport("user32.dll")] internal static extern nint LoadCursorW(nint instance, nint name);
     [DllImport("user32.dll")] internal static extern int SetWindowRgn(nint window, nint region, [MarshalAs(UnmanagedType.Bool)] bool redraw);

@@ -229,7 +229,13 @@ public sealed class SpaceInteractionController
                     // Track region membership during suppression without expanding the Space.
                     s.Inside = true;
                     Cancel(ref s.CollapseToken);
-                    if (s.State is SpaceVisualState.Idle or SpaceVisualState.Hover && CanHover(s))
+                    if (s.State == SpaceVisualState.Returning && _pendingFocus is null && CanHover(s))
+                    {
+                        // Re-entry cancels an automatic return using the existing Focus/token path.
+                        // A pending explicit switch and safety/Preview/drag gates still take precedence.
+                        RequestFocus(e.SpaceId!, fromHover: true);
+                    }
+                    else if (s.State is SpaceVisualState.Idle or SpaceVisualState.Hover && CanHover(s))
                     {
                         s.State = SpaceVisualState.Hover;
                         Cancel(ref s.HoverToken);
