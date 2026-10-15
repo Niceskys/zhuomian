@@ -138,20 +138,40 @@ jobs:
           path: '${{ runner.temp }}/e2-i2-preflight/*.trx'
           if-no-files-found: error
 
-      - name: Restore and test .NET solution
+      - name: Restore .NET solution
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
         run: |
-          $solutions = Get-ChildItem -Path . -Filter *.sln -File -Recurse
-          foreach ($solution in $solutions) {
+          foreach ($solution in Get-ChildItem -Path . -Filter *.sln -File -Recurse) {
             dotnet restore $solution.FullName
             if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed for $($solution.FullName) (exit $LASTEXITCODE)." }
+          }
+
+      - name: Build Release solution
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          foreach ($solution in Get-ChildItem -Path . -Filter *.sln -File -Recurse) {
             dotnet build $solution.FullName --no-restore --configuration Release
             if ($LASTEXITCODE -ne 0) { throw "dotnet build failed for $($solution.FullName) (exit $LASTEXITCODE)." }
+          }
+
+      - name: Verify solution format
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        timeout-minutes: 10
+        run: |
+          foreach ($solution in Get-ChildItem -Path . -Filter *.sln -File -Recurse) {
             dotnet format $solution.FullName --no-restore --verify-no-changes
             if ($LASTEXITCODE -ne 0) { throw "dotnet format failed for $($solution.FullName) (exit $LASTEXITCODE)." }
-            # Serialize projects so the unchanged v1 killed-owner cleanup is not
-            # competing with the larger v2 native file/process benchmark workload.
+          }
+
+      - name: Test complete solution serially
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          foreach ($solution in Get-ChildItem -Path . -Filter *.sln -File -Recurse) {
+            # Retain the existing serialization for native file/process benchmark isolation.
             dotnet test $solution.FullName --no-build --configuration Release -m:1 `
               --logger "trx;LogFilePrefix=test-results" `
               --results-directory "$env:RUNNER_TEMP\test-results"
