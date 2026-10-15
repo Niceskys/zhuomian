@@ -3,7 +3,7 @@
 ## Provenance and scope
 
 - Authoritative base: main `0cdd6c1868f7c8339fe0343141b8d23f6f054ac5`, verified remotely; #39 merged at that SHA.
-- Branch: `feat/e2-i2-native-motion-integration`; independent Draft PR targeting main (delivery link recorded after creation).
+- Branch: `feat/e2-i2-native-motion-integration`; [Draft PR #40](https://github.com/Niceskys/zhuomian/pull/40) targeting main.
 - Original animation source: #32 `5ea708e0e1b7f760816380dbf56f303d899cc8e6`, including Proposed ADR-0006 and motion tests.
 - Original native source: #31 `06d6f14520ebc1e7cc6486a4b3cdd90f11d7a678`. Original #31/#32/#33 heads, targets and Draft status unchanged at intake.
 - No production framework adoption, real launch/store/user-file access, search/edit/drop/discovery/delete, keyboard hook or private Shell API. All ADRs remain Proposed.
@@ -24,7 +24,7 @@ Public SPI_GETCLIENTAREAANIMATION, high contrast and AppearanceResolver drive mo
 
 ## Verification and delivery
 
-Local .NET SDK 9.0.300 tests and synthetic samples are development evidence only. Windows-only conditional bodies must execute on Windows before delivery. Final full Windows CI, actual suite totals, Release warnings/errors, native smoke, runner/OS/display/DPI and artifact are recorded in this Draft PR's delivery record and exact-head BUILD.json. Original #32 or #39 CI cannot substitute for this increment. Any failed/superseded integrated run remains in history.
+Local .NET SDK 9.0.300: Core **460 passed / 0 failed / 0 skipped**, Platform **70 passed / 0 failed / 0 skipped**, App Release build **0 warnings / 0 errors**; project-based format checks succeeded. These tests and synthetic samples are development evidence only. Windows-only conditional bodies must execute on Windows before delivery. Final full Windows CI, actual suite totals, Release warnings/errors, native smoke, runner/OS/display/DPI and artifact are recorded in this Draft PR's delivery record and exact-head BUILD.json. Original #32 or #39 CI cannot substitute for this increment. Any failed/superseded integrated run remains in history.
 
 The existing CI's E3 baseline fetch, native launch, NTFS, crash/authority/history/immutable comparison/performance collection, strict exit propagation, full Release/format and serial tests remain. The native publishing step is upgraded from E2-I1 to the new E2-I2 label/artifact and retains all its safety gates, adding motion markers and the narrowly documented Core exception to source isolation. It does not publish current motion under an obsolete E2-I1 artifact name.
 
