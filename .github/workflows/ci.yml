@@ -112,6 +112,21 @@ jobs:
         shell: pwsh
         run: ./scripts/persistence/prepare-v2-round3-baseline.ps1 -OutputDirectory "$env:RUNNER_TEMP/v2-round3-baseline"
 
+      - name: Verify E2-I2 native motion before full solution verification
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          dotnet test tests/Zhuomian.Platform.Tests --configuration Release --logger trx --results-directory "$env:RUNNER_TEMP/e2-i2-preflight"
+          if ($LASTEXITCODE -ne 0) { throw "Native motion preflight failed (exit $LASTEXITCODE)." }
+
+      - name: Upload E2-I2 native preflight results
+        if: always() && steps.solution.outputs.found == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2-i2-native-preflight
+          path: '${{ runner.temp }}/e2-i2-preflight/*.trx'
+          if-no-files-found: error
+
       - name: Restore and test .NET solution
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
