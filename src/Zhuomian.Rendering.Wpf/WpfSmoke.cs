@@ -90,9 +90,26 @@ public static class WpfSmoke
             else { host.Dispatcher.DispatchPointer(PointerAction.Down, blank); host.Dispatcher.DispatchPointer(PointerAction.Up, blank); }
             for (int frame = 0; frame <= 12; frame++)
             {
-                host.RenderHiddenTestFrame(true); CheckRegion(host, renderer); clock.NowMilliseconds += 20;
+                host.RenderHiddenTestFrame(true); CheckRegion(host, renderer);
+                if (frame == 6)
+                {
+                    var scene = host.SubmittedScene!;
+                    var tile = scene.Spaces.Single(space => space.Id == id).Items.First();
+                    var hit = scene.HitTest((int)Math.Round((tile.Bounds.X + 10) * scene.PixelsPerDip),
+                        (int)Math.Round((tile.Bounds.Y + 10) * scene.PixelsPerDip));
+                    Require(hit?.ItemId == tile.Id, "wpf_motion_item_hit");
+                    int before = host.Dispatcher.FakeLaunchCount;
+                    host.Dispatcher.DispatchPointer(PointerAction.Down, hit);
+                    clock.NowMilliseconds += 10; host.RenderHiddenTestFrame(true);
+                    Require(ReferenceEquals(scene, host.SubmittedScene) && !host.AnimationTimerArmed, "wpf_motion_press_pin");
+                    host.Dispatcher.DispatchPointer(PointerAction.Up, hit);
+                    Require(host.Dispatcher.FakeLaunchCount == before + 1, "wpf_motion_click_enabled");
+                }
+                clock.NowMilliseconds += 20;
             }
-            Require(host.SubmittedScene!.Spaces.Single(s => s.Id == id).Expanded, "wpf_expansion");
+            clock.NowMilliseconds += SpaceDispatcher.MotionDurationMilliseconds;
+            host.RenderHiddenTestFrame(true); CheckRegion(host, renderer);
+            Require(!host.AnimationTimerArmed && host.SubmittedScene!.Spaces.Single(s => s.Id == id).Expanded, "wpf_expansion");
             if (evidenceDirectory is not null) { renderer.SaveOffscreen(Path.Combine(evidenceDirectory, id == EngineeringFixture.HoverId.ToString("D") ? "A-expanded-OFFSCREEN.png" : "B-expanded-OFFSCREEN.png")); }
             host.Dispatcher.Complete(new(id, host.Dispatcher.Controller.InputGeneration, host.Dispatcher.Controller.GetState(id).TransitionToken));
             host.Dispatcher.DispatchPointer(PointerAction.Down, new(id, Close: true));
@@ -102,6 +119,7 @@ public static class WpfSmoke
             host.RenderHiddenTestFrame(false); CheckRegion(host, renderer);
             Require(!host.AnimationTimerArmed && host.SubmittedScene!.Spaces.Single(s => s.Id == id).Bounds == ModernEngineeringFixture.SavedBounds(Guid.Parse(id)), "wpf_return");
         }
+        log("wpf_motion_click A_B=true synthetic_clock=true clicks_enabled=true pinned_submission=true presentation_UNVERIFIED");
         host.Dispatcher.HostLost(); host.RenderHiddenTestFrame(false);
         Require(!host.AnimationTimerArmed && !host.DeadlineTimerArmed && !host.Dispatcher.HasGesture && host.Dispatcher.Controller.KeyboardMode == KeyboardMode.NoKeyboardCapture, "wpf_hostlost");
         Require(GetForegroundWindow() == foreground, "wpf_foreground_changed");
