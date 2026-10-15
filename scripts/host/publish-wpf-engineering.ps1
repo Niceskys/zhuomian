@@ -73,7 +73,9 @@ foreach ($trx in Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/test-results" -Fil
     }
     $testResults += [ordered]@{ file = $trx.Name; total = [int]$counters.total; passed = [int]$counters.passed }
 }
-if ($testResults.Count -ne 6 -or ($testResults | Measure-Object -Property passed -Sum).Sum -ne 1032) { throw 'Expected all 1025 existing cases plus 5 scene and 2 WPF cases across 6 suites.' }
+$passedTotal = 0
+foreach ($suite in $testResults) { $passedTotal += $suite['passed'] }
+if ($testResults.Count -ne 6 -or $passedTotal -ne 1032) { throw 'Expected all 1025 existing cases plus 5 scene and 2 WPF cases across 6 suites.' }
 $metadata = [ordered]@{
     version = '0.0.0-ui-i1'
     commitSha = $CommitSha
