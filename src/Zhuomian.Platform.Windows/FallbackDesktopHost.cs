@@ -217,7 +217,8 @@ public sealed class FallbackDesktopHost : IDisposable
     private nint? RendererCallback(nint window, uint message, nuint wParam, nint lParam)
     {
         if (message == _taskbarMessage || message == SignalMessage || message == CompletionMessage ||
-            message is 0x21 or 0x113 or 0x200 or 0x201 or 0x202 or 0x203 or 0x2A3 or 0x1F or 0x215 or 0x2B1 or 0x218 or 0x15 or 0x1A or 0x7E or 0x2E0 or 0x10 or 0x02)
+            (message == 0x113 && wParam is 1 or 2) ||
+            message is 0x21 or 0x200 or 0x201 or 0x202 or 0x203 or 0x2A3 or 0x1F or 0x215 or 0x2B1 or 0x218 or 0x15 or 0x1A or 0x7E or 0x2E0 or 0x10 or 0x02)
         { return WindowCallback(window, message, wParam, lParam); }
         return null;
     }

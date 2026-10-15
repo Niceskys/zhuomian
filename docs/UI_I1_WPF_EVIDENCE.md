@@ -39,3 +39,13 @@ Windows 11 attended gates: visible readability/spacing, physical clicks during A
 NoActivate and MA_NOACTIVATE remain; WPF controls cannot set KeyboardMode or launcher. No real launch/store/delete/plugin/elevation, global input injection or new global keyboard hook. Existing safety messages retain generation/token cancellation. A future explicit search action must first acquire existing KeyboardMode via a reviewed activation path, set/clear Searching/IME composition flags and restore NoActivate on release, external foreground and HostLost. UI-I2 should resolve presentation/initial-press identity, then explicit focus/IME/UIA before adding real search. No automatic UI-I2 start.
 
 Revert this PR to restore E2-I2 App rendering; no user data migration. [ADR-0013](ADR/0013-wpf-unified-host.md) remains Proposed. Draft PR and Windows CI links belong in the final engineering handoff; actual Windows 11 acceptance remains the user's separate gate.
+
+## Changed-file inventory
+
+- Build/CI: `.github/workflows/ci.yml`, `Zhuomian.sln`.
+- App: `src/Zhuomian.App/Program.cs`, `Zhuomian.App.csproj`, `README.md`, `Start-Engineering.cmd`.
+- Platform: `src/Zhuomian.Platform.Windows/AssemblyInfo.cs`, `FallbackDesktopHost.cs`, `SpaceDispatcher.cs`, new `ModernEngineeringFixture.cs`, `SceneSnapshot.cs`.
+- New WPF project: `src/Zhuomian.Rendering.Wpf/Zhuomian.Rendering.Wpf.csproj`, `WpfHostRenderer.cs`, `WpfSmoke.cs`.
+- Tests: new `tests/Zhuomian.Platform.Tests/SceneSnapshotTests.cs`; new `tests/Zhuomian.Rendering.Wpf.Tests/Zhuomian.Rendering.Wpf.Tests.csproj`, `UnifiedHostTests.cs`.
+- Packaging: new `scripts/host/publish-wpf-engineering.ps1`.
+- Evidence/ADR: new `docs/UI_I1_WPF_EVIDENCE.md`, `docs/ADR/0013-wpf-unified-host.md`; additive `docs/ADR/README.md` index entry.
