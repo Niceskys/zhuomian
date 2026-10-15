@@ -42,7 +42,7 @@ Revert this PR to restore E2-I2 App rendering; no user data migration. [ADR-0013
 
 ## Changed-file inventory
 
-- Build/CI: `.github/workflows/ci.yml`, `Zhuomian.sln`.
+- Build/CI: `.github/workflows/ci.yml`, `Zhuomian.sln`, `scripts/test-ci-dotnet-exit-codes.ps1`.
 - App: `src/Zhuomian.App/Program.cs`, `Zhuomian.App.csproj`, `README.md`, `Start-Engineering.cmd`.
 - Platform: `src/Zhuomian.Platform.Windows/AssemblyInfo.cs`, `FallbackDesktopHost.cs`, `SpaceDispatcher.cs`, new `ModernEngineeringFixture.cs`, `SceneSnapshot.cs`.
 - New WPF project: `src/Zhuomian.Rendering.Wpf/Zhuomian.Rendering.Wpf.csproj`, `WpfHostRenderer.cs`, `WpfSmoke.cs`.
@@ -53,3 +53,5 @@ Revert this PR to restore E2-I2 App rendering; no user data migration. [ADR-0013
 ## Windows DPI harness correction
 
 Run [38753348904](https://github.com/Niceskys/zhuomian/actions/runs/38753348904), source `8d24865d02dea6eca81901203ef591a66a280c3a`, failed WPF preflight with `dpi_context_rejected`; native Platform76 passed. VSTest does not inherit the App's PerMonitorV2 manifest and WPF establishes a different default DPI context before host Start. The harness now uses public SetThreadDpiAwarenessContext on its isolated STA only, restoring it after Dispatcher shutdown. The product's process/thread guard, manifest, single-monitor checks and original tests are unchanged. An additive negative case intentionally uses an unaware thread and requires rejection before HWND/hook creation. The real self-contained App EXE independently runs WPF smoke with its embedded manifest; passing the harness alone cannot prove packaging correctness. This is recorded Windows Server runner evidence, not mixed-DPI Windows 11 acceptance.
+
+The CI restore/Release/format/full-test commands are exposed as separate steps to locate slow/failing stages without changing regression scope. Run [38756067833](https://github.com/Niceskys/zhuomian/actions/runs/38756067833) exposed the failure-propagation fixture's old fixed step-name assumption. Its parser now extracts exactly the four ordered stages, retains all 16 native failure injections, two success paths and legacy masking reproduction, and adds missing/duplicate/reordered-stage rejection. No Core/E3/history gate is disabled.

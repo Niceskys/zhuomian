@@ -57,7 +57,7 @@ git diff --exit-code $baseMain -- src/Zhuomian.Core src/Zhuomian.Launching.Windo
     ':(exclude)src/Zhuomian.Core/Interaction/SpaceInteractionController.cs' `
     ':(exclude)tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs'
 if ($LASTEXITCODE -ne 0) { throw 'Existing Core/E3/Spike/test/tooling source must remain unchanged.' }
-"All Core/E3/Spike/test/tooling source except the documented minimal Returning change, additive Core cases and exact-blob history/typed additive-Core evidence integration matches $baseMain byte-for-byte." | Set-Content -LiteralPath (Join-Path $OutputDirectory 'ISOLATION.txt')
+"All inspected Core/E3/Spike/test and persistence/performance tooling paths except the documented minimal Returning change, additive Core cases and exact-blob history/typed additive-Core evidence integration matches $baseMain byte-for-byte." | Set-Content -LiteralPath (Join-Path $OutputDirectory 'ISOLATION.txt')
 . (Join-Path $PSScriptRoot 'assert-motion-source-isolation.ps1')
 Assert-ReviewedMotionSourceIsolation -Repository (git rev-parse --show-toplevel)
 $coreCases = & git diff --numstat $baseMain -- tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs
