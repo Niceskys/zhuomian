@@ -41,10 +41,13 @@ git diff --exit-code $baseMain -- src/Zhuomian.Core src/Zhuomian.Launching.Windo
     tests/Zhuomian.Core.Tests tests/Zhuomian.Launching.Windows.Tests tests/Zhuomian.LaunchFixture `
     tests/Zhuomian.Persistence.Tests tests/Zhuomian.Persistence.V2.Tests tests/Zhuomian.Persistence.LockFixture `
     tests/Zhuomian.Persistence.V2Fixture spikes scripts/persistence scripts/performance global.json Directory.Build.props `
+    ':(exclude)scripts/persistence/test-baseline-history-performance.ps1' `
     ':(exclude)src/Zhuomian.Core/Interaction/SpaceInteractionController.cs' `
     ':(exclude)tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs'
 if ($LASTEXITCODE -ne 0) { throw 'Existing Core/E3/Spike/test/tooling source must remain unchanged.' }
-"All Core/E3/Spike/test/tooling source except the documented minimal Returning change and additive Core cases matches $baseMain byte-for-byte." | Set-Content -LiteralPath (Join-Path $OutputDirectory 'ISOLATION.txt')
+"All Core/E3/Spike/test/tooling source except the documented minimal Returning change, additive Core cases and exact-blob history wrapper integration matches $baseMain byte-for-byte." | Set-Content -LiteralPath (Join-Path $OutputDirectory 'ISOLATION.txt')
+. (Join-Path $PSScriptRoot 'assert-motion-source-isolation.ps1')
+Assert-ReviewedMotionSourceIsolation -Repository (git rev-parse --show-toplevel)
 $coreCases = & git diff --numstat $baseMain -- tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs
 if ($LASTEXITCODE -ne 0 -or $coreCases -notmatch '^\d+\t0\t') { throw 'Core regression changes must be additive.' }
 New-Item -ItemType Directory -Path (Join-Path $OutputDirectory 'test-results') | Out-Null

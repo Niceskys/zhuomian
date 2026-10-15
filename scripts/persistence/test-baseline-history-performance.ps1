@@ -10,11 +10,10 @@ foreach ($sourceSha in @('ec43366ab3b86b54bac9e311b5f7d9ebb2fa9b6d', 'fa6338d662
     git -C $repository cat-file -e "$sourceSha^{commit}"
     if ($LASTEXITCODE -ne 0) { throw 'An immutable A/B/C source commit is unavailable.' }
 }
-# Preserve every original source/test file, not just a numeric suite count.
-$originalSourcePaths = @(git -C $repository ls-tree -r --name-only $baselineSourceSha -- src tests)
-if ($LASTEXITCODE -ne 0 -or $originalSourcePaths.Count -eq 0) { throw 'Original source inventory unavailable.' }
-git -C $repository diff --quiet $baselineSourceSha -- $originalSourcePaths
-if ($LASTEXITCODE -ne 0) { throw 'An original production/test file changed; immutable v1 baseline gate remains closed.' }
+# Preserve all historical E3/other source, allowing only two exact reviewed interaction blobs.
+# The detached baseline below and its full original C freeze remain untouched.
+. (Join-Path $repository 'scripts/host/assert-motion-source-isolation.ps1')
+Assert-ReviewedMotionSourceIsolation -Repository $repository
 $baselineClone = Join-Path ([IO.Path]::GetTempPath()) ('zhuomian-v1-baseline-' + [Guid]::NewGuid().ToString('N'))
 try {
     # Detached local immutable checkout; never change main or its working tree.
