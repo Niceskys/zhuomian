@@ -25,10 +25,20 @@ foreach ($suite in @(@{ name = 'Zhuomian.Core.Tests'; count = 451 }, @{ name = '
     if ($matches.Count -ne 1) { throw 'Expected exactly one original-suite TRX.' }
     [xml]$original = Get-Content -LiteralPath $matches[0].FullName -Raw
     $count = $original.TestRun.ResultSummary.Counters
-    if ([int]$count.total -ne $suite.count -or [int]$count.passed -ne $suite.count -or [int]$count.failed -ne 0 -or [int]$count.notExecuted -ne 0) {
-        throw 'Original test suite was reduced, skipped or failed.'
+    if ($suite.name -eq 'Zhuomian.Core.Tests') {
+        $repository = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+        . (Join-Path $repository 'scripts/host/assert-core-motion-results.ps1')
+        . (Join-Path $repository 'scripts/host/assert-motion-source-isolation.ps1')
+        Assert-ReviewedMotionSourceIsolation -Repository $repository
+        $coreCounts = Get-ReviewedCoreResultCounts -Document $original
+        $baseline[$suite.name] = $coreCounts.original
     }
-    $baseline[$suite.name] = [int]$count.passed
+    else {
+        if ([int]$count.total -ne $suite.count -or [int]$count.passed -ne $suite.count -or [int]$count.failed -ne 0 -or [int]$count.notExecuted -ne 0) {
+            throw 'Original test suite was reduced, skipped or failed.'
+        }
+        $baseline[$suite.name] = [int]$count.passed
+    }
 }
 $results = @($trx.TestRun.Results.UnitTestResult)
 $originalPersistence = @($results | Where-Object { $_.testName -match '^Zhuomian.Persistence.Tests\.(CodecTests|FileStoreTests|WindowsStorageTests)\.' })
@@ -119,6 +129,8 @@ $evidence = [ordered]@{
     failed = [int]$counters.failed
     skipped = [int]$counters.notExecuted
     originalSuiteCounts = $baseline
+    reviewedAdditionalCoreTests = $coreCounts.additional
+    actualCoreTests = $coreCounts.actual
     nativeAssertions = $required
     lifecycleAssertions = $lifecycleAssertions
     originalPersistenceCount = $originalPersistence.Count

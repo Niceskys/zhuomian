@@ -110,7 +110,10 @@ jobs:
       - name: Verify exact motion change and immutable E3 source isolation
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
-        run: ./scripts/host/test-motion-source-isolation.ps1
+        run: |
+          ./scripts/host/test-motion-source-isolation.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Motion isolation fixture failed.' }
+          ./scripts/host/test-core-motion-results.ps1
 
       - name: Build immutable reviewed v2 performance baseline
         if: steps.solution.outputs.found == 'true'
