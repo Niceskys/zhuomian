@@ -181,15 +181,17 @@ public sealed class SpaceDispatcher : IInteractionLauncher
                 // Accessibility changes must not move a pinned click. No frame timer runs while held;
                 // complete the nonanimated endpoint on release. Safety resets have already gone Idle.
                 if (paused && Controller.HostAvailable && Controller.Availability != DesktopAvailability.Suspended) { continue; }
-                _motions.Remove(id);
                 _visual[id] = plan.TargetBounds;
+                // Keep endpoint ownership until E1 consumes completion; restoring motion policy
+                // must not start a zero-distance trajectory while that message is delayed.
+                _motions[id] = new(completion, plan.TargetBounds, plan.TargetBounds, now, Finished: true);
                 completions.Add(completion);
                 continue;
             }
             bool retarget = !_motions.TryGetValue(id, out var motion) || motion.Completion != completion || motion.Target != plan.TargetBounds;
             if (retarget)
             {
-                motion = new(completion, _visual[id], plan.TargetBounds, now);
+                motion = new(completion, _visual[id], plan.TargetBounds, now, Finished: _visual[id] == plan.TargetBounds);
                 _motions[id] = motion;
             }
             if (motion!.Finished) { completions.Add(completion); continue; }

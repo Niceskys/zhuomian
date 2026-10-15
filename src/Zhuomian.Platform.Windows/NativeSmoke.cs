@@ -22,10 +22,12 @@ public static class NativeSmoke
         host.Dispatcher.DispatchPointer(PointerAction.Up, hit);
         using var resources = Process.GetCurrentProcess();
         uint gdiBefore = GetGuiResources(resources.Handle, 0);
+        int maximumTimers = 0;
         for (int frame = 0; frame <= 12; frame++)
         {
             clock.NowMilliseconds = frame * 20;
             host.RenderHiddenTestFrame(true);
+            maximumTimers = Math.Max(maximumTimers, (host.DeadlineTimerArmed ? 1 : 0) + (host.AnimationTimerArmed ? 1 : 0));
             CheckRegion(host);
             var bounds = host.Dispatcher.VisualBounds[id];
             log(FormattableString.Invariant($"hidden_frame synthetic_ms={clock.NowMilliseconds} space={id} x={bounds.X:F3} y={bounds.Y:F3} width={bounds.Width:F3} height={bounds.Height:F3} token={host.Dispatcher.Controller.GetState(id).TransitionToken}"));
@@ -50,7 +52,7 @@ public static class NativeSmoke
         if (IsWindow(window) || host.ActiveHookCount != 0) { throw new InvalidOperationException("hidden_motion_release"); }
         uint gdiAfter = GetGuiResources(resources.Handle, 0);
         Require(gdiAfter <= gdiBefore, "motion_gdi_release");
-        log($"native_motion_resources paint_count={host.PaintCount} synthetic_frames=13 timer_callbacks={host.AnimationFrameCount} gdi_before={gdiBefore} gdi_after={gdiAfter} active_timer_max=1 idle_timers=0");
+        log($"native_motion_resources paint_count={host.PaintCount} synthetic_frames=13 timer_callbacks={host.AnimationFrameCount} gdi_before={gdiBefore} gdi_after={gdiAfter} active_timer_max={maximumTimers} idle_timers=0");
         log("native_motion hidden=true synthetic_clock=true frames=13 region_hit_consistent=true paint_executed=true reverse_continuous=true reduced_motion_timer=0 hostlost_timer=0 foreground_unchanged=true desktop_fluency_UNVERIFIED");
     }
     private static void CheckRegion(FallbackDesktopHost host)

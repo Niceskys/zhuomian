@@ -93,6 +93,18 @@ public sealed class MotionIntegrationTests
     }
 
     [Fact]
+    public void RestoringMotionBeforeReducedEndpointCompletionCannotRestartTheTrajectory()
+    {
+        var clock = new Clock(); var d = new SpaceDispatcher(clock, new()); Click(d);
+        d.RenderTargets(Monitor, true); clock.NowMilliseconds = 80; d.RenderTargets(Monitor, true);
+        var endpoint = Assert.Single(d.RenderTargets(Monitor, false)); var applied = d.VisualBounds[B];
+        clock.NowMilliseconds = 100;
+        Assert.Equal(endpoint, Assert.Single(d.RenderTargets(Monitor, true)));
+        Assert.Equal(applied, d.VisualBounds[B]); Assert.False(d.HasActiveAnimation);
+        d.Complete(endpoint); Assert.Empty(d.RenderTargets(Monitor, true)); Assert.False(d.HasActiveAnimation);
+    }
+
+    [Fact]
     public void NativeMotionHasRealRegionsPaintAndTimerOwnership()
     {
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000)) { return; }
