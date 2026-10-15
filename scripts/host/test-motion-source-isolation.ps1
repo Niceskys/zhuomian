@@ -31,6 +31,11 @@ try {
     $rejected = $false
     try { Assert-ReviewedMotionSourceIsolation -Repository $owned } catch { $rejected = $true }
     if (-not $rejected) { throw 'Isolation accepted missing original tests.' }
+    git -C $owned restore -- tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Deleted-test fixture reset failed.' }
+    # Revalidate the restored fixture: success must end in a real successful Git check,
+    # not leave the deliberately rejected hash-object exit code as the script result.
+    Assert-ReviewedMotionSourceIsolation -Repository $owned
     Write-Output 'motion_source_isolation accepted_exact_blobs=true rejected_mutations=5 rejected_test_deletion=true immutable_E3_baseline_unchanged=true'
 }
 finally {
