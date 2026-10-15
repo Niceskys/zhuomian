@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'Format 3 evidence requires Windows NTFS.' }
 $suite = Get-Content -LiteralPath "$EvidenceDirectory/v2-platform.json" -Raw | ConvertFrom-Json
-if ($suite.total -lt 942 -or $suite.passed -ne $suite.total -or $suite.failed -ne 0 -or $suite.skipped -ne 0 -or $suite.v2Tests -lt 283) {
+if ($suite.total -lt 945 -or $suite.passed -ne $suite.total -or $suite.failed -ne 0 -or $suite.skipped -ne 0 -or $suite.v2Tests -lt 286) {
     throw 'Retained and new tests are not all passed.'
 }
 $performance = Get-Content -LiteralPath "$EvidenceDirectory/v3-performance.json" -Raw | ConvertFrom-Json

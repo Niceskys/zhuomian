@@ -93,6 +93,10 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         var verified = Verify(allowIncompleteMain: true);
         if (MainMatches(verified.Root))
         { return new(StorageError.None, CommitState.Unchanged, verified.Latest.Revision); }
+        // A valid previous main is retained as a root witness; damaged/absent
+        // main adds no root witness. Never publish beyond our own read budget.
+        if (verified.Witnesses >= MaxSegments * 2 && _storage.Exists(State) && ValidMainHeader())
+        { return new(StorageError.TooLarge); }
         return PublishRoot(verified.Root, false, verified.Latest.Revision);
     });
 
@@ -183,6 +187,11 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
                 if (root.Main == root.Count) { return new(StorageError.None, CommitState.Unchanged, snapshot.Revision); }
             }
             else if (root.Count >= MaxSegments) { return new(StorageError.TooLarge); }
+            // Distinct saves replace A and B; a format-2 accepted retry only
+            // replaces B. Reserve the exact worst-case witness growth before A.
+            int witnessesNeeded = snapshot.Revision == verified.Latest.Revision ? 1 : 2;
+            if (verified.Witnesses > MaxSegments * 2 - witnessesNeeded)
+            { return new(StorageError.TooLarge); }
         }
         // A segment is a one-record bounded raw history page, linked by exact hash and ordinal.
         // Strictly increasing revisions make streaming conflict validation possible without a dictionary.
@@ -358,11 +367,11 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             }
             if (!allowIncompleteMain && !MainMatches(root)) { throw new StorageException(StorageError.RecoveryRequired); }
         }
-        VerifyWitnesses(root, heads, previousSelections);
-        return new(root, latest!, current, recovery, readBytes);
+        int witnesses = VerifyWitnesses(root, heads, previousSelections);
+        return new(root, latest!, current, recovery, readBytes, witnesses);
     }
 
-    private void VerifyWitnesses(Root current, byte[][] heads, long[] previousSelections)
+    private int VerifyWitnesses(Root current, byte[][] heads, long[] previousSelections)
     {
         long started = _measure ? Stopwatch.GetTimestamp() : 0;
         if (_measure) { _enumerations++; }
@@ -399,6 +408,7 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
             if (_measure) { _witnessValidationTicks += Stopwatch.GetTimestamp() - validationStart; }
         }
         if (_measure) { _witnessTicks += Stopwatch.GetTimestamp() - started; }
+        return count;
     }
 
     private bool Next(IEnumerator<string> entries)
@@ -576,5 +586,5 @@ public sealed class WorkspaceV2Store : IWorkspaceStore, IDisposable
         _ => StorageError.IoFailure,
     };
     private sealed record Root(Guid Id, long Count, byte[] Head, long Main);
-    private sealed record Verified(Root Root, Workspace Latest, Workspace? Current, Workspace? Recovery, long HistoryBytes);
+    private sealed record Verified(Root Root, Workspace Latest, Workspace? Current, Workspace? Recovery, long HistoryBytes, int Witnesses);
 }
