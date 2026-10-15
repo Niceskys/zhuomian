@@ -288,3 +288,56 @@ jobs:
             ${{ runner.temp }}/ui-i1-engineering/ci-wpf-smoke.log
             ${{ runner.temp }}/ui-i1-engineering/BUILD.json
           if-no-files-found: error
+
+  wpf-exe-smoke:
+    runs-on: windows-latest
+    steps:
+      - name: Check out exact UI source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up .NET 9 for published EXE
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Publish and smoke actual WPF EXE in parallel with full regression
+        shell: pwsh
+        run: |
+          $head = '${{ github.event.pull_request.head.sha || github.sha }}'
+          if ((git rev-parse HEAD).Trim() -ne $head) { throw 'EXE smoke source mismatch.' }
+          $out = Join-Path $env:RUNNER_TEMP 'ui-i1-exe-smoke'
+          dotnet publish src/Zhuomian.App -c Release -r win-x64 --self-contained true -o $out `
+            "-p:InformationalVersion=0.0.0-ui-i1+$head" -p:IncludeSourceRevisionInInformationalVersion=false
+          if ($LASTEXITCODE -ne 0) { throw 'EXE smoke publish failed.' }
+          $exe = Join-Path $out 'Zhuomian.App.exe'
+          Push-Location $out
+          try {
+            & $exe --native-smoke 2>&1 | Tee-Object -FilePath 'ci-native-smoke.log'
+            if ($LASTEXITCODE -ne 0) { throw 'Published EXE native smoke failed.' }
+            & $exe --wpf-smoke 2>&1 | Tee-Object -FilePath 'ci-wpf-smoke.log'
+            if ($LASTEXITCODE -ne 0) { throw 'Published EXE WPF smoke failed.' }
+          } finally { Pop-Location }
+          [ordered]@{
+            scope = 'SMOKE ONLY; full regression and engineering package are separately gated'
+            commitSha = $head
+            runUrl = 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            windowsBuild = [Environment]::OSVersion.Version.ToString()
+            runnerImage = $env:ImageOS
+            runnerImageVersion = $env:ImageVersion
+            desktopAcceptance = $false
+            presentationSynchronization = 'UNVERIFIED'
+          } | ConvertTo-Json | Set-Content (Join-Path $out 'BUILD.json') -Encoding utf8
+
+      - name: Upload actual EXE smoke evidence only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-i1-wpf-exe-smoke-evidence
+          path: |
+            ${{ runner.temp }}/ui-i1-exe-smoke/ci-native-smoke.log
+            ${{ runner.temp }}/ui-i1-exe-smoke/ci-wpf-smoke.log
+            ${{ runner.temp }}/ui-i1-exe-smoke/wpf-evidence/
+            ${{ runner.temp }}/ui-i1-exe-smoke/BUILD.json
+          if-no-files-found: error
