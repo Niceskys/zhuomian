@@ -194,14 +194,30 @@ public sealed class WpfHostRenderer : IHostRenderer
     internal void SaveOffscreen(string path)
     {
         _dispatcher.VerifyAccess();
+        if (_source is null || Zhuomian.Platform.Windows.NativeMethods.IsWindowVisible(Handle))
+        { throw new InvalidOperationException("hidden_capture_only"); }
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        _root.InvalidateMeasure(); _root.InvalidateArrange();
-        _root.Measure(new(1200, 800)); _root.Arrange(new Rect(0, 0, 1200, 800)); _root.UpdateLayout();
-        File.WriteAllText(Path.ChangeExtension(path, ".scene.json"), JsonSerializer.Serialize(SubmittedScene));
-        var bitmap = new RenderTargetBitmap(1200, 800, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(_root);
-        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        using var stream = File.Create(path); encoder.Save(stream);
+        var source = _source;
+        // A hidden HwndTarget can suppress drawing updates. Capture the SAME visual tree
+        // detached from that target, never pretend this is a live-window/display screenshot.
+        source.RootVisual = null;
+        try
+        {
+            InvalidateTree(_root);
+            _root.Measure(new(1200, 800)); _root.Arrange(new Rect(0, 0, 1200, 800)); _root.UpdateLayout();
+            File.WriteAllText(Path.ChangeExtension(path, ".scene.json"), JsonSerializer.Serialize(SubmittedScene));
+            var bitmap = new RenderTargetBitmap(1200, 800, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(_root);
+            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var stream = File.Create(path); encoder.Save(stream);
+        }
+        finally { if (!_disposed) { source.RootVisual = _root; } }
+    }
+    private static void InvalidateTree(DependencyObject visual)
+    {
+        if (visual is UIElement element) { element.InvalidateMeasure(); element.InvalidateArrange(); element.InvalidateVisual(); }
+        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(visual); index++)
+        { InvalidateTree(VisualTreeHelper.GetChild(visual, index)); }
     }
     public int Run() { _dispatcher.VerifyAccess(); Dispatcher.PushFrame(_frame); return 0; }
     public void RequestStop(int exitCode) { _dispatcher.VerifyAccess(); _frame.Continue = false; }

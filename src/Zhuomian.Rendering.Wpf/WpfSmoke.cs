@@ -119,6 +119,7 @@ public static class WpfSmoke
             host.RenderHiddenTestFrame(false); CheckRegion(host, renderer);
             Require(!host.AnimationTimerArmed && host.SubmittedScene!.Spaces.Single(s => s.Id == id).Bounds == ModernEngineeringFixture.SavedBounds(Guid.Parse(id)), "wpf_return");
         }
+        if (evidenceDirectory is not null) { log("wpf_offscreen kind=detached_same_visual_tree hidden=true live_window_screenshot=false presentation_UNVERIFIED"); }
         log("wpf_motion_click A_B=true synthetic_clock=true clicks_enabled=true pinned_submission=true presentation_UNVERIFIED");
         host.Dispatcher.HostLost(); host.RenderHiddenTestFrame(false);
         Require(!host.AnimationTimerArmed && !host.DeadlineTimerArmed && !host.Dispatcher.HasGesture && host.Dispatcher.Controller.KeyboardMode == KeyboardMode.NoKeyboardCapture, "wpf_hostlost");
