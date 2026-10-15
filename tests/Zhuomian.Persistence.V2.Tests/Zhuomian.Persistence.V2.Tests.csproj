@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <Using Include="Xunit" />
+    <ProjectReference Include="../../src/Zhuomian.Persistence/Zhuomian.Persistence.csproj" />
+    <ProjectReference Include="../Zhuomian.Persistence.V2Fixture/Zhuomian.Persistence.V2Fixture.csproj" ReferenceOutputAssembly="false" />
+    <Compile Include="../Zhuomian.Persistence.Tests/TestSupport.cs" Link="TestSupport.cs" />
+    <Compile Include="../Zhuomian.Persistence.Tests/WindowsFixtureLinks.cs" Link="WindowsFixtureLinks.cs" />
+  </ItemGroup>
+  <Target Name="CopyV2Fixture" AfterTargets="Build">
+    <ItemGroup>
+      <V2FixtureFiles Include="../Zhuomian.Persistence.V2Fixture/bin/$(Configuration)/net9.0/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(V2FixtureFiles)" DestinationFolder="$(OutDir)v2-fixture" />
+  </Target>
+</Project>

@@ -82,6 +82,16 @@ jobs:
         shell: pwsh
         run: ./scripts/test-ci-dotnet-exit-codes.ps1
 
+      - name: Configure generated v2 evidence
+        shell: pwsh
+        run: |
+          "E3_V2_EVIDENCE_DIR=$env:RUNNER_TEMP/v2-evidence" >> $env:GITHUB_ENV
+
+      - name: Build immutable reviewed v2 performance baseline
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: ./scripts/persistence/prepare-v2-round3-baseline.ps1 -OutputDirectory "$env:RUNNER_TEMP/v2-round3-baseline"
+
       - name: Restore and test .NET solution
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
@@ -94,11 +104,30 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "dotnet build failed for $($solution.FullName) (exit $LASTEXITCODE)." }
             dotnet format $solution.FullName --no-restore --verify-no-changes
             if ($LASTEXITCODE -ne 0) { throw "dotnet format failed for $($solution.FullName) (exit $LASTEXITCODE)." }
-            dotnet test $solution.FullName --no-build --configuration Release `
+            # Serialize projects so the unchanged v1 killed-owner cleanup is not
+            # competing with the larger v2 native file/process benchmark workload.
+            dotnet test $solution.FullName --no-build --configuration Release -m:1 `
               --logger "trx;LogFilePrefix=test-results" `
               --results-directory "$env:RUNNER_TEMP\test-results"
             if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $($solution.FullName) (exit $LASTEXITCODE)." }
           }
+
+      - name: Verify actual v2 native capacity and crash evidence
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/persistence/collect-v2-evidence.ps1 `
+            -ResultsDirectory "$env:RUNNER_TEMP/test-results" `
+            -EvidenceDirectory "$env:E3_V2_EVIDENCE_DIR" `
+            -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
+
+      - name: Verify opt-in authority recovery and immutable performance comparison
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/persistence/collect-v3-evidence.ps1 `
+            -EvidenceDirectory "$env:E3_V2_EVIDENCE_DIR" `
+            -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
 
       - name: Execute immutable legacy compatibility and same-protocol capacity comparison
         if: steps.solution.outputs.found == 'true'
@@ -118,7 +147,7 @@ jobs:
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
         run: |
-          ./scripts/persistence/test-history-three-version-performance.ps1 -OutputDirectory "$env:RUNNER_TEMP/history-performance"
+          ./scripts/persistence/test-baseline-history-performance.ps1 -OutputDirectory "$env:RUNNER_TEMP/history-performance"
 
       - name: Upload repeated history performance samples
         if: always() && steps.solution.outputs.found == 'true'
@@ -159,4 +188,12 @@ jobs:
         with:
           name: test-results
           path: '${{ runner.temp }}/test-results/*.trx'
+          if-no-files-found: error
+
+      - name: Upload generated v2 capacity evidence
+        if: always() && steps.solution.outputs.found == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: v2-evidence
+          path: '${{ runner.temp }}/v2-evidence/*.json'
           if-no-files-found: error
