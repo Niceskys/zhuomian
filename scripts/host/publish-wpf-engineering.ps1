@@ -13,7 +13,7 @@ dotnet publish src/Zhuomian.App --configuration Release --runtime win-x64 --self
 if ($LASTEXITCODE -ne 0) { throw "Native engineering publish failed (exit $LASTEXITCODE)." }
 if ((git rev-parse HEAD).Trim() -ne $CommitSha) { throw 'Package source SHA must equal checkout HEAD.' }
 $exe = Join-Path $OutputDirectory 'Zhuomian.App.exe'
-foreach ($file in @('Zhuomian.App.exe', 'coreclr.dll', 'hostfxr.dll')) {
+foreach ($file in @('Zhuomian.App.exe', 'coreclr.dll', 'hostfxr.dll', 'PresentationCore.dll', 'PresentationFramework.dll', 'wpfgfx_cor3.dll')) {
     if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory $file) -PathType Leaf)) { throw "Published dependency missing: $file" }
 }
 Copy-Item src/Zhuomian.App/Start-Engineering.cmd, src/Zhuomian.App/README.md -Destination $OutputDirectory
@@ -73,7 +73,7 @@ foreach ($trx in Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/test-results" -Fil
     }
     $testResults += [ordered]@{ file = $trx.Name; total = [int]$counters.total; passed = [int]$counters.passed }
 }
-if ($testResults.Count -lt 5) { throw 'Missing original or Platform TRX results.' }
+if ($testResults.Count -ne 6 -or ($testResults | Measure-Object -Property passed -Sum).Sum -ne 1031) { throw 'Expected all 1025 existing cases plus 5 scene and 1 WPF cases across 6 suites.' }
 $metadata = [ordered]@{
     version = '0.0.0-ui-i1'
     commitSha = $CommitSha

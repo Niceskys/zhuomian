@@ -76,6 +76,7 @@ public sealed class WpfHostRenderer : IHostRenderer
             var foreground = Brush(space.Foreground);
             var card = new Border
             {
+                Tag = "space:" + space.Id,
                 Background = background,
                 BorderBrush = new SolidColorBrush(Color.FromRgb(99, 110, 130)),
                 BorderThickness = new(1),
@@ -103,8 +104,8 @@ public sealed class WpfHostRenderer : IHostRenderer
             }
             foreach (var item in space.Items)
             {
-                var tile = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
-                int identity = int.Parse(item.Id.AsSpan(item.Id.Length - 4), System.Globalization.CultureInfo.InvariantCulture);
+                var tile = new StackPanel { Tag = "item:" + space.Id + "/" + item.Id, HorizontalAlignment = HorizontalAlignment.Center };
+                int identity = Guid.Parse(item.Id).ToByteArray()[15];
                 tile.Children.Add(new Border
                 {
                     Width = 30,
@@ -113,7 +114,7 @@ public sealed class WpfHostRenderer : IHostRenderer
                     Background = new SolidColorBrush(Color.FromRgb((byte)(70 + identity * 19 % 100), (byte)(110 + identity * 13 % 100), (byte)(150 + identity * 7 % 100))),
                     Child = new TextBlock
                     {
-                        Text = identity.ToString("00", System.Globalization.CultureInfo.InvariantCulture),
+                        Text = identity.ToString("X2", System.Globalization.CultureInfo.InvariantCulture),
                         Foreground = Brushes.White,
                         FontSize = 12,
                         HorizontalAlignment = HorizontalAlignment.Center,
@@ -147,6 +148,28 @@ public sealed class WpfHostRenderer : IHostRenderer
         TextTrimming = TextTrimming.CharacterEllipsis,
         VerticalAlignment = VerticalAlignment.Center
     };
+    internal bool MatchesSubmittedGeometry(SceneSnapshot scene)
+    {
+        _dispatcher.VerifyAccess();
+        var visuals = _root.Children.OfType<FrameworkElement>().Where(element => element.Tag is string)
+            .ToDictionary(element => (string)element.Tag);
+        bool Matches(string key, LogicalRect bounds)
+        {
+            if (!visuals.Remove(key, out var visual)) { return false; }
+            double scale = scene.PixelsPerDip;
+            return Canvas.GetLeft(visual) == Math.Round(bounds.X * scale) / scale &&
+                Canvas.GetTop(visual) == Math.Round(bounds.Y * scale) / scale &&
+                visual.Width == Math.Round(bounds.Right * scale) / scale - Math.Round(bounds.X * scale) / scale &&
+                visual.Height == Math.Round(bounds.Bottom * scale) / scale - Math.Round(bounds.Y * scale) / scale;
+        }
+        foreach (var space in scene.Spaces)
+        {
+            if (!Matches("space:" + space.Id, space.Bounds)) { return false; }
+            foreach (var item in space.Items)
+            { if (!Matches("item:" + space.Id + "/" + item.Id, item.Bounds)) { return false; } }
+        }
+        return visuals.Count == 0;
+    }
     internal void SaveOffscreen(string path)
     {
         _dispatcher.VerifyAccess();

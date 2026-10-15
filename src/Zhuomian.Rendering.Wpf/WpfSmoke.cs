@@ -13,6 +13,19 @@ public static class WpfSmoke
 {
     private static readonly int[] Capacities = [6, 8, 12];
     private sealed class Clock : IInteractionClock { public long NowMilliseconds { get; set; } }
+    private sealed class SubmissionFailure(IHostRenderer inner) : IHostRenderer
+    {
+        internal bool Fail;
+        public nint Create(int left, int top, int width, int height, Func<nint, uint, nuint, nint, nint?> callback) => inner.Create(left, top, width, height, callback);
+        public void Submit(SceneSnapshot scene)
+        {
+            if (Fail) { throw new InvalidOperationException("injected_renderer_submit_failure"); }
+            inner.Submit(scene);
+        }
+        public int Run() => inner.Run();
+        public void RequestStop(int exitCode) => inner.RequestStop(exitCode);
+        public void Dispose() => inner.Dispose();
+    }
     private static void Require(bool condition, string code) { if (!condition) { throw new InvalidOperationException(code); } }
     public static void Run(Action<string> log, string? evidenceDirectory = null)
     {
@@ -49,6 +62,18 @@ public static class WpfSmoke
                 Require(host.Dispatcher.FakeLaunchCount == before + 1, "wpf_cancel");
             }
         }
+        // A new press can target the still-visible previous submission after safety reconciliation.
+        // Pin that picture; a subsequent foreground identity change must cancel, not retarget it.
+        host.Dispatcher.SetAvailability(DesktopAvailability.ExternalForeground, "external-before-down");
+        var pinnedHit = new SurfaceHit(idle.Spaces[0].Id, idle.Spaces[0].Items[0].Id);
+        host.Dispatcher.DispatchPointer(PointerAction.Down, pinnedHit);
+        host.RenderHiddenTestFrame(true);
+        Require(ReferenceEquals(idle, host.SubmittedScene), "wpf_reconciled_press_pin");
+        host.Dispatcher.SetAvailability(DesktopAvailability.ExternalForeground, "external-after-down");
+        host.RenderHiddenTestFrame(true);
+        host.Dispatcher.DispatchPointer(PointerAction.Up, pinnedHit);
+        Require(host.Dispatcher.FakeLaunchCount == 26 && !host.Dispatcher.HasGesture, "wpf_safety_cancel");
+        host.Dispatcher.SetAvailability(DesktopAvailability.DesktopAvailable, "synthetic-wpf-smoke");
         log("wpf_preview hidden=true distinct_items=26 fake_clicks=26 cancelled_clicks=26 pinned_scene=true");
         foreach (var id in new[] { EngineeringFixture.HoverId.ToString("D"), EngineeringFixture.ClickId.ToString("D") })
         {
@@ -78,6 +103,9 @@ public static class WpfSmoke
         Require(!host.AnimationTimerArmed && !host.DeadlineTimerArmed && !host.Dispatcher.HasGesture && host.Dispatcher.Controller.KeyboardMode == KeyboardMode.NoKeyboardCapture, "wpf_hostlost");
         Require(GetForegroundWindow() == foreground, "wpf_foreground_changed");
         nint window = host.Window;
+        // Exercise the actual WPF owner-thread message pump and its native close route.
+        Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => SendMessageW(window, 0x10, 0, 0)));
+        Require(host.Run() == 0, "wpf_dispatcher_exit");
         host.Dispose();
         Require(!IsWindow(window) && renderer.Handle == 0 && !renderer.HasRootVisual && host.ActiveHookCount == 0 && !host.SessionRegistered, "wpf_cleanup");
         log("wpf_smoke hidden=true hwnd_single_owner=true region_hit_submitted_scene=true A_B=true reduced_motion=true idle_timers=0 hostlost=true foreground_unchanged=true source_visual_hook_session_released=true presentation_UNVERIFIED");
@@ -86,6 +114,7 @@ public static class WpfSmoke
     private static void CheckRegion(FallbackDesktopHost host, WpfHostRenderer renderer)
     {
         Require(ReferenceEquals(host.SubmittedScene, renderer.SubmittedScene), "wpf_scene_identity");
+        Require(renderer.MatchesSubmittedGeometry(host.SubmittedScene!), "wpf_visual_tree_geometry");
         nint region = CreateRectRgn(0, 0, 0, 0);
         try
         {
@@ -103,12 +132,13 @@ public static class WpfSmoke
     }
     private static void CheckRollback(Action<string> log)
     {
-        foreach (string failure in new[] { "configure", "region", "paint", "workarea", "destroy" })
+        foreach (string failure in new[] { "configure", "region", "submit", "workarea", "destroy" })
         {
             using var renderer = new WpfHostRenderer();
+            using var submission = new SubmissionFailure(renderer);
             bool changed = false;
             using var host = new FallbackDesktopHost(log, () => { if (failure == "configure") { throw new InvalidOperationException("injected"); } },
-                () => changed ? new(0, 0, 1000, 800) : new(0, 0, 1200, 800), renderer: renderer);
+                () => changed ? new(0, 0, 1000, 800) : new(0, 0, 1200, 800), renderer: submission);
             if (failure == "configure")
             {
                 try { host.Start(false); throw new InvalidOperationException("rollback_not_exercised"); }
@@ -119,6 +149,7 @@ public static class WpfSmoke
                 host.Start(false);
                 nint window = host.Window;
                 if (failure == "workarea") { changed = true; }
+                else if (failure == "submit") { submission.Fail = true; }
                 else if (failure == "destroy") { DestroyWindow(window); }
                 else { host.FailNextHiddenFrame(failure); }
                 if (failure != "destroy") { SendMessageW(window, 0x113, 2, 0); }

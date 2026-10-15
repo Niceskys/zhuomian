@@ -387,8 +387,9 @@ public sealed class FallbackDesktopHost : IDisposable
         bool allowMotion = motionOverride ?? _hiddenMotionPolicy ?? EngineeringFixture.Resolve(EngineeringFixture.ClickId, true, _appearanceEnvironment).AllowMotion;
         var completions = Dispatcher.RenderTargets(_monitor, allowMotion);
         if (_hiddenFrameFailure == "region") { _hiddenFrameFailure = null; throw new InvalidOperationException("injected_region_failure"); }
-        // Preserve all hit geometry while a Preview sequence pins its target. Safety generations supersede it.
-        if (_renderer is not null && (!Dispatcher.HasGesture || SubmittedScene?.HostGeneration != Dispatcher.Controller.InputGeneration))
+        // Preserve the last submitted scene while a gesture pins its target. Safety paths cancel
+        // the adapter gesture before this point, including a generation change while held.
+        if (_renderer is not null && !Dispatcher.HasGesture)
         { SubmittedScene = SceneSnapshot.Capture(++_frameId, Dispatcher, _monitor.Density.PixelsPerDip, _appearanceEnvironment); }
         ApplyRegion();
         string stateSummary = string.Join(";", Dispatcher.Workspace.Spaces.Keys.Order().Select(id =>
