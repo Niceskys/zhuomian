@@ -208,10 +208,31 @@ public sealed class WpfHostRenderer : IHostRenderer
             File.WriteAllText(Path.ChangeExtension(path, ".scene.json"), JsonSerializer.Serialize(SubmittedScene));
             var bitmap = new RenderTargetBitmap(1200, 800, 96, 96, PixelFormats.Pbgra32);
             bitmap.Render(_root);
+            VerifyOffscreenPixels(bitmap);
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
             using var stream = File.Create(path); encoder.Save(stream);
         }
         finally { if (!_disposed) { source.RootVisual = _root; } }
+    }
+    private void VerifyOffscreenPixels(RenderTargetBitmap bitmap)
+    {
+        var scene = SubmittedScene!;
+        var tiles = _root.Children.OfType<StackPanel>().ToDictionary(tile => (string)tile.Tag);
+        byte[] pixel = new byte[4];
+        foreach (var space in scene.Spaces)
+        {
+            foreach (var item in space.Items)
+            {
+                var icon = (Border)tiles["item:" + space.Id + "/" + item.Id].Children[0];
+                var sample = icon.TransformToAncestor(_root).Transform(new Point(5, 10));
+                var hit = scene.HitTest((int)Math.Round(sample.X * scene.PixelsPerDip), (int)Math.Round(sample.Y * scene.PixelsPerDip));
+                if (hit?.SpaceId != space.Id || hit?.ItemId != item.Id) { continue; } // Correctly occluded by a later card.
+                bitmap.CopyPixels(new Int32Rect((int)sample.X, (int)sample.Y, 1, 1), pixel, 4, 0);
+                var expected = ((SolidColorBrush)icon.Background).Color;
+                if (pixel[0] != expected.B || pixel[1] != expected.G || pixel[2] != expected.R || pixel[3] != 255)
+                { throw new InvalidOperationException("offscreen_visible_icon_pixel_mismatch"); }
+            }
+        }
     }
     private static void InvalidateTree(DependencyObject visual)
     {
