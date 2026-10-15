@@ -145,7 +145,8 @@ public sealed class SpaceDispatcher : IInteractionLauncher
         Controller.Post(new(SpaceInteractionEventKind.PointerCancel, GestureId: _gesture));
         Controller.Drain();
     }
-    /// <summary>Samples one frame. Retargets start at the last displayed bounds, not a hidden future sample.
+    /// <summary>Samples one frame. Retargets start at the last applied/submitted bounds, not an unsubmitted future sample.
+    /// These bounds do not acknowledge compositor/display presentation.
     /// Reduced Motion completes immediately; pinned clicks and external drag freeze ordinary motion.</summary>
     public IReadOnlyList<VisualCompletion> RenderTargets(MonitorWorkArea monitor, bool allowMotion = false)
     {
