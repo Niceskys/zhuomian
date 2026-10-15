@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -20,6 +21,7 @@ public sealed class WpfHostRenderer : IHostRenderer
     private readonly DispatcherFrame _frame = new();
     private Func<nint, uint, nuint, nint, nint?>? _callback;
     private bool _disposed;
+    private int _viewportWidth, _viewportHeight;
     public SceneSnapshot? SubmittedScene { get; private set; }
     public nint Handle => _source?.Handle ?? 0;
     public bool HasRootVisual => _source?.RootVisual is not null;
@@ -30,6 +32,7 @@ public sealed class WpfHostRenderer : IHostRenderer
         if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA) { throw new InvalidOperationException("sta_required"); }
         if (_source is not null) { throw new InvalidOperationException("source_already_created"); }
         _callback = callback;
+        _viewportWidth = width; _viewportHeight = height;
         try
         {
             _source = new(new HwndSourceParameters("Zhuomian UI-I1 ENGINEERING ONLY")
@@ -128,7 +131,11 @@ public sealed class WpfHostRenderer : IHostRenderer
             }
         }
         SubmittedScene = scene;
-        // This schedules layout/rendering; it does not acknowledge display presentation.
+        // Lay out against the actual coordinator-created host viewport even while hidden.
+        // This establishes WPF layout, never compositor/display presentation.
+        _root.InvalidateMeasure(); _root.InvalidateArrange();
+        _root.Measure(new(_viewportWidth / scene.PixelsPerDip, _viewportHeight / scene.PixelsPerDip));
+        _root.Arrange(new Rect(0, 0, _viewportWidth / scene.PixelsPerDip, _viewportHeight / scene.PixelsPerDip));
         _root.UpdateLayout();
     }
     private void Place(FrameworkElement element, LogicalRect bounds, double scale)
@@ -159,7 +166,11 @@ public sealed class WpfHostRenderer : IHostRenderer
         {
             if (!visuals.Remove(key, out var visual)) { return false; }
             double scale = scene.PixelsPerDip;
-            return Canvas.GetLeft(visual) == Math.Round(bounds.X * scale) / scale &&
+            var offset = VisualTreeHelper.GetOffset(visual);
+            return visual.IsMeasureValid && visual.IsArrangeValid &&
+                visual.RenderSize.Width == visual.Width && visual.RenderSize.Height == visual.Height &&
+                offset.X == Canvas.GetLeft(visual) && offset.Y == Canvas.GetTop(visual) &&
+                Canvas.GetLeft(visual) == Math.Round(bounds.X * scale) / scale &&
                 Canvas.GetTop(visual) == Math.Round(bounds.Y * scale) / scale &&
                 visual.Width == Math.Round(bounds.Right * scale) / scale - Math.Round(bounds.X * scale) / scale &&
                 visual.Height == Math.Round(bounds.Bottom * scale) / scale - Math.Round(bounds.Y * scale) / scale;
@@ -184,7 +195,9 @@ public sealed class WpfHostRenderer : IHostRenderer
     {
         _dispatcher.VerifyAccess();
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        _root.InvalidateMeasure(); _root.InvalidateArrange();
         _root.Measure(new(1200, 800)); _root.Arrange(new Rect(0, 0, 1200, 800)); _root.UpdateLayout();
+        File.WriteAllText(Path.ChangeExtension(path, ".scene.json"), JsonSerializer.Serialize(SubmittedScene));
         var bitmap = new RenderTargetBitmap(1200, 800, 96, 96, PixelFormats.Pbgra32);
         bitmap.Render(_root);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
