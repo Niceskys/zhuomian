@@ -87,6 +87,26 @@ jobs:
         run: |
           "E3_V2_EVIDENCE_DIR=$env:RUNNER_TEMP/v2-evidence" >> $env:GITHUB_ENV
 
+      - name: Fetch pinned immutable E3 engineering history
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          # Full main history does not include commits from squash-merged PRs.
+          # Fetch the exact existing baselines; never replace them with current code.
+          $sources = @(
+            '514a5594f594728d2093cb041ed3552472384472',
+            '6687bc39d060029e8f0a692419694ffa3c5a7a29',
+            'ec43366ab3b86b54bac9e311b5f7d9ebb2fa9b6d',
+            'fa6338d662e5e59efe01a6ce01b399b3551a95ba',
+            'b25f9cefcf15f77be82b365563e4814b528d2f40'
+          )
+          git fetch --no-tags origin @sources
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned immutable E3 history fetch failed.' }
+          foreach ($source in $sources) {
+            git cat-file -e "$source^{commit}"
+            if ($LASTEXITCODE -ne 0) { throw "Pinned source unavailable: $source" }
+          }
+
       - name: Build immutable reviewed v2 performance baseline
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
@@ -196,4 +216,19 @@ jobs:
         with:
           name: v2-evidence
           path: '${{ runner.temp }}/v2-evidence/*.json'
+          if-no-files-found: error
+
+      - name: Publish and verify E2-I1 native engineering package
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/host/publish-native-engineering.ps1 `
+            -OutputDirectory "$env:RUNNER_TEMP/e2-i1-engineering" `
+            -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
+
+      - name: Upload E2-I1 native engineering package
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2-i1-windows-x64-engineering
+          path: '${{ runner.temp }}/e2-i1-engineering/'
           if-no-files-found: error

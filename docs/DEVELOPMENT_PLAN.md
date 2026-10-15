@@ -105,3 +105,8 @@ AI 负责开发、文档、自动测试、诊断和交接；用户负责需求�
 - WorkerW、真实背景 Blur 与 Packaging 均未成为已接受的唯一生产方案。
 
 本次重排仅改变依赖顺序与交付范围；P0-01 至 P0-07 未因此关闭，ADR-0001/0002 保持 Proposed。当前已有 E1 领域控制器与 fake launcher 测试，以及 E3-1 受控启动服务、Windows 原生资源检查和自有夹具 OS 提交路径（[范围与证据](E3_1_LAUNCH_EVIDENCE.md)）。用户应用目录默认为空，File/Folder/URL 关联执行仍禁用；另有 E3-2 [独立持久化模块](../src/Zhuomian.Persistence/README.md) 与原子事务/恢复测试（[证据与限制](E3_2_PERSISTENCE_EVIDENCE.md)），没有 UI 接入或渲染。领域不变量已有适用阶段覆盖，真实平台/几何/资源生命周期 INV 仍待后续集成验证。
+
+
+### E2-I1 independent native host integration candidate
+
+Based on main `6f2d1411aa63d08d2a996d80ec309b05bfd0a691`, this increment ports original #31 into a separate App/Windows adapter with fake resources only. It repairs GestureId cancellation and fails closed on changed/untrustworthy work-area coordinates. Existing E3 launch, v1 persistence and independent format 2/3 engineering stores/tests/CI remain; none is connected to the executable. [Proposed ADR-0005](ADR/0005-e2-native-engineering-host.md), [integration evidence](E2_I1_INTEGRATION_EVIDENCE.md) and [engineering instructions](../src/Zhuomian.App/README.md) define the boundary. Instant geometry is not accepted B0/B1/B2, and no P0 or Windows 11 acceptance gate closes. E2-I2 may add separately reviewed motion after this increment is independently accepted.
