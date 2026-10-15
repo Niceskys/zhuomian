@@ -470,9 +470,10 @@ public sealed class FallbackDesktopHost : IDisposable
     private void PaintWindow(nint window)
     {
         nint dc = BeginPaint(window, out var paint);
-        if (dc == 0) { return; }
+        if (dc == 0) { throw new InvalidOperationException("paint_dc_failed"); }
         try
         {
+            if (_hiddenFrameFailure == "paint_callback") { _hiddenFrameFailure = null; throw new InvalidOperationException("injected_paint_callback_failure"); }
             if (_monitor is null) { return; }
             PaintCount++;
             nint font = CreateFontW(-(int)Math.Round(14 * _monitor.Density.PixelsPerDip), 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI");

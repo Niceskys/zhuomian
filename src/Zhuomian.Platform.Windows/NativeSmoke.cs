@@ -113,7 +113,7 @@ public static class NativeSmoke
                 cases++;
             }
         }
-        foreach (string stage in new[] { "region", "paint" })
+        foreach (string stage in new[] { "region", "paint", "paint_callback" })
         {
             using var failed = new FallbackDesktopHost(_ => { }); failed.Start(false); nint window = failed.Window;
             failed.FailNextHiddenFrame(stage); SendMessageW(window, 0x113, 2, 0);
