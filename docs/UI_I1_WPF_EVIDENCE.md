@@ -47,7 +47,7 @@ Revert this PR to restore E2-I2 App rendering; no user data migration. [ADR-0013
 - Platform: `src/Zhuomian.Platform.Windows/AssemblyInfo.cs`, `FallbackDesktopHost.cs`, `SpaceDispatcher.cs`, new `ModernEngineeringFixture.cs`, `SceneSnapshot.cs`.
 - New WPF project: `src/Zhuomian.Rendering.Wpf/Zhuomian.Rendering.Wpf.csproj`, `WpfHostRenderer.cs`, `WpfSmoke.cs`.
 - Tests: new `tests/Zhuomian.Platform.Tests/SceneSnapshotTests.cs`; new `tests/Zhuomian.Rendering.Wpf.Tests/Zhuomian.Rendering.Wpf.Tests.csproj`, `UnifiedHostTests.cs`.
-- Packaging: new `scripts/host/publish-wpf-engineering.ps1`.
+- Packaging: new `scripts/host/publish-wpf-engineering.ps1`, `scripts/host/test-wpf-package-results.ps1`.
 - Evidence/ADR: new `docs/UI_I1_WPF_EVIDENCE.md`, `docs/ADR/0013-wpf-unified-host.md`; additive `docs/ADR/README.md` index entry.
 
 ## Windows DPI harness correction

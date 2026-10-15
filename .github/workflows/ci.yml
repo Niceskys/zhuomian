@@ -83,6 +83,10 @@ jobs:
         shell: pwsh
         run: ./scripts/test-ci-dotnet-exit-codes.ps1
 
+      - name: Verify WPF package result aggregation
+        shell: pwsh
+        run: ./scripts/host/test-wpf-package-results.ps1
+
       - name: Configure generated v2 evidence
         shell: pwsh
         run: |
