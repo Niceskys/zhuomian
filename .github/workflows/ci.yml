@@ -107,10 +107,33 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Pinned source unavailable: $source" }
           }
 
+      - name: Verify exact motion change and immutable E3 source isolation
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/host/test-motion-source-isolation.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Motion isolation fixture failed.' }
+          ./scripts/host/test-core-motion-results.ps1
+
       - name: Build immutable reviewed v2 performance baseline
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
         run: ./scripts/persistence/prepare-v2-round3-baseline.ps1 -OutputDirectory "$env:RUNNER_TEMP/v2-round3-baseline"
+
+      - name: Verify E2-I2 native motion before full solution verification
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          dotnet test tests/Zhuomian.Platform.Tests --configuration Release --logger trx --results-directory "$env:RUNNER_TEMP/e2-i2-preflight"
+          if ($LASTEXITCODE -ne 0) { throw "Native motion preflight failed (exit $LASTEXITCODE)." }
+
+      - name: Upload E2-I2 native preflight results
+        if: always() && steps.solution.outputs.found == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2-i2-native-preflight
+          path: '${{ runner.temp }}/e2-i2-preflight/*.trx'
+          if-no-files-found: error
 
       - name: Restore and test .NET solution
         if: steps.solution.outputs.found == 'true'
@@ -218,17 +241,17 @@ jobs:
           path: '${{ runner.temp }}/v2-evidence/*.json'
           if-no-files-found: error
 
-      - name: Publish and verify E2-I1 native engineering package
+      - name: Publish and verify E2-I2 native engineering package
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
         run: |
           ./scripts/host/publish-native-engineering.ps1 `
-            -OutputDirectory "$env:RUNNER_TEMP/e2-i1-engineering" `
+            -OutputDirectory "$env:RUNNER_TEMP/e2-i2-engineering" `
             -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
 
-      - name: Upload E2-I1 native engineering package
+      - name: Upload E2-I2 native engineering package
         uses: actions/upload-artifact@v7
         with:
-          name: e2-i1-windows-x64-engineering
-          path: '${{ runner.temp }}/e2-i1-engineering/'
+          name: e2-i2-windows-x64-engineering
+          path: '${{ runner.temp }}/e2-i2-engineering/'
           if-no-files-found: error

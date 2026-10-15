@@ -6,9 +6,9 @@ if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000) || !Environment.Is64B
     Console.Error.WriteLine("unsupported_environment: Windows 11 x64 required.");
     return 2;
 }
-Console.WriteLine("Zhuomian E2-I1 ENGINEERING fixture. One monitor only. May cover desktop icons.");
+Console.WriteLine("Zhuomian E2-I2 ENGINEERING fixture. One monitor only. May cover desktop icons.");
 Console.WriteLine("build=" + Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
-Console.WriteLine("No real launch, storage, search or animation. Use Space Exit, or close this console.");
+Console.WriteLine("No real launch, storage or search. Motion is an engineering candidate. Use Space Exit, or close this console.");
 try
 {
     if (args.Length == 1 && args[0] == "--native-smoke")

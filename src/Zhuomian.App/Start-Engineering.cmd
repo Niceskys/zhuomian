@@ -1,9 +1,9 @@
 @echo off
 cd /d "%~dp0"
-echo Zhuomian E2-I1 engineering verification only - not an installer or daily-use release.
+echo Zhuomian E2-I2 engineering verification only - not an installer or daily-use release.
 echo Windows 11 x64 / ONE monitor required. No administrative rights required.
 echo Opaque Space may cover icons. Press Win+D to expose desktop; keep this console running.
-echo Click Space Exit to stop. A hover=20ms; B click=instantaneous, NOT B0 animation.
+echo Click Space Exit to stop. A hover=20ms; B click=240ms geometry candidate, Reduced Motion=instant. NOT accepted B0.
 echo Starting executable. Diagnostics saved to engineering-session.log in this extracted folder.
 if not exist "%~dp0Zhuomian.App.exe" (
   echo Missing Zhuomian.App.exe. Extract the complete engineering package.

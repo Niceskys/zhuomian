@@ -110,3 +110,8 @@ AI 负责开发、文档、自动测试、诊断和交接；用户负责需求�
 ### E2-I1 independent native host integration candidate
 
 Based on main `6f2d1411aa63d08d2a996d80ec309b05bfd0a691`, this increment ports original #31 into a separate App/Windows adapter with fake resources only. It repairs GestureId cancellation and fails closed on changed/untrustworthy work-area coordinates. Existing E3 launch, v1 persistence and independent format 2/3 engineering stores/tests/CI remain; none is connected to the executable. [Proposed ADR-0005](ADR/0005-e2-native-engineering-host.md), [integration evidence](E2_I1_INTEGRATION_EVIDENCE.md) and [engineering instructions](../src/Zhuomian.App/README.md) define the boundary. Instant geometry is not accepted B0/B1/B2, and no P0 or Windows 11 acceptance gate closes. E2-I2 may add separately reviewed motion after this increment is independently accepted.
+
+
+### E2-I2 native motion integration candidate
+
+After merged #39, an independent increment on main `0cdd6c1868f7c8339fe0343141b8d23f6f054ac5` ports the reviewed geometry candidate from original #32. It retains E2-I1 GestureId/WorkAreaGuard and all E3 checks, adds the minimal guarded Core Returning re-entry, active-only native motion and independent Reduced Motion policy. [Proposed ADR-0006](ADR/0006-e2-native-motion.md) and [E2-I2 evidence](E2_I2_INTEGRATION_EVIDENCE.md) record actual results and open Windows 11 gates. This is not accepted B0, production framework or performance acceptance; E2-I3 remains separately authorized work.
