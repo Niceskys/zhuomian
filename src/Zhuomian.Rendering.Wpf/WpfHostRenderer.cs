@@ -106,16 +106,18 @@ public sealed class WpfHostRenderer : IHostRenderer
             {
                 var tile = new StackPanel { Tag = "item:" + space.Id + "/" + item.Id, HorizontalAlignment = HorizontalAlignment.Center };
                 int identity = Guid.Parse(item.Id).ToByteArray()[15];
+                var iconBackground = new RgbColor(70 + identity * 19 % 100, 110 + identity * 13 % 100, 150 + identity * 7 % 100);
+                var iconForeground = iconBackground.ContrastRatio(new(255, 255, 255)) >= ReadablePalette.MinimumContrastRatio ? Brushes.White : Brushes.Black;
                 tile.Children.Add(new Border
                 {
                     Width = 30,
                     Height = 30,
                     CornerRadius = new(8),
-                    Background = new SolidColorBrush(Color.FromRgb((byte)(70 + identity * 19 % 100), (byte)(110 + identity * 13 % 100), (byte)(150 + identity * 7 % 100))),
+                    Background = Brush(iconBackground),
                     Child = new TextBlock
                     {
                         Text = identity.ToString("X2", System.Globalization.CultureInfo.InvariantCulture),
-                        Foreground = Brushes.White,
+                        Foreground = iconForeground,
                         FontSize = 12,
                         HorizontalAlignment = HorizontalAlignment.Center,
                         VerticalAlignment = VerticalAlignment.Center
@@ -166,7 +168,15 @@ public sealed class WpfHostRenderer : IHostRenderer
         {
             if (!Matches("space:" + space.Id, space.Bounds)) { return false; }
             foreach (var item in space.Items)
-            { if (!Matches("item:" + space.Id + "/" + item.Id, item.Bounds)) { return false; } }
+            {
+                string key = "item:" + space.Id + "/" + item.Id;
+                if (!visuals.TryGetValue(key, out var visual) || visual is not StackPanel tile ||
+                    tile.Children[0] is not Border icon || icon.Background is not SolidColorBrush backing ||
+                    icon.Child is not TextBlock glyph || glyph.Foreground is not SolidColorBrush text) { return false; }
+                var background = new RgbColor(backing.Color.R, backing.Color.G, backing.Color.B);
+                if (background.ContrastRatio(new(text.Color.R, text.Color.G, text.Color.B)) < ReadablePalette.MinimumContrastRatio) { return false; }
+                if (!Matches(key, item.Bounds)) { return false; }
+            }
         }
         return visuals.Count == 0;
     }
