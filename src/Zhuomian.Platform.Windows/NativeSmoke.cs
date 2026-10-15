@@ -8,6 +8,7 @@ namespace Zhuomian.Platform.Windows;
 [SupportedOSPlatform("windows")]
 public static class NativeSmoke
 {
+    private sealed class FrozenClock : IInteractionClock { public long NowMilliseconds => 0; }
     internal static void CheckWorkAreaShutdown(Action<string> log)
     {
         uint shellMessage = RegisterWindowMessageW("TaskbarCreated");
@@ -23,7 +24,7 @@ public static class NativeSmoke
                     "unavailable" => null,
                     _ => throw new InvalidOperationException("injected_query_failure")
                 };
-                using var host = new FallbackDesktopHost(log, null, Query);
+                using var host = new FallbackDesktopHost(log, null, Query, new FrozenClock());
                 host.Start(false); nint window = host.Window;
                 string b = EngineeringFixture.ClickId.ToString("D");
                 host.Dispatcher.SetAvailability(DesktopAvailability.DesktopAvailable, "synthetic-work-area");

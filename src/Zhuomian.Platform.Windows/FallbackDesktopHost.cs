@@ -23,7 +23,7 @@ public sealed class FallbackDesktopHost : IDisposable
     private readonly EventProcedure _eventProcedure;
     private readonly nint _instance = GetModuleHandleW(null);
     private readonly HostLease _lease;
-    private readonly Clock _clock = new();
+    private readonly IInteractionClock _clock;
     private readonly int _ownerThread = Environment.CurrentManagedThreadId;
     private readonly Func<WorkAreaSnapshot?> _workAreaQuery;
     private WorkAreaGuard? _workAreaGuard;
@@ -43,8 +43,9 @@ public sealed class FallbackDesktopHost : IDisposable
     private Point? _downPoint;
     private AppearanceEnvironment _appearanceEnvironment = new(reducedTransparency: true, reducedMotion: true);
     public FallbackDesktopHost(Action<string> log) : this(log, null) { }
-    internal FallbackDesktopHost(Action<string> log, Action? afterConfigure, Func<WorkAreaSnapshot?>? workAreaQuery = null)
+    internal FallbackDesktopHost(Action<string> log, Action? afterConfigure, Func<WorkAreaSnapshot?>? workAreaQuery = null, IInteractionClock? clock = null)
     {
+        _clock = clock ?? new Clock();
         _afterConfigure = afterConfigure;
         _workAreaQuery = workAreaQuery ?? ReadNativeWorkArea;
         _log = log ?? throw new ArgumentNullException(nameof(log));
@@ -200,12 +201,14 @@ public sealed class FallbackDesktopHost : IDisposable
                     if (Dispatcher.ExitRequested) { Stop("user_exit", 0); }
                     return 0;
                 case 0x2A3: // No native capture: leaving cancels the pinned click safely.
+                    if (!Reconcile()) { return 0; }
                     Dispatcher.DispatchPointer(PointerAction.Leave);
                     Dispatcher.DispatchPointer(PointerAction.Cancel);
                     _downPoint = null;
                     UpdateVisual(); return 0;
                 case 0x1F:
                 case 0x215:
+                    if (!Reconcile()) { return 0; }
                     Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null; UpdateVisual(); return 0;
                 case 0x2B1:
                     _locked = wParam is 7 or 3 or 4 || (wParam != 8 && _locked);
