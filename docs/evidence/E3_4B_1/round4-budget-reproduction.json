@@ -1,0 +1,39 @@
+{
+  "scope": "Linux targeted logic reproduction; not Windows NTFS or physical power evidence",
+  "beforeProductionSha": "4b7ce1ef720987fb3abb29967c62d970082cf461",
+  "afterProductionSha": "2695004613d9d7e352b75f0cb1a8d2708c64bc31",
+  "before": [
+    {
+      "name": "Zhuomian.Persistence.V2.Tests.V3WitnessBudgetTests.SaveReservesBothWitnessSlotsBeforeAcceptingAnotherRevision(recoverable: True)",
+      "outcome": "Failed",
+      "message": "Assert.Equal() Failure: Values differ\nExpected: TooLarge\nActual:   None"
+    },
+    {
+      "name": "Zhuomian.Persistence.V2.Tests.V3WitnessBudgetTests.ExplicitRepairReservesAValidOldMainWitnessBeforePublication",
+      "outcome": "Failed",
+      "message": "Assert.Equal() Failure: Values differ\nExpected: TooLarge\nActual:   None"
+    },
+    {
+      "name": "Zhuomian.Persistence.V2.Tests.V3WitnessBudgetTests.SaveReservesBothWitnessSlotsBeforeAcceptingAnotherRevision(recoverable: False)",
+      "outcome": "Failed",
+      "message": "Assert.Equal() Failure: Values differ\nExpected: TooLarge\nActual:   None"
+    }
+  ],
+  "after": [
+    {
+      "name": "Zhuomian.Persistence.V2.Tests.V3WitnessBudgetTests.ExplicitRepairReservesAValidOldMainWitnessBeforePublication",
+      "outcome": "Passed",
+      "message": null
+    },
+    {
+      "name": "Zhuomian.Persistence.V2.Tests.V3WitnessBudgetTests.SaveReservesBothWitnessSlotsBeforeAcceptingAnotherRevision(recoverable: False)",
+      "outcome": "Passed",
+      "message": null
+    },
+    {
+      "name": "Zhuomian.Persistence.V2.Tests.V3WitnessBudgetTests.SaveReservesBothWitnessSlotsBeforeAcceptingAnotherRevision(recoverable: True)",
+      "outcome": "Passed",
+      "message": null
+    }
+  ]
+}
