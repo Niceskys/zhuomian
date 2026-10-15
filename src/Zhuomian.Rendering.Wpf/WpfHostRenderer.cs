@@ -197,22 +197,15 @@ public sealed class WpfHostRenderer : IHostRenderer
         if (_source is null || Zhuomian.Platform.Windows.NativeMethods.IsWindowVisible(Handle))
         { throw new InvalidOperationException("hidden_capture_only"); }
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        var source = _source;
-        // A hidden HwndTarget can suppress drawing updates. Capture the SAME visual tree
-        // detached from that target, never pretend this is a live-window/display screenshot.
-        source.RootVisual = null;
-        try
-        {
-            InvalidateTree(_root);
-            _root.Measure(new(1200, 800)); _root.Arrange(new Rect(0, 0, 1200, 800)); _root.UpdateLayout();
-            File.WriteAllText(Path.ChangeExtension(path, ".scene.json"), JsonSerializer.Serialize(SubmittedScene));
-            var bitmap = new RenderTargetBitmap(1200, 800, 96, 96, PixelFormats.Pbgra32);
-            bitmap.Render(_root);
-            VerifyOffscreenPixels(bitmap);
-            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
-            using var stream = File.Create(path); encoder.Save(stream);
-        }
-        finally { if (!_disposed) { source.RootVisual = _root; } }
+        // Offscreen rendering of the existing submitted tree; never a display-present acknowledgement.
+        InvalidateTree(_root);
+        _root.Measure(new(1200, 800)); _root.Arrange(new Rect(0, 0, 1200, 800)); _root.UpdateLayout();
+        File.WriteAllText(Path.ChangeExtension(path, ".scene.json"), JsonSerializer.Serialize(SubmittedScene));
+        var bitmap = new RenderTargetBitmap(1200, 800, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(_root);
+        VerifyOffscreenPixels(bitmap);
+        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var stream = File.Create(path); encoder.Save(stream);
     }
     private void VerifyOffscreenPixels(RenderTargetBitmap bitmap)
     {
