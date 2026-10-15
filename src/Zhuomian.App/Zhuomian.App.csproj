@@ -1,12 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <Version>0.0.0-e2-i2</Version>
-    <TargetFramework>net9.0</TargetFramework>
+    <Version>0.0.0-ui-i1</Version>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Zhuomian.Platform.Windows/Zhuomian.Platform.Windows.csproj" />
+    <ProjectReference Include="../Zhuomian.Rendering.Wpf/Zhuomian.Rendering.Wpf.csproj" />
   </ItemGroup>
 </Project>

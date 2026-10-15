@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v6
@@ -241,17 +242,17 @@ jobs:
           path: '${{ runner.temp }}/v2-evidence/*.json'
           if-no-files-found: error
 
-      - name: Publish and verify E2-I2 native engineering package
+      - name: Publish and verify UI-I1 unified WPF engineering package
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
         run: |
-          ./scripts/host/publish-native-engineering.ps1 `
-            -OutputDirectory "$env:RUNNER_TEMP/e2-i2-engineering" `
+          ./scripts/host/publish-wpf-engineering.ps1 `
+            -OutputDirectory "$env:RUNNER_TEMP/ui-i1-engineering" `
             -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
 
-      - name: Upload E2-I2 native engineering package
+      - name: Upload UI-I1 unified WPF engineering package
         uses: actions/upload-artifact@v7
         with:
-          name: e2-i2-windows-x64-engineering
-          path: '${{ runner.temp }}/e2-i2-engineering/'
+          name: ui-i1-wpf-unified-host-windows-x64
+          path: '${{ runner.temp }}/ui-i1-engineering/'
           if-no-files-found: error
