@@ -197,3 +197,18 @@ jobs:
           name: v2-evidence
           path: '${{ runner.temp }}/v2-evidence/*.json'
           if-no-files-found: error
+
+      - name: Publish and verify E2-I1 native engineering package
+        if: steps.solution.outputs.found == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/host/publish-native-engineering.ps1 `
+            -OutputDirectory "$env:RUNNER_TEMP/e2-i1-engineering" `
+            -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
+
+      - name: Upload E2-I1 native engineering package
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2-i1-windows-x64-engineering
+          path: '${{ runner.temp }}/e2-i1-engineering/'
+          if-no-files-found: error
