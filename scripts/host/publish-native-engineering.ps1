@@ -30,6 +30,9 @@ $smoke = Get-Content -LiteralPath (Join-Path $OutputDirectory 'ci-native-smoke.l
 foreach ($required in @('work_area_smoke hidden=true', 'native_region hidden=true', 'idle_timers=0', 'native_smoke_cleanup hwnd_destroyed=true')) {
     if (-not $smoke.Contains($required)) { throw "Incomplete native evidence: $required" }
 }
+if ($smoke -match 'unhook_ok=False|session_release_ok=False|class_release_failed|native_callback_failed|native_event_callback_failed') {
+    throw 'Native cleanup or callback failure prevents publishing a usable engineering package.'
+}
 $checkedOutCommit = & git rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Git provenance query failed.' }
 $baseMain = '6f2d1411aa63d08d2a996d80ec309b05bfd0a691'

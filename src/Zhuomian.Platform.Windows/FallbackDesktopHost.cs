@@ -54,6 +54,20 @@ public sealed class FallbackDesktopHost : IDisposable
         _lease = new(ReleaseWindow);
         Dispatcher = new(_clock, _scheduler);
     }
+    private void Log(string message)
+    {
+        // A broken diagnostic sink cannot prevent fail-closed teardown or escape a native callback.
+        try { _log(message); }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { }
+    }
+    private void StopFromCallback(string reason)
+    {
+        try { Stop(reason, 1); }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _ready = false; _exitCode = 1; PostQuitMessage(1);
+        }
+    }
     public SpaceDispatcher Dispatcher { get; }
     public nint Window => _window;
     public int ActiveHookCount => _hook == 0 ? 0 : 1;
@@ -87,7 +101,11 @@ public sealed class FallbackDesktopHost : IDisposable
         if (!AreDpiAwarenessContextsEqual(GetThreadDpiAwarenessContext(), -4)) { throw new InvalidOperationException("dpi_context_rejected"); }
         int count = 0;
         if (!EnumDisplayMonitors(0, 0, (_, _, _, _) => { count++; return true; }, 0) || count != 1) { throw new InvalidOperationException("single_monitor_required"); }
-        var initial = WorkAreaGuard.Read(_workAreaQuery) ?? throw new InvalidOperationException("work_area_query_failed");
+        if (WorkAreaGuard.Read(_workAreaQuery) is not { } initial)
+        {
+            _exitCode = 2; StopReason = "work_area_query_failed"; Log(StopReason);
+            Dispose(); return;
+        }
         _work = new(initial.Left, initial.Top, initial.Right, initial.Bottom);
         _workAreaGuard = new(initial, _workAreaQuery);
         try
@@ -110,7 +128,7 @@ public sealed class FallbackDesktopHost : IDisposable
             if (!Reconcile()) { return; }
             UpdateVisual();
             if (visible) { ShowWindow(_window, 4); PlaceBehindApplications(); }
-            _log(FormattableString.Invariant($"host_started windows={Environment.OSVersion.Version.Build} monitors=1 dpi={Dpi} material=Solid motion=disabled animation=instantaneous keyboard=disabled"));
+            Log(FormattableString.Invariant($"host_started windows={Environment.OSVersion.Version.Build} monitors=1 dpi={Dpi} material=Solid motion=disabled animation=instantaneous keyboard=disabled"));
         }
         catch { Dispose(); throw; }
     }
@@ -147,9 +165,13 @@ public sealed class FallbackDesktopHost : IDisposable
     private void EventCallback(nint hook, uint eventId, nint window, int objectId, int childId, uint thread, uint time)
     {
         // Out-of-context WinEvent callbacks run on the registering message thread. No keyboard hook.
-        if (!_ready || _disposed || _signalPending || eventId is not (3 or 0x16 or 0x20)) { return; }
-        _signalPending = true;
-        if (!PostMessageW(_window, SignalMessage, 0, 0)) { _signalPending = false; Stop("signal_dispatch_failed", 1); }
+        try
+        {
+            if (!_ready || _disposed || _signalPending || eventId is not (3 or 0x16 or 0x20)) { return; }
+            _signalPending = true;
+            if (!PostMessageW(_window, SignalMessage, 0, 0)) { _signalPending = false; Stop("signal_dispatch_failed", 1); }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { StopFromCallback("native_event_callback_failed"); }
     }
     private nint WindowCallback(nint window, uint message, nuint wParam, nint lParam)
     {
@@ -239,7 +261,7 @@ public sealed class FallbackDesktopHost : IDisposable
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // Do not propagate managed exceptions or private exception payloads across an unmanaged callback.
-            Stop("native_callback_failed", 1); return 0;
+            StopFromCallback("native_callback_failed"); return 0;
         }
     }
     private static WorkAreaSnapshot? ReadNativeWorkArea()
@@ -269,7 +291,7 @@ public sealed class FallbackDesktopHost : IDisposable
         if (shell != _shell || shellProcess != _shellProcess)
         {
             LoseInput(); _shell = shell; _shellProcess = shellProcess;
-            if (shell != 0 && IsWindow(shell) && shellProcess != 0) { Dispatcher.HostRestored(); _log("shell_generation_changed safe=Idle_Disarmed_NoKeyboardCapture"); }
+            if (shell != 0 && IsWindow(shell) && shellProcess != 0) { Dispatcher.HostRestored(); Log("shell_generation_changed safe=Idle_Disarmed_NoKeyboardCapture"); }
         }
         nint input = OpenInputDesktop(0, false, 1);
         bool accessible = input != 0;
@@ -316,7 +338,7 @@ public sealed class FallbackDesktopHost : IDisposable
         string stateSummary = string.Join(";", Dispatcher.Workspace.Spaces.Keys.Order().Select(id =>
             id.ToString("D") + "=" + Dispatcher.Controller.GetState(id.ToString("D")).VisualState)) +
             FormattableString.Invariant($";availability={Dispatcher.Controller.Availability};gate={Dispatcher.Controller.IntentGate};fake={Dispatcher.FakeLaunchCount};generation={Dispatcher.Controller.InputGeneration}");
-        if (stateSummary != _lastState) { _log("state_changed " + stateSummary); _lastState = stateSummary; }
+        if (stateSummary != _lastState) { Log("state_changed " + stateSummary); _lastState = stateSummary; }
         if (!InvalidateRect(_window, 0, false)) { throw new InvalidOperationException("frame_invalidation_failed"); }
         foreach (var completion in completions)
         {
@@ -445,7 +467,7 @@ public sealed class FallbackDesktopHost : IDisposable
     {
         if (!_ready) { return; }
         _exitCode = exitCode; StopReason = reason; _ready = false;
-        _log(reason);
+        Log(reason);
         // Release on the message thread immediately; do not wait for a later input or Run iteration.
         try { Dispose(); }
         finally { PostQuitMessage(exitCode); }
@@ -467,7 +489,7 @@ public sealed class FallbackDesktopHost : IDisposable
         // The owning Run/using scope calls Dispose again after that callback unwinds.
         if (!_registered || (_externallyDestroying != 0 && IsWindow(_externallyDestroying))) { return; }
         if (UnregisterClassW(_className, _instance)) { _registered = false; }
-        else { _log("class_release_failed"); }
+        else { Log("class_release_failed"); }
     }
     public void Dispose()
     {
@@ -483,7 +505,7 @@ public sealed class FallbackDesktopHost : IDisposable
         finally
         {
             ReleaseClass();
-            _log($"host_closed windows_remaining={((IsWindow(_window) || IsWindow(_externallyDestroying)) ? 1 : 0)} hooks_remaining={ActiveHookCount} timers={(DeadlineTimerArmed ? 1 : 0)} session_registered={_sessionRegistered} unhook_ok={unhooked} session_release_ok={sessionReleased}");
+            Log($"host_closed windows_remaining={((IsWindow(_window) || IsWindow(_externallyDestroying)) ? 1 : 0)} hooks_remaining={ActiveHookCount} timers={(DeadlineTimerArmed ? 1 : 0)} session_registered={_sessionRegistered} unhook_ok={unhooked} session_release_ok={sessionReleased}");
         }
         if (!unhooked || !sessionReleased) { throw new InvalidOperationException("native_release_failed"); }
     }

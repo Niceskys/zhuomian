@@ -5,9 +5,13 @@ echo Windows 11 x64 / ONE monitor required. No administrative rights required.
 echo Opaque Space may cover icons. Press Win+D to expose desktop; keep this console running.
 echo Click Space Exit to stop. A hover=20ms; B click=instantaneous, NOT B0 animation.
 echo Starting executable. Diagnostics saved to engineering-session.log in this extracted folder.
-Zhuomian.App.exe > engineering-session.log 2>&1
+if not exist "%~dp0Zhuomian.App.exe" (
+  echo Missing Zhuomian.App.exe. Extract the complete engineering package.
+  exit /b 2
+)
+"%~dp0Zhuomian.App.exe" > "%~dp0engineering-session.log" 2>&1
 set "zhuomian_result=%errorlevel%"
-type engineering-session.log
+type "%~dp0engineering-session.log"
 echo Exit code: %zhuomian_result%
 pause
 exit /b %zhuomian_result%

@@ -64,10 +64,24 @@ public static class NativeSmoke
         Require(GetWindowRect(restarted.Window, out var rect) && rect.Top == 40 && rect.Bottom == 800, "restart_work_area");
         restarted.Dispose();
         using var failedStart = new FallbackDesktopHost(log, null, () => null);
-        bool refused = false;
-        try { failedStart.Start(false); }
-        catch (InvalidOperationException) { refused = failedStart.Window == 0 && failedStart.ActiveHookCount == 0; }
-        Require(refused, "initial_query_failure");
+        failedStart.Start(false);
+        Require(failedStart.Window == 0 && failedStart.ActiveHookCount == 0 && !failedStart.ClassRegistered &&
+            !failedStart.SessionRegistered && failedStart.StopReason == "work_area_query_failed" && failedStart.Run() == 2,
+            "initial_query_failure");
+        bool changed = false;
+        using var failedLog = new FallbackDesktopHost(message =>
+        {
+            if (message == "work_area_changed_restart_required" || message.StartsWith("host_closed", StringComparison.Ordinal))
+            { throw new IOException("injected_sink_failure"); }
+        }, null,
+            () => new(0, 0, 1200, changed ? 760 : 800));
+        failedLog.Start(false); nint failedLogWindow = failedLog.Window; changed = true;
+        SendMessageW(failedLogWindow, 0x1A, 0, 0);
+        Require(!IsWindow(failedLogWindow) && failedLog.StopReason == "work_area_changed_restart_required" &&
+            failedLog.ActiveHookCount == 0 && !failedLog.SessionRegistered && !failedLog.ClassRegistered,
+            "logging_failure_cannot_block_release");
+        while (PeekMessageW(out _, 0, 0x12, 0x12, 1)) { }
+        log("work_area_logging_failure_release=pass");
         log("work_area_smoke hidden=true synthetic_query=true cases=24 unchanged_notifications=pass restart_snapshot=pass initial_query_failure=pass");
     }
     internal static void CheckRegionAndOwnership(Action<string> log)
