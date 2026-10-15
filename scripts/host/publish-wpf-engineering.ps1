@@ -112,6 +112,6 @@ foreach ($notice in $notices) {
     Copy-Item -LiteralPath $notice.FullName -Destination (Join-Path $OutputDirectory "runtime-$index-$($notice.Name)")
 }
 'ENGINEERING ONLY. Project release license remains undecided. Runtime license/third-party notices are included; no additional third-party UI packages or icon assets.' | Set-Content -LiteralPath (Join-Path $OutputDirectory 'NOTICE.txt')
-Get-ChildItem -LiteralPath $OutputDirectory -File -Recurse | Sort-Object FullName | ForEach-Object {
+Get-ChildItem -LiteralPath $OutputDirectory -File -Recurse | Where-Object { $_.Name -ne 'SHA256SUMS.txt' } | Sort-Object FullName | ForEach-Object {
     "$( (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash )  $([IO.Path]::GetRelativePath($OutputDirectory, $_.FullName))"
 } | Set-Content -LiteralPath (Join-Path $OutputDirectory 'SHA256SUMS.txt') -Encoding utf8
