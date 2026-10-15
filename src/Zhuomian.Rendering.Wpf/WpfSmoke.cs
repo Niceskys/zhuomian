@@ -49,19 +49,22 @@ public static class WpfSmoke
             foreach (var item in space.Items)
             {
                 int before = host.Dispatcher.FakeLaunchCount;
-                var hit = idle.HitTest((int)Math.Round((item.Bounds.X + 10) * idle.PixelsPerDip), (int)Math.Round((item.Bounds.Y + 10) * idle.PixelsPerDip));
+                int x = (int)Math.Round((item.Bounds.X + 10) * idle.PixelsPerDip), y = (int)Math.Round((item.Bounds.Y + 10) * idle.PixelsPerDip);
+                var hit = host.HitAt(x, y);
                 Require(hit?.ItemId == item.Id, "wpf_item_identity");
-                host.Dispatcher.DispatchPointer(PointerAction.Down, hit);
-                host.RenderHiddenTestFrame(true);
-                Require(ReferenceEquals(idle, host.SubmittedScene), "wpf_pinned_scene");
-                host.Dispatcher.DispatchPointer(PointerAction.Up, hit);
+                nint point = (y << 16) | (x & 0xffff);
+                var beforeScene = host.SubmittedScene;
+                SendMessageW(host.Window, 0x201, 1, point);
+                Require(ReferenceEquals(beforeScene, host.SubmittedScene), "wpf_pinned_scene");
+                SendMessageW(host.Window, 0x202, 0, point);
                 Require(host.Dispatcher.FakeLaunchCount == before + 1 && host.Dispatcher.Controller.FocusOwner is null, "wpf_fake_click");
-                host.Dispatcher.DispatchPointer(PointerAction.Down, hit);
-                host.Dispatcher.DispatchPointer(PointerAction.Cancel);
-                host.Dispatcher.DispatchPointer(PointerAction.Up, hit);
+                SendMessageW(host.Window, 0x201, 1, point);
+                SendMessageW(host.Window, 0x1F, 0, 0);
+                SendMessageW(host.Window, 0x202, 0, point);
                 Require(host.Dispatcher.FakeLaunchCount == before + 1, "wpf_cancel");
             }
         }
+        idle = host.SubmittedScene!;
         // A new press can target the still-visible previous submission after safety reconciliation.
         // Pin that picture; a subsequent foreground identity change must cancel, not retarget it.
         host.Dispatcher.SetAvailability(DesktopAvailability.ExternalForeground, "external-before-down");
