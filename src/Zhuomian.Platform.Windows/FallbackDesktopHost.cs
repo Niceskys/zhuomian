@@ -23,6 +23,9 @@ public sealed class FallbackDesktopHost : IDisposable
     private readonly EventProcedure _eventProcedure;
     private readonly nint _instance = GetModuleHandleW(null);
     private readonly HostLease _lease;
+    private readonly IHostRenderer? _renderer;
+    private long _frameId;
+    public SceneSnapshot? SubmittedScene { get; private set; }
     private readonly IInteractionClock _clock;
     private readonly int _ownerThread = Environment.CurrentManagedThreadId;
     private readonly Func<WorkAreaSnapshot?> _workAreaQuery;
@@ -44,9 +47,11 @@ public sealed class FallbackDesktopHost : IDisposable
     private readonly Action? _afterConfigure;
     private Point? _downPoint;
     private AppearanceEnvironment _appearanceEnvironment = new(reducedTransparency: true, reducedMotion: true);
-    public FallbackDesktopHost(Action<string> log) : this(log, null) { }
-    internal FallbackDesktopHost(Action<string> log, Action? afterConfigure, Func<WorkAreaSnapshot?>? workAreaQuery = null, IInteractionClock? clock = null, Func<bool?>? motionPreferenceQuery = null)
+    public FallbackDesktopHost(Action<string> log) : this(log, (Action?)null) { }
+    public FallbackDesktopHost(Action<string> log, IHostRenderer renderer) : this(log, (Action?)null, renderer: renderer) { }
+    internal FallbackDesktopHost(Action<string> log, Action? afterConfigure, Func<WorkAreaSnapshot?>? workAreaQuery = null, IInteractionClock? clock = null, Func<bool?>? motionPreferenceQuery = null, IHostRenderer? renderer = null)
     {
+        _renderer = renderer;
         _clock = clock ?? new Clock();
         _motionPreferenceQuery = motionPreferenceQuery ?? ReadNativeAnimationPreference;
         _testMotionQuery = motionPreferenceQuery is not null;
@@ -56,7 +61,7 @@ public sealed class FallbackDesktopHost : IDisposable
         _procedure = WindowCallback;
         _eventProcedure = EventCallback;
         _lease = new(ReleaseWindow);
-        Dispatcher = new(_clock, _scheduler);
+        Dispatcher = new(_clock, _scheduler, modernFixture: renderer is not null);
     }
     private void Log(string message)
     {
@@ -137,19 +142,27 @@ public sealed class FallbackDesktopHost : IDisposable
         _workAreaGuard = new(initial, _workAreaQuery);
         try
         {
-            var wc = new WindowClass
+            if (_renderer is null)
             {
-                Size = (uint)Marshal.SizeOf<WindowClass>(),
-                Style = 8,
-                Procedure = _procedure,
-                Instance = _instance,
-                ClassName = _className,
-                Cursor = LoadCursorW(0, 32512)
-            };
-            if (RegisterClassExW(wc) == 0) { throw new InvalidOperationException("class_registration_failed"); }
-            _registered = true;
-            _lease.Create(() => CreateWindowExW(HostExtendedStyle, _className, "Zhuomian E2-I2 engineering fixture",
-                HostStyle, _work.Left, _work.Top, _work.Right - _work.Left, _work.Bottom - _work.Top, 0, 0, _instance, 0), Configure);
+                var wc = new WindowClass
+                {
+                    Size = (uint)Marshal.SizeOf<WindowClass>(),
+                    Style = 8,
+                    Procedure = _procedure,
+                    Instance = _instance,
+                    ClassName = _className,
+                    Cursor = LoadCursorW(0, 32512)
+                };
+                if (RegisterClassExW(wc) == 0) { throw new InvalidOperationException("class_registration_failed"); }
+                _registered = true;
+                _lease.Create(() => CreateWindowExW(HostExtendedStyle, _className, "Zhuomian E2-I2 engineering fixture",
+                    HostStyle, _work.Left, _work.Top, _work.Right - _work.Left, _work.Bottom - _work.Top, 0, 0, _instance, 0), Configure);
+            }
+            else
+            {
+                _lease.Create(() => _renderer.Create(_work.Left, _work.Top, _work.Right - _work.Left, _work.Bottom - _work.Top,
+                    RendererCallback), Configure);
+            }
             _ready = true;
             Dispatcher.HostRestored();
             if (!Reconcile()) { return; }
@@ -180,6 +193,7 @@ public sealed class FallbackDesktopHost : IDisposable
     {
         VerifyThread();
         if (!_ready) { return _disposed ? _exitCode : throw new InvalidOperationException("host_not_started"); }
+        if (_renderer is not null) { _renderer.Run(); return _exitCode; }
         int result;
         while ((result = GetMessageW(out var message, 0, 0, 0)) > 0)
         {
@@ -199,6 +213,14 @@ public sealed class FallbackDesktopHost : IDisposable
             if (!PostMessageW(_window, SignalMessage, 0, 0)) { _signalPending = false; Stop("signal_dispatch_failed", 1); }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException) { StopFromCallback("native_event_callback_failed"); }
+    }
+    private nint? RendererCallback(nint window, uint message, nuint wParam, nint lParam)
+    {
+        if (message == _taskbarMessage || message == SignalMessage || message == CompletionMessage ||
+            (message == 0x113 && wParam is 1 or 2) ||
+            message is 0x21 or 0x200 or 0x201 or 0x202 or 0x203 or 0x2A3 or 0x1F or 0x215 or 0x2B1 or 0x218 or 0x15 or 0x1A or 0x7E or 0x2E0 or 0x10 or 0x02)
+        { return WindowCallback(window, message, wParam, lParam); }
+        return null;
     }
     private nint WindowCallback(nint window, uint message, nuint wParam, nint lParam)
     {
@@ -366,16 +388,27 @@ public sealed class FallbackDesktopHost : IDisposable
         bool allowMotion = motionOverride ?? _hiddenMotionPolicy ?? EngineeringFixture.Resolve(EngineeringFixture.ClickId, true, _appearanceEnvironment).AllowMotion;
         var completions = Dispatcher.RenderTargets(_monitor, allowMotion);
         if (_hiddenFrameFailure == "region") { _hiddenFrameFailure = null; throw new InvalidOperationException("injected_region_failure"); }
+        // Preserve the last submitted scene while a gesture pins its target. Safety paths cancel
+        // the adapter gesture before this point, including a generation change while held.
+        if (_renderer is not null && !Dispatcher.HasGesture)
+        { SubmittedScene = SceneSnapshot.Capture(++_frameId, Dispatcher, _monitor.Density.PixelsPerDip, _appearanceEnvironment); }
         ApplyRegion();
         string stateSummary = string.Join(";", Dispatcher.Workspace.Spaces.Keys.Order().Select(id =>
             id.ToString("D") + "=" + Dispatcher.Controller.GetState(id.ToString("D")).VisualState)) +
             FormattableString.Invariant($";availability={Dispatcher.Controller.Availability};gate={Dispatcher.Controller.IntentGate};fake={Dispatcher.FakeLaunchCount};generation={Dispatcher.Controller.InputGeneration}");
         if (stateSummary != _lastState) { Log("state_changed " + stateSummary); _lastState = stateSummary; }
         if (_hiddenFrameFailure == "paint") { _hiddenFrameFailure = null; throw new InvalidOperationException("injected_paint_failure"); }
-        int painted = PaintCount;
-        if (!InvalidateRect(_window, 0, false) || !UpdateWindow(_window)) { throw new InvalidOperationException("frame_paint_failed"); }
-        // Hidden HWNDs may not receive UpdateWindow painting. Exercise the same GDI path synchronously.
-        if (_ready && PaintCount == painted) { SendMessageW(_window, 0x0F, 0, 0); }
+        if (_renderer is not null)
+        {
+            _renderer.Submit(SubmittedScene!);
+        }
+        else
+        {
+            int painted = PaintCount;
+            if (!InvalidateRect(_window, 0, false) || !UpdateWindow(_window)) { throw new InvalidOperationException("frame_paint_failed"); }
+            // Hidden HWNDs may not receive UpdateWindow painting. Exercise the same GDI path synchronously.
+            if (_ready && PaintCount == painted) { SendMessageW(_window, 0x0F, 0, 0); }
+        }
         if (!_ready) { return; } // A nested paint callback may have failed closed.
         KillTimer(_window, 2); AnimationTimerArmed = false;
         if (Dispatcher.HasActiveAnimation && allowMotion)
@@ -409,7 +442,7 @@ public sealed class FallbackDesktopHost : IDisposable
         if (region == 0) { throw new InvalidOperationException("region_create_failed"); }
         try
         {
-            foreach (var bounds in Dispatcher.VisualBounds.Values)
+            foreach (var bounds in SubmittedScene is { } scene ? scene.Spaces.Select(space => space.Bounds) : Dispatcher.VisualBounds.Values)
             {
                 var r = Pixels(bounds);
                 nint part = CreateRectRgn(r.Left, r.Top, r.Right, r.Bottom);
@@ -424,6 +457,7 @@ public sealed class FallbackDesktopHost : IDisposable
     }
     private SurfaceHit? HitTest(int x, int y)
     {
+        if (SubmittedScene is { } scene) { return scene.HitTest(x, y); }
         double scale = _monitor!.Density.PixelsPerDip;
         double lx = x / scale, ly = y / scale;
         // Paint and hit test have identical Focus-first stacking and geometry.
@@ -519,7 +553,7 @@ public sealed class FallbackDesktopHost : IDisposable
         Log(reason);
         // Release on the message thread immediately; do not wait for a later input or Run iteration.
         try { Dispose(); }
-        finally { PostQuitMessage(exitCode); }
+        finally { if (_renderer is not null) { _renderer.RequestStop(exitCode); } else { PostQuitMessage(exitCode); } }
     }
     private void ReleaseWindow(nint window)
     {
@@ -528,7 +562,8 @@ public sealed class FallbackDesktopHost : IDisposable
         if (unhooked) { _hook = 0; }
         bool sessionReleased = !_sessionRegistered || WTSUnRegisterSessionNotification(window);
         if (sessionReleased) { _sessionRegistered = false; }
-        if (window != _externallyDestroying && IsWindow(window) && !DestroyWindow(window)) { throw new InvalidOperationException("host_destroy_failed"); }
+        if (_renderer is not null) { _renderer.Dispose(); }
+        if (_renderer is null && window != _externallyDestroying && IsWindow(window) && !DestroyWindow(window)) { throw new InvalidOperationException("host_destroy_failed"); }
         _window = 0;
         if (!unhooked || !sessionReleased) { throw new InvalidOperationException("native_rollback_release_failed"); }
     }

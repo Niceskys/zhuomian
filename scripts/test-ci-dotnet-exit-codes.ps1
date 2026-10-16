@@ -7,9 +7,31 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 $workflowPath = Join-Path $PSScriptRoot '../.github/workflows/ci.yml'
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
-$match = [regex]::Match($workflow, '(?ms)^      - name: Restore and test \.NET solution\r?\n.*?        run: \|\r?\n(?<body>(?:          [^\r\n]*\r?\n)+)')
-if (-not $match.Success) { throw 'Cannot locate the actual .NET workflow body.' }
-$body = $match.Groups['body'].Value -replace '(?m)^          ', ''
+function Get-DotnetWorkflowBody {
+    param([string]$WorkflowText)
+    $names = @('Restore .NET solution', 'Build Release solution', 'Verify solution format', 'Test complete solution serially')
+    $bodies = @()
+    $previous = -1
+    foreach ($name in $names) {
+        $pattern = '(?ms)^      - name: ' + [regex]::Escape($name) + '\r?\n.*?        run: \|\r?\n(?<body>(?:          [^\r\n]*\r?\n)+)'
+        $stageMatches = [regex]::Matches($WorkflowText, $pattern)
+        if ($stageMatches.Count -ne 1 -or $stageMatches[0].Index -le $previous) { throw "Missing, duplicate or reordered .NET workflow stage: $name" }
+        $previous = $stageMatches[0].Index
+        $bodies += $stageMatches[0].Groups['body'].Value -replace '(?m)^          ', ''
+    }
+    return $bodies -join "`n"
+}
+$body = Get-DotnetWorkflowBody $workflow
+foreach ($mutation in @('missing', 'duplicate', 'reordered')) {
+    $invalid = switch ($mutation) {
+        'missing' { $workflow.Replace('name: Verify solution format', 'name: Removed format fixture') }
+        'duplicate' { $workflow + "`n" + $workflow }
+        'reordered' { $workflow.Replace('name: Restore .NET solution', 'name: Swap fixture').Replace('name: Build Release solution', 'name: Restore .NET solution').Replace('name: Swap fixture', 'name: Build Release solution') }
+    }
+    $rejected = $false
+    try { $null = Get-DotnetWorkflowBody $invalid } catch { $rejected = $true }
+    if (-not $rejected) { throw "Workflow parser accepted $mutation stages." }
+}
 $legacyBody = $body -replace '(?m)^\s*if \(\$LASTEXITCODE -ne 0\).*\r?\n', ''
 
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("zhuomian-ci-exit-{0}" -f [guid]::NewGuid())
@@ -54,9 +76,9 @@ exec '{0}' -NoLogo -NoProfile -NonInteractive -File '{1}' "$@"
     $callsPath = Join-Path $tempRoot 'calls.txt'
     $failurePath = Join-Path $tempRoot 'failure.txt'
     $verbs = @('restore', 'build', 'format', 'test')
-    $expectedAll = @('first', 'second') | ForEach-Object {
-        $name = $_
-        $verbs | ForEach-Object { "$name/$_" }
+    $expectedAll = $verbs | ForEach-Object {
+        $verb = $_
+        @('first', 'second') | ForEach-Object { "$_/$verb" }
     }
     function Invoke-Fixture {
         param([string]$ScriptBody, [string]$Failure, [bool]$NativePreference)
@@ -90,7 +112,7 @@ exec '{0}' -NoLogo -NoProfile -NonInteractive -File '{1}' "$@"
             if ($result.Code -eq 0 -or ($result.Calls -join ',') -ne ($expectedCalls -join ',') -or $result.Output -notmatch "fixture diagnostic: $failure exit 23") {
                 throw "Failure propagation/diagnostic lost: $failure, native preference $nativePreference."
             }
-            if (-not $nativePreference -and $result.Output -notmatch "dotnet $($verbs[$failureIndex % 4]) failed") {
+            if (-not $nativePreference -and $result.Output -notmatch "dotnet $($verbs[[int][Math]::Floor($failureIndex / 2)]) failed") {
                 throw "Missing command-specific failure context: $failure."
             }
             Write-Host "Verified $failure : runner exit $($result.Code), no subsequent commands; native preference $nativePreference."
@@ -100,7 +122,7 @@ exec '{0}' -NoLogo -NoProfile -NonInteractive -File '{1}' "$@"
             throw "Successful two-solution path failed; native preference $nativePreference."
         }
     }
-    Write-Host 'CI exit-code self-test passed: 16 failure injections, 2 success paths, 1 legacy reproduction.'
+    Write-Host 'CI exit-code self-test passed: 16 failure injections, 2 success paths, 1 legacy reproduction; missing/duplicate/reordered stages rejected.'
 }
 finally {
     $env:PATH = $oldPath

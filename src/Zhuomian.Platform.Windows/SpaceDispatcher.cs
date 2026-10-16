@@ -28,19 +28,21 @@ public sealed class SpaceDispatcher : IInteractionLauncher
     private readonly InputFirstScheduler _inputScheduler;
     private readonly int _ownerThread = Environment.CurrentManagedThreadId;
     private readonly Workspace _workspace;
+    private readonly Func<Guid, LogicalRect> _savedBounds;
     private readonly Dictionary<string, LogicalRect> _visual = new(StringComparer.Ordinal);
     private string? _inside;
     private SurfaceHit? _pressed;
     private long _gesture;
     private long _pressedGeneration;
     private bool _dragSuppressed;
-    public SpaceDispatcher(IInteractionClock clock, DeterministicInteractionScheduler scheduler)
+    public SpaceDispatcher(IInteractionClock clock, DeterministicInteractionScheduler scheduler, bool modernFixture = false)
     {
+        _savedBounds = modernFixture ? ModernEngineeringFixture.SavedBounds : EngineeringFixture.SavedBounds;
         _clock = clock;
-        _workspace = EngineeringFixture.Create();
+        _workspace = modernFixture ? ModernEngineeringFixture.Create() : EngineeringFixture.Create();
         _inputScheduler = new(scheduler);
         Controller = new(_workspace.GetInteractionPolicies(), clock, _inputScheduler, this, collapseDelayMilliseconds: 120);
-        foreach (var space in _workspace.Spaces.Values) { _visual.Add(space.Id.ToString("D"), EngineeringFixture.SavedBounds(space.Id)); }
+        foreach (var space in _workspace.Spaces.Values) { _visual.Add(space.Id.ToString("D"), _savedBounds(space.Id)); }
     }
     public SpaceInteractionController Controller { get; }
     public Workspace Workspace => _workspace;
@@ -51,7 +53,7 @@ public sealed class SpaceDispatcher : IInteractionLauncher
     public bool TryLaunch(string itemId)
     {
         VerifyThread();
-        if (itemId != EngineeringFixture.ItemId.ToString("D")) { return false; }
+        if (!Guid.TryParse(itemId, out var id) || !_workspace.ItemStore.Items.ContainsKey(id)) { return false; }
         FakeLaunchCount++;
         return true;
     }
@@ -79,7 +81,7 @@ public sealed class SpaceDispatcher : IInteractionLauncher
         _inside = null;
         _pressed = null;
         _dragSuppressed = false;
-        foreach (var space in _workspace.Spaces.Values) { _visual[space.Id.ToString("D")] = EngineeringFixture.SavedBounds(space.Id); }
+        foreach (var space in _workspace.Spaces.Values) { _visual[space.Id.ToString("D")] = _savedBounds(space.Id); }
     }
     public void HostRestored()
     {
@@ -143,7 +145,8 @@ public sealed class SpaceDispatcher : IInteractionLauncher
         Controller.Post(new(SpaceInteractionEventKind.PointerCancel, GestureId: _gesture));
         Controller.Drain();
     }
-    /// <summary>Samples one frame. Retargets start at the last displayed bounds, not a hidden future sample.
+    /// <summary>Samples one frame. Retargets start at the last applied/submitted bounds, not an unsubmitted future sample.
+    /// These bounds do not acknowledge compositor/display presentation.
     /// Reduced Motion completes immediately; pinned clicks and external drag freeze ordinary motion.</summary>
     public IReadOnlyList<VisualCompletion> RenderTargets(MonitorWorkArea monitor, bool allowMotion = false)
     {
@@ -167,7 +170,7 @@ public sealed class SpaceDispatcher : IInteractionLauncher
             string id = space.Id.ToString("D");
             var state = Controller.GetState(id);
             bool expand = state.VisualState is SpaceVisualState.Focusing or SpaceVisualState.Focused;
-            var plan = SpaceLayoutEngine.Calculate(space, EngineeringFixture.SavedBounds(space.Id), monitor,
+            var plan = SpaceLayoutEngine.Calculate(space, _savedBounds(space.Id), monitor,
                 EngineeringFixture.Expansion, expand ? LayoutTransitionDirection.Expand : LayoutTransitionDirection.Return, _visual[id]);
             if (state.VisualState is not (SpaceVisualState.Focusing or SpaceVisualState.Returning))
             {
