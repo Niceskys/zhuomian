@@ -69,6 +69,7 @@ public sealed class WpfHostRenderer : IHostRenderer
     }
     private readonly Dictionary<string, SpaceVisual> _spaces = new(StringComparer.Ordinal);
     private readonly PresentationTheme _theme;
+    private bool _layoutDirty;
     public RendererDiagnostics Diagnostics { get; } = new();
     public WpfHostRenderer(PresentationTheme? theme = null) { _theme = theme ?? new(); }
     public void Submit(SceneSnapshot scene)
@@ -80,6 +81,7 @@ public sealed class WpfHostRenderer : IHostRenderer
         long start = Stopwatch.GetTimestamp(), allocation = GC.GetAllocatedBytesForCurrentThread();
         try
         {
+            _layoutDirty = false;
             if (_spaces.Count == 0 && scene.Spaces.Length > 0) { Diagnostics.FullTreeRebuild++; }
             int order = 0;
             foreach (string id in _spaces.Keys.Where(id => !scene.Spaces.Any(s => s.Id == id)).ToArray())
@@ -94,7 +96,7 @@ public sealed class WpfHostRenderer : IHostRenderer
                 }
                 else { Diagnostics.VisualReused += 7; } // card, title, search + child, toolbar, Back, Exit
                 var previous = visual.Scene;
-                if (previous?.Name != space.Name) { visual.Title.Text = space.Name; }
+                if (previous?.Name != space.Name) { visual.Title.Text = space.Name; _layoutDirty = true; }
                 if (previous?.Background != space.Background) { visual.Card.Background = Brush(space.Background); }
                 if (previous?.Foreground != space.Foreground)
                 {
@@ -104,6 +106,7 @@ public sealed class WpfHostRenderer : IHostRenderer
                 Place(visual.Card, space.Bounds, scene.PixelsPerDip, order++);
                 Place(visual.Title, new(space.Bounds.X + SceneLayout.Padding, space.Bounds.Y + _theme.TitleTop,
                     space.Bounds.Width - (space.Expanded ? _theme.ExpandedTitleReserve : 2 * SceneLayout.Padding), _theme.TitleHeight), scene.PixelsPerDip, order++);
+                if (previous?.Expanded != space.Expanded) { _layoutDirty = true; }
                 foreach (var control in visual.ExpandedControls)
                 { control.Visibility = space.Expanded ? Visibility.Visible : Visibility.Collapsed; }
                 if (space.Expanded)
@@ -118,13 +121,16 @@ public sealed class WpfHostRenderer : IHostRenderer
                 foreach (string id in visual.Items.Keys.Where(id => space.ItemIdentities.IsDefault ? !space.Items.Any(i => i.Id == id) : !space.ItemIdentities.Contains(id)).ToArray())
                 { Remove(visual.Items[id].Tile, 4); visual.Items.Remove(id); }
                 foreach (var cached in visual.Items)
-                { cached.Value.Tile.Visibility = space.Items.Any(item => item.Id == cached.Key) ? Visibility.Visible : Visibility.Collapsed; }
+                {
+                    var visibility = space.Items.Any(item => item.Id == cached.Key) ? Visibility.Visible : Visibility.Collapsed;
+                    if (cached.Value.Tile.Visibility != visibility) { cached.Value.Tile.Visibility = visibility; _layoutDirty = true; }
+                }
                 foreach (var item in space.Items)
                 {
                     if (!visual.Items.TryGetValue(item.Id, out var tile))
                     { tile = new(space.Id, item.Id, _theme); visual.Items.Add(item.Id, tile); Add(tile.Tile, 4); }
                     else { Diagnostics.VisualReused += 4; }
-                    if (tile.Scene?.Label != item.Label) { tile.Label.Text = item.Label; }
+                    if (tile.Scene?.Label != item.Label) { tile.Label.Text = item.Label; _layoutDirty = true; }
                     if (tile.Foreground != space.Foreground) { tile.Label.Foreground = Brush(space.Foreground); tile.Foreground = space.Foreground; }
                     tile.Tile.Visibility = Visibility.Visible;
                     Place(tile.Tile, item.Bounds, scene.PixelsPerDip, order++);
@@ -135,6 +141,9 @@ public sealed class WpfHostRenderer : IHostRenderer
             SubmittedScene = scene;
             Diagnostics.SceneSubmitted++;
             // Submit/layout are CPU-side operations, never display-present acknowledgements.
+            // Hidden/retained roots can keep an old arrange slot after a child shrinks.
+            // Invalidate only changed scenes; otherwise an explicit Width can center in that old slot.
+            if (_layoutDirty) { _root.InvalidateMeasure(); _root.InvalidateArrange(); }
             _root.Measure(new(_viewportWidth / scene.PixelsPerDip, _viewportHeight / scene.PixelsPerDip));
             _root.Arrange(new Rect(0, 0, _viewportWidth / scene.PixelsPerDip, _viewportHeight / scene.PixelsPerDip));
             _root.UpdateLayout();
@@ -152,9 +161,9 @@ public sealed class WpfHostRenderer : IHostRenderer
         }
     }
     private void Add(FrameworkElement element, int count = 1)
-    { _root.Children.Add(element); Diagnostics.VisualCreated += count; Diagnostics.LiveVisuals += count; }
+    { _layoutDirty = true; _root.Children.Add(element); Diagnostics.VisualCreated += count; Diagnostics.LiveVisuals += count; }
     private void Remove(FrameworkElement element, int count = 1)
-    { _root.Children.Remove(element); Diagnostics.VisualRemoved += count; Diagnostics.LiveVisuals -= count; }
+    { _layoutDirty = true; _root.Children.Remove(element); Diagnostics.VisualRemoved += count; Diagnostics.LiveVisuals -= count; }
     private void Remove(SpaceVisual visual)
     {
         foreach (var tile in visual.Items.Values) { Remove(tile.Tile, 4); }
@@ -179,7 +188,7 @@ public sealed class WpfHostRenderer : IHostRenderer
         if (Canvas.GetLeft(element) != x) { Canvas.SetLeft(element, x); }
         if (Canvas.GetTop(element) != y) { Canvas.SetTop(element, y); }
         if (Panel.GetZIndex(element) != order) { Panel.SetZIndex(element, order); }
-        if (changed) { Diagnostics.LayoutInvalidated++; }
+        if (changed) { _layoutDirty = true; Diagnostics.LayoutInvalidated++; }
     }
     private sealed class SpaceVisual
     {

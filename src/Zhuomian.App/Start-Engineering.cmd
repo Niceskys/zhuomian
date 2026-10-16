@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-echo Zhuomian UI-I1 WPF ENGINEERING ONLY - not an installer or daily-use release.
+echo Zhuomian UI-I2 WPF ENGINEERING ONLY - not an installer or daily-use release.
 echo Windows 11 x64 / ONE monitor required. No administrative rights required.
 echo Opaque Space may cover icons. Press Win+D to expose desktop; keep this console running.
 echo Use expanded Space Exit or close this console to stop. A hover=20ms; B click=240ms geometry candidate, Reduced Motion=instant. NOT accepted B0.
