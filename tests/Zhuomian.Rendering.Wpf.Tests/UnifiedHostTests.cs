@@ -12,7 +12,7 @@ public sealed class UnifiedHostTests
         [DllImport("user32.dll")]
         internal static extern nint SetThreadDpiAwarenessContext(nint context);
     }
-    private static void OnStaThread(nint dpiContext, Action test)
+    internal static void OnStaThread(nint dpiContext, Action test, int timeoutSeconds = 60)
     {
         Exception? failure = null;
         var thread = new Thread(() =>
@@ -33,7 +33,7 @@ public sealed class UnifiedHostTests
         thread.IsBackground = true;
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        Assert.True(thread.Join(TimeSpan.FromSeconds(60)), "WPF smoke owner thread did not terminate.");
+        Assert.True(thread.Join(TimeSpan.FromSeconds(timeoutSeconds)), "WPF smoke owner thread did not terminate.");
         if (failure is not null) { ExceptionDispatchInfo.Capture(failure).Throw(); }
     }
     [Fact]

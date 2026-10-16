@@ -171,6 +171,8 @@ jobs:
           }
 
       - name: Test complete solution serially
+        env:
+          ZHUOMIAN_RENDER_DIAGNOSTICS: ${{ runner.temp }}/render-diagnostics
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
         run: |
@@ -268,29 +270,37 @@ jobs:
           path: '${{ runner.temp }}/v2-evidence/*.json'
           if-no-files-found: error
 
-      - name: Publish and verify UI-I1 unified WPF engineering package
+      - name: Upload WPF same-protocol engineering diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-i2-render-diagnostics
+          path: '${{ runner.temp }}/render-diagnostics/'
+          if-no-files-found: error
+
+      - name: Publish and verify UI-I2 unified WPF engineering package
         if: steps.solution.outputs.found == 'true'
         shell: pwsh
         run: |
           ./scripts/host/publish-wpf-engineering.ps1 `
-            -OutputDirectory "$env:RUNNER_TEMP/ui-i1-engineering" `
+            -OutputDirectory "$env:RUNNER_TEMP/ui-i2-engineering" `
             -CommitSha '${{ github.event.pull_request.head.sha || github.sha }}'
 
-      - name: Upload UI-I1 unified WPF engineering package
+      - name: Upload UI-I2 unified WPF engineering package
         uses: actions/upload-artifact@v7
         with:
-          name: ui-i1-wpf-unified-host-windows-x64
-          path: '${{ runner.temp }}/ui-i1-engineering/'
+          name: ui-i2-wpf-render-stability-windows-x64
+          path: '${{ runner.temp }}/ui-i2-engineering/'
           if-no-files-found: error
 
-      - name: Upload UI-I1 offscreen visual evidence
+      - name: Upload UI-I2 offscreen visual evidence
         uses: actions/upload-artifact@v7
         with:
-          name: ui-i1-wpf-offscreen-evidence
+          name: ui-i2-wpf-offscreen-evidence
           path: |
-            ${{ runner.temp }}/ui-i1-engineering/wpf-evidence/
-            ${{ runner.temp }}/ui-i1-engineering/ci-wpf-smoke.log
-            ${{ runner.temp }}/ui-i1-engineering/BUILD.json
+            ${{ runner.temp }}/ui-i2-engineering/wpf-evidence/
+            ${{ runner.temp }}/ui-i2-engineering/ci-wpf-smoke.log
+            ${{ runner.temp }}/ui-i2-engineering/BUILD.json
           if-no-files-found: error
 
   wpf-exe-smoke:
@@ -311,9 +321,9 @@ jobs:
         run: |
           $head = '${{ github.event.pull_request.head.sha || github.sha }}'
           if ((git rev-parse HEAD).Trim() -ne $head) { throw 'EXE smoke source mismatch.' }
-          $out = Join-Path $env:RUNNER_TEMP 'ui-i1-exe-smoke'
+          $out = Join-Path $env:RUNNER_TEMP 'ui-i2-exe-smoke'
           dotnet publish src/Zhuomian.App -c Release -r win-x64 --self-contained true -o $out `
-            "-p:InformationalVersion=0.0.0-ui-i1+$head" -p:IncludeSourceRevisionInInformationalVersion=false
+            "-p:InformationalVersion=0.0.0-ui-i2+$head" -p:IncludeSourceRevisionInInformationalVersion=false
           if ($LASTEXITCODE -ne 0) { throw 'EXE smoke publish failed.' }
           $exe = Join-Path $out 'Zhuomian.App.exe'
           Push-Location $out
@@ -338,10 +348,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ui-i1-wpf-exe-smoke-evidence
+          name: ui-i2-wpf-exe-smoke-evidence
           path: |
-            ${{ runner.temp }}/ui-i1-exe-smoke/ci-native-smoke.log
-            ${{ runner.temp }}/ui-i1-exe-smoke/ci-wpf-smoke.log
-            ${{ runner.temp }}/ui-i1-exe-smoke/wpf-evidence/
-            ${{ runner.temp }}/ui-i1-exe-smoke/BUILD.json
+            ${{ runner.temp }}/ui-i2-exe-smoke/ci-native-smoke.log
+            ${{ runner.temp }}/ui-i2-exe-smoke/ci-wpf-smoke.log
+            ${{ runner.temp }}/ui-i2-exe-smoke/wpf-evidence/
+            ${{ runner.temp }}/ui-i2-exe-smoke/BUILD.json
           if-no-files-found: error
