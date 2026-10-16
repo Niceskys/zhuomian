@@ -22,6 +22,7 @@ public static class WpfSmoke
             if (Fail) { throw new InvalidOperationException("injected_renderer_submit_failure"); }
             inner.Submit(scene);
         }
+        public void Reset() => inner.Reset();
         public int Run() => inner.Run();
         public void RequestStop(int exitCode) => inner.RequestStop(exitCode);
         public void Dispose() => inner.Dispose();
@@ -39,6 +40,10 @@ public static class WpfSmoke
         Require(host.Window == renderer.Handle && renderer.HasRootVisual && host.ActiveHookCount == 1 && host.SessionRegistered, "wpf_ownership");
         Require(((long)GetWindowLongPtrW(host.Window, -20) & 0x08000008) == 0x08000000, "wpf_style");
         Require(SendMessageW(host.Window, 0x21, 0, 0) == 3, "wpf_noactivate");
+        // Reconcile the actual runner foreground before testing stable direct Preview presses.
+        SendMessageW(host.Window, 0x200, 0, 0);
+        clock.NowMilliseconds += SceneInputGuard.LagWindowMilliseconds + 1;
+        host.RenderHiddenTestFrame(false);
         var idle = host.SubmittedScene!;
         Require(idle.Spaces.Select(s => s.Items.Length).Order().SequenceEqual(Capacities), "wpf_capacity");
         Require(idle.Spaces.All(s => !s.Expanded && s.CloseBounds is null), "wpf_idle_structure");
@@ -132,6 +137,38 @@ public static class WpfSmoke
         Require(!IsWindow(window) && renderer.Handle == 0 && !renderer.HasRootVisual && host.ActiveHookCount == 0 && !host.SessionRegistered, "wpf_cleanup");
         log("wpf_smoke hidden=true hwnd_single_owner=true region_hit_submitted_scene=true A_B=true reduced_motion=true idle_timers=0 hostlost=true foreground_unchanged=true source_visual_hook_session_released=true presentation_UNVERIFIED");
         CheckRollback(log);
+        CheckFirstDown(log);
+    }
+    private static void CheckFirstDown(Action<string> log)
+    {
+        var clock = new Clock(); using var renderer = new WpfHostRenderer();
+        using var host = new FallbackDesktopHost(log, null, () => new(0, 0, 1200, 800), clock, renderer: renderer);
+        host.Start(false); SendMessageW(host.Window, 0x200, 0, 0);
+        clock.NowMilliseconds = 300; host.RenderHiddenTestFrame(false);
+        string id = EngineeringFixture.ClickId.ToString("D");
+        host.Dispatcher.DispatchPointer(PointerAction.Down, new(id)); host.Dispatcher.DispatchPointer(PointerAction.Up, new(id));
+        host.RenderHiddenTestFrame(true); clock.NowMilliseconds += 80; host.RenderHiddenTestFrame(true);
+        var scene = host.SubmittedScene!; var item = scene.Spaces.Single(s => s.Id == id).Items.First();
+        nint Point(SceneItem target) => ((int)((target.Bounds.Y + 10) * scene.PixelsPerDip) << 16) | ((int)((target.Bounds.X + 10) * scene.PixelsPerDip) & 0xffff);
+        int before = host.Dispatcher.FakeLaunchCount;
+        SendMessageW(host.Window, 0x201, 1, Point(item)); SendMessageW(host.Window, 0x202, 0, Point(item));
+        Require(host.InputGuard.Conflicts > 0 && host.Dispatcher.FakeLaunchCount == before && !host.Dispatcher.HasGesture, "wpf_first_down_conflict");
+        var stable = scene.Spaces.Single(s => s.Id == ModernEngineeringFixture.StudyId.ToString("D")).Items.First();
+        SendMessageW(host.Window, 0x201, 1, Point(stable));
+        Require(host.Dispatcher.HasGesture && host.InputGuard.PinnedFrameId is not null && !host.AnimationTimerArmed, "wpf_first_down_stable_pin");
+        var pinned = host.SubmittedScene; clock.NowMilliseconds += 10; host.RenderHiddenTestFrame(true);
+        Require(ReferenceEquals(pinned, host.SubmittedScene), "wpf_guarded_pin_freezes_scene");
+        SendMessageW(host.Window, 0x202, 0, Point(stable));
+        Require(host.Dispatcher.FakeLaunchCount == before + 1, "wpf_guarded_launch_once");
+        SendMessageW(host.Window, 0x201, 1, Point(stable));
+        host.Dispatcher.SetAvailability(DesktopAvailability.ExternalForeground, "changed-after-press");
+        SendMessageW(host.Window, 0x202, 0, Point(stable));
+        Require(host.Dispatcher.FakeLaunchCount == before + 1, "wpf_guarded_stale_generation");
+        host.Dispatcher.HostLost(); host.RenderHiddenTestFrame(false);
+        Require(renderer.Diagnostics.LiveVisuals == 0 && renderer.SubmittedScene is null && host.InputGuard.RetainedScenes == 0, "wpf_hostlost_cache_clear");
+        host.Dispatcher.HostRestored(); host.RenderHiddenTestFrame(false);
+        Require(renderer.Diagnostics.LiveVisuals == 125, "wpf_cache_restore");
+        log($"wpf_first_down hidden=true conflicts={host.InputGuard.Conflicts} accepted={host.InputGuard.Accepted} attempts={host.InputGuard.Attempts} generation_rejected={host.InputGuard.GenerationRejected} coverage_rejected={host.InputGuard.CoverageRejected} pinned=true old_generation_no_launch=true cache_hostlost_restore=true presentation_UNVERIFIED");
     }
     private static void CheckRegion(FallbackDesktopHost host, WpfHostRenderer renderer)
     {

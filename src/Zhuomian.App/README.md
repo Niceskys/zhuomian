@@ -14,3 +14,6 @@ The app can obscure desktop icons and is not accepted daily-use hosting. Display
 `--native-smoke` executes the retained hidden GDI regression diagnostics. `--wpf-smoke` executes actual hidden unified-host diagnostics and writes synthetic/offscreen PNGs to `wpf-evidence` in the working directory. Neither command injects global input. Packaged logs and test results describe the recorded Windows Runner only. OFFSCREEN images render the existing submitted WPF visual tree with RenderTargetBitmap; they are not live-window or desktop screenshots. WPF display presentation, physical clicks during animation, Windows 11 desktop coexistence, accessibility and IME remain UNVERIFIED.
 
 See packaged `UI_I1_WPF_EVIDENCE.md`, `0013-wpf-unified-host.md`, `BUILD.json`, test results and `SHA256SUMS.txt`. ADR remains Proposed. The project release license remains undecided; .NET/WPF runtime notices are included separately.
+
+
+UI-I2 retains the same ENGINEERING ONLY scope and three cards. Incremental visuals and conservative first-press consensus are described in [UI-I2 evidence](../../docs/UI_I2_RENDER_EVIDENCE.md) and [Proposed ADR-0014](../../docs/ADR/0014-wpf-render-input-stability.md). A conflict can cancel a click; real screen presentation remains UNVERIFIED. No real resources or saved Workspace are connected.

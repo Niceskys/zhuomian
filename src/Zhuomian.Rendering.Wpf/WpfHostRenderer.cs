@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -35,7 +36,7 @@ public sealed class WpfHostRenderer : IHostRenderer
         _viewportWidth = width; _viewportHeight = height;
         try
         {
-            _source = new(new HwndSourceParameters("Zhuomian UI-I1 ENGINEERING ONLY")
+            _source = new(new HwndSourceParameters("Zhuomian UI-I2 ENGINEERING ONLY")
             {
                 PositionX = left,
                 PositionY = top,
@@ -66,87 +67,183 @@ public sealed class WpfHostRenderer : IHostRenderer
         _callback?.Invoke(Handle, 0x02, 0, 0);
         RequestStop(1);
     }
+    private readonly Dictionary<string, SpaceVisual> _spaces = new(StringComparer.Ordinal);
+    private readonly PresentationTheme _theme;
+    public RendererDiagnostics Diagnostics { get; } = new();
+    public WpfHostRenderer(PresentationTheme? theme = null) { _theme = theme ?? new(); }
     public void Submit(SceneSnapshot scene)
     {
         _dispatcher.VerifyAccess();
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(scene);
         if (ReferenceEquals(SubmittedScene, scene)) { return; }
-        _root.Children.Clear();
-        foreach (var space in scene.Spaces)
+        long start = Stopwatch.GetTimestamp(), allocation = GC.GetAllocatedBytesForCurrentThread();
+        try
         {
-            var background = Brush(space.Background);
-            var foreground = Brush(space.Foreground);
-            var card = new Border
+            if (_spaces.Count == 0 && scene.Spaces.Length > 0) { Diagnostics.FullTreeRebuild++; }
+            int order = 0;
+            foreach (string id in _spaces.Keys.Where(id => !scene.Spaces.Any(s => s.Id == id)).ToArray())
+            { Remove(_spaces[id]); _spaces.Remove(id); }
+            foreach (var space in scene.Spaces)
             {
-                Tag = "space:" + space.Id,
-                Background = background,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(99, 110, 130)),
-                BorderThickness = new(1),
-                CornerRadius = new(14),
-                ClipToBounds = true
-            };
-            Place(card, space.Bounds, scene.PixelsPerDip);
-            // All geometry comes from the coordinator. WPF never reads Core or chooses Focus.
-            var title = Label(space.Name, foreground, 17, FontWeights.SemiBold);
-            Place(title, new(space.Bounds.X + 16, space.Bounds.Y + 10, space.Bounds.Width - (space.Expanded ? 112 : 32), 28), scene.PixelsPerDip);
-            if (space.Expanded)
-            {
-                var search = new Border
+                if (!_spaces.TryGetValue(space.Id, out var visual))
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(24, 128, 128, 128)),
-                    CornerRadius = new(7),
-                    Child = Label("Search in Space", foreground, 13, FontWeights.Normal),
-                    Padding = new(12, 6, 0, 0)
-                };
-                Place(search, new(space.Bounds.X + 16, space.Bounds.Y + 48, space.Bounds.Width - 32, 36), scene.PixelsPerDip);
-                Place(Label("All items     ·     Grid     ·     Sort     ·     Settings", foreground, 12, FontWeights.Normal),
-                    new(space.Bounds.X + 16, space.Bounds.Y + 98, space.Bounds.Width - 32, 24), scene.PixelsPerDip);
-                Place(Label("Back", foreground, 11, FontWeights.Normal), space.CloseBounds!, scene.PixelsPerDip);
-                Place(Label("Exit", foreground, 11, FontWeights.Normal), space.ExitBounds!, scene.PixelsPerDip);
-            }
-            foreach (var item in space.Items)
-            {
-                var tile = new StackPanel { Tag = "item:" + space.Id + "/" + item.Id, HorizontalAlignment = HorizontalAlignment.Center };
-                int identity = Guid.Parse(item.Id).ToByteArray()[15];
-                var iconBackground = new RgbColor(70 + identity * 19 % 100, 110 + identity * 13 % 100, 150 + identity * 7 % 100);
-                var iconForeground = iconBackground.ContrastRatio(new(255, 255, 255)) >= ReadablePalette.MinimumContrastRatio ? Brushes.White : Brushes.Black;
-                tile.Children.Add(new Border
+                    visual = new(space.Id, _theme);
+                    _spaces.Add(space.Id, visual);
+                    foreach (var element in visual.Chrome) { Add(element, element == visual.Search ? 2 : 1); }
+                }
+                else { Diagnostics.VisualReused += 7; } // card, title, search + child, toolbar, Back, Exit
+                var previous = visual.Scene;
+                if (previous?.Name != space.Name) { visual.Title.Text = space.Name; }
+                if (previous?.Background != space.Background) { visual.Card.Background = Brush(space.Background); }
+                if (previous?.Foreground != space.Foreground)
                 {
-                    Width = 30,
-                    Height = 30,
-                    CornerRadius = new(8),
-                    Background = Brush(iconBackground),
-                    Child = new TextBlock
-                    {
-                        Text = identity.ToString("X2", System.Globalization.CultureInfo.InvariantCulture),
-                        Foreground = iconForeground,
-                        FontSize = 12,
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        VerticalAlignment = VerticalAlignment.Center
-                    }
-                });
-                tile.Children.Add(Label(item.Label, foreground, 10, FontWeights.Normal));
-                Place(tile, item.Bounds, scene.PixelsPerDip);
+                    var foreground = Brush(space.Foreground);
+                    foreach (var label in visual.Labels) { label.Foreground = foreground; }
+                }
+                Place(visual.Card, space.Bounds, scene.PixelsPerDip, order++);
+                Place(visual.Title, new(space.Bounds.X + SceneLayout.Padding, space.Bounds.Y + _theme.TitleTop,
+                    space.Bounds.Width - (space.Expanded ? _theme.ExpandedTitleReserve : 2 * SceneLayout.Padding), _theme.TitleHeight), scene.PixelsPerDip, order++);
+                foreach (var control in visual.ExpandedControls)
+                { control.Visibility = space.Expanded ? Visibility.Visible : Visibility.Collapsed; }
+                if (space.Expanded)
+                {
+                    Place(visual.Search, new(space.Bounds.X + SceneLayout.Padding, space.Bounds.Y + _theme.SearchTop,
+                        space.Bounds.Width - 2 * SceneLayout.Padding, _theme.SearchHeight), scene.PixelsPerDip, order++);
+                    Place(visual.Toolbar, new(space.Bounds.X + SceneLayout.Padding, space.Bounds.Y + _theme.ToolbarTop,
+                        space.Bounds.Width - 2 * SceneLayout.Padding, _theme.ToolbarHeight), scene.PixelsPerDip, order++);
+                    Place(visual.Back, space.CloseBounds!, scene.PixelsPerDip, order++);
+                    Place(visual.Exit, space.ExitBounds!, scene.PixelsPerDip, order++);
+                }
+                foreach (string id in visual.Items.Keys.Where(id => space.ItemIdentities.IsDefault ? !space.Items.Any(i => i.Id == id) : !space.ItemIdentities.Contains(id)).ToArray())
+                { Remove(visual.Items[id].Tile, 4); visual.Items.Remove(id); }
+                foreach (var cached in visual.Items)
+                { cached.Value.Tile.Visibility = space.Items.Any(item => item.Id == cached.Key) ? Visibility.Visible : Visibility.Collapsed; }
+                foreach (var item in space.Items)
+                {
+                    if (!visual.Items.TryGetValue(item.Id, out var tile))
+                    { tile = new(space.Id, item.Id, _theme); visual.Items.Add(item.Id, tile); Add(tile.Tile, 4); }
+                    else { Diagnostics.VisualReused += 4; }
+                    if (tile.Scene?.Label != item.Label) { tile.Label.Text = item.Label; }
+                    if (previous?.Foreground != space.Foreground || tile.Scene is null) { tile.Label.Foreground = Brush(space.Foreground); }
+                    tile.Tile.Visibility = Visibility.Visible;
+                    Place(tile.Tile, item.Bounds, scene.PixelsPerDip, order++);
+                    tile.Scene = item;
+                }
+                visual.Scene = space;
             }
+            SubmittedScene = scene;
+            Diagnostics.SceneSubmitted++;
+            // Submit/layout are CPU-side operations, never display-present acknowledgements.
+            _root.Measure(new(_viewportWidth / scene.PixelsPerDip, _viewportHeight / scene.PixelsPerDip));
+            _root.Arrange(new Rect(0, 0, _viewportWidth / scene.PixelsPerDip, _viewportHeight / scene.PixelsPerDip));
+            _root.UpdateLayout();
         }
-        SubmittedScene = scene;
-        // Lay out against the actual coordinator-created host viewport even while hidden.
-        // This establishes WPF layout, never compositor/display presentation.
-        _root.InvalidateMeasure(); _root.InvalidateArrange();
-        _root.Measure(new(_viewportWidth / scene.PixelsPerDip, _viewportHeight / scene.PixelsPerDip));
-        _root.Arrange(new Rect(0, 0, _viewportWidth / scene.PixelsPerDip, _viewportHeight / scene.PixelsPerDip));
-        _root.UpdateLayout();
+        catch
+        {
+            // Partial updates cannot remain an authoritative picture. Coordinator closes the lease.
+            Reset();
+            throw;
+        }
+        finally
+        {
+            Diagnostics.FrameUpdateTicks = Stopwatch.GetTimestamp() - start;
+            Diagnostics.ManagedAllocation = GC.GetAllocatedBytesForCurrentThread() - allocation;
+        }
     }
-    private void Place(FrameworkElement element, LogicalRect bounds, double scale)
+    private void Add(FrameworkElement element, int count = 1)
+    { _root.Children.Add(element); Diagnostics.VisualCreated += count; Diagnostics.LiveVisuals += count; }
+    private void Remove(FrameworkElement element, int count = 1)
+    { _root.Children.Remove(element); Diagnostics.VisualRemoved += count; Diagnostics.LiveVisuals -= count; }
+    private void Remove(SpaceVisual visual)
+    {
+        foreach (var tile in visual.Items.Values) { Remove(tile.Tile, 4); }
+        visual.Items.Clear();
+        foreach (var element in visual.Chrome) { Remove(element, element == visual.Search ? 2 : 1); }
+        visual.Scene = null;
+    }
+    public void Reset()
+    {
+        _dispatcher.VerifyAccess();
+        foreach (var visual in _spaces.Values) { Remove(visual); }
+        _spaces.Clear(); SubmittedScene = null;
+    }
+    private void Place(FrameworkElement element, LogicalRect bounds, double scale, int order)
     {
         double x = Math.Round(bounds.X * scale) / scale, y = Math.Round(bounds.Y * scale) / scale;
-        element.Width = Math.Max(0, Math.Round(bounds.Right * scale) / scale - x);
-        element.Height = Math.Max(0, Math.Round(bounds.Bottom * scale) / scale - y);
-        Canvas.SetLeft(element, x); Canvas.SetTop(element, y);
-        _root.Children.Add(element);
+        double width = Math.Max(0, Math.Round(bounds.Right * scale) / scale - x);
+        double height = Math.Max(0, Math.Round(bounds.Bottom * scale) / scale - y);
+        bool changed = element.Width != width || element.Height != height || Canvas.GetLeft(element) != x || Canvas.GetTop(element) != y;
+        if (element.Width != width) { element.Width = width; }
+        if (element.Height != height) { element.Height = height; }
+        if (Canvas.GetLeft(element) != x) { Canvas.SetLeft(element, x); }
+        if (Canvas.GetTop(element) != y) { Canvas.SetTop(element, y); }
+        if (Panel.GetZIndex(element) != order) { Panel.SetZIndex(element, order); }
+        if (changed) { Diagnostics.LayoutInvalidated++; }
     }
-    private static SolidColorBrush Brush(RgbColor c) => new(Color.FromRgb((byte)c.Red, (byte)c.Green, (byte)c.Blue));
+    private sealed class SpaceVisual
+    {
+        internal readonly Border Card, Search;
+        internal readonly TextBlock Title, Toolbar, Back, Exit;
+        internal readonly FrameworkElement[] Chrome, ExpandedControls;
+        internal readonly TextBlock[] Labels;
+        internal readonly Dictionary<string, ItemVisual> Items = new(StringComparer.Ordinal);
+        internal SceneSpace? Scene;
+        internal SpaceVisual(string id, PresentationTheme theme)
+        {
+            Card = new() { Tag = "space:" + id, BorderBrush = Brush(theme.BorderColor), BorderThickness = new(theme.BorderWidth), CornerRadius = new(theme.CardRadius), ClipToBounds = true };
+            Title = Label("", Brushes.White, theme.TitleFontSize, FontWeights.SemiBold);
+            var searchLabel = Label("Search in Space", Brushes.White, theme.BodyFontSize, FontWeights.Normal);
+            Search = new() { Background = Brush(theme.SearchColor, theme.SearchOpacity), CornerRadius = new(theme.SearchRadius), Child = searchLabel, Padding = new(theme.SearchInset, 6, 0, 0) };
+            Toolbar = Label("All items     ·     Grid     ·     Sort     ·     Settings", Brushes.White, theme.ToolbarFontSize, FontWeights.Normal);
+            Back = Label("Back", Brushes.White, theme.ActionFontSize, FontWeights.Normal);
+            Exit = Label("Exit", Brushes.White, theme.ActionFontSize, FontWeights.Normal);
+            Chrome = [Card, Title, Search, Toolbar, Back, Exit];
+            ExpandedControls = [Search, Toolbar, Back, Exit];
+            Labels = [Title, searchLabel, Toolbar, Back, Exit];
+        }
+    }
+    private sealed class ItemVisual
+    {
+        internal readonly StackPanel Tile;
+        internal readonly TextBlock Label;
+        internal SceneItem? Scene;
+        internal ItemVisual(string spaceId, string itemId, PresentationTheme theme)
+        {
+            int identity = Guid.Parse(itemId).ToByteArray()[15];
+            var background = new RgbColor(70 + identity * 19 % 100, 110 + identity * 13 % 100, 150 + identity * 7 % 100);
+            Tile = new()
+            {
+                Tag = "item:" + spaceId + "/" + itemId,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                RenderTransformOrigin = new(.5, .5),
+                RenderTransform = new ScaleTransform(1, 1)
+            };
+            Tile.Children.Add(new Border
+            {
+                Width = theme.IconSize,
+                Height = theme.IconSize,
+                CornerRadius = new(theme.IconRadius),
+                Background = Brush(background),
+                Child = new TextBlock
+                {
+                    Text = identity.ToString("X2", System.Globalization.CultureInfo.InvariantCulture),
+                    Foreground = background.ContrastRatio(new(255, 255, 255)) >= ReadablePalette.MinimumContrastRatio ? Brushes.White : Brushes.Black,
+                    FontSize = theme.ToolbarFontSize,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            });
+            Label = WpfHostRenderer.Label("", Brushes.White, theme.ItemFontSize, FontWeights.Normal);
+            Tile.Children.Add(Label);
+        }
+    }
+    private static SolidColorBrush Brush(RgbColor c, double opacity = 1)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb((byte)c.Red, (byte)c.Green, (byte)c.Blue));
+        brush.Opacity = opacity;
+        brush.Freeze(); return brush;
+    }
     private static TextBlock Label(string text, Brush color, double size, FontWeight weight) => new()
     {
         Text = text,
@@ -160,7 +257,7 @@ public sealed class WpfHostRenderer : IHostRenderer
     internal bool MatchesSubmittedGeometry(SceneSnapshot scene)
     {
         _dispatcher.VerifyAccess();
-        var visuals = _root.Children.OfType<FrameworkElement>().Where(element => element.Tag is string)
+        var visuals = _root.Children.OfType<FrameworkElement>().Where(element => element.Tag is string && element.Visibility == Visibility.Visible)
             .ToDictionary(element => (string)element.Tag);
         bool Matches(string key, LogicalRect bounds)
         {
@@ -241,7 +338,7 @@ public sealed class WpfHostRenderer : IHostRenderer
         if (_disposed) { return; }
         _disposed = true;
         _dispatcher.UnhandledException -= OnUnhandledException;
-        _root.Children.Clear();
+        Reset();
         if (_source is { } source)
         {
             source.RootVisual = null;
