@@ -7,10 +7,10 @@ namespace Zhuomian.Platform.Tests;
 public sealed class SceneInputGuardTests
 {
     private sealed class Clock : IInteractionClock { public long NowMilliseconds => 0; }
-    private static SceneSnapshot Scene(double scale = 1)
+    private static SceneSnapshot Scene(double scale = 1, SceneLayout? layout = null)
     {
         var d = new SpaceDispatcher(new Clock(), new(), modernFixture: true);
-        return SceneSnapshot.Capture(1, d, scale, new(reducedTransparency: true));
+        return SceneSnapshot.Capture(1, d, scale, new(reducedTransparency: true), layout);
     }
     private static SceneSnapshot Swap(SceneSnapshot scene, long frame)
     {
@@ -34,6 +34,10 @@ public sealed class SceneInputGuardTests
     [Fact]
     public void UnchangedTargetAndBlankRemainUsableDuringOtherSpaceMotion()
     {
+        var custom = Scene(layout: new() { Padding = 20, ColumnPitch = 72, RowPitch = 60 });
+        Assert.Equal(custom.Spaces[0].Bounds.X + 20, custom.Spaces[0].Items[0].Bounds.X);
+        Assert.Equal(72, custom.Spaces[0].Items[1].Bounds.X - custom.Spaces[0].Items[0].Bounds.X);
+        Assert.Throws<ArgumentOutOfRangeException>(() => Scene(layout: new() { ColumnPitch = 0 }));
         var a = Scene(); var guard = new SceneInputGuard(); guard.Observe(a, 0);
         var other = a.Spaces[1];
         guard.Observe(a with { FrameId = 2, Spaces = a.Spaces.SetItem(1, other with { Bounds = new(other.Bounds.X + 5, other.Bounds.Y, other.Bounds.Width, other.Bounds.Height) }) }, 16);

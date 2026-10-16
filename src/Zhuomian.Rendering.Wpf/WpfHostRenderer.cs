@@ -83,6 +83,7 @@ public sealed class WpfHostRenderer : IHostRenderer
         {
             _layoutDirty = false;
             if (_spaces.Count == 0 && scene.Spaces.Length > 0) { Diagnostics.FullTreeRebuild++; }
+            double padding = (scene.Layout ?? SceneLayout.Default).Padding;
             int order = 0;
             foreach (string id in _spaces.Keys.Where(id => !scene.Spaces.Any(s => s.Id == id)).ToArray())
             { Remove(_spaces[id]); _spaces.Remove(id); }
@@ -104,17 +105,17 @@ public sealed class WpfHostRenderer : IHostRenderer
                     foreach (var label in visual.Labels) { label.Foreground = foreground; }
                 }
                 Place(visual.Card, space.Bounds, scene.PixelsPerDip, order++);
-                Place(visual.Title, new(space.Bounds.X + SceneLayout.Padding, space.Bounds.Y + _theme.TitleTop,
-                    space.Bounds.Width - (space.Expanded ? _theme.ExpandedTitleReserve : 2 * SceneLayout.Padding), _theme.TitleHeight), scene.PixelsPerDip, order++);
+                Place(visual.Title, new(space.Bounds.X + padding, space.Bounds.Y + _theme.TitleTop,
+                    space.Bounds.Width - (space.Expanded ? _theme.ExpandedTitleReserve : 2 * padding), _theme.TitleHeight), scene.PixelsPerDip, order++);
                 if (previous?.Expanded != space.Expanded) { _layoutDirty = true; }
                 foreach (var control in visual.ExpandedControls)
                 { control.Visibility = space.Expanded ? Visibility.Visible : Visibility.Collapsed; }
                 if (space.Expanded)
                 {
-                    Place(visual.Search, new(space.Bounds.X + SceneLayout.Padding, space.Bounds.Y + _theme.SearchTop,
-                        space.Bounds.Width - 2 * SceneLayout.Padding, _theme.SearchHeight), scene.PixelsPerDip, order++);
-                    Place(visual.Toolbar, new(space.Bounds.X + SceneLayout.Padding, space.Bounds.Y + _theme.ToolbarTop,
-                        space.Bounds.Width - 2 * SceneLayout.Padding, _theme.ToolbarHeight), scene.PixelsPerDip, order++);
+                    Place(visual.Search, new(space.Bounds.X + padding, space.Bounds.Y + _theme.SearchTop,
+                        space.Bounds.Width - 2 * padding, _theme.SearchHeight), scene.PixelsPerDip, order++);
+                    Place(visual.Toolbar, new(space.Bounds.X + padding, space.Bounds.Y + _theme.ToolbarTop,
+                        space.Bounds.Width - 2 * padding, _theme.ToolbarHeight), scene.PixelsPerDip, order++);
                     Place(visual.Back, space.CloseBounds!, scene.PixelsPerDip, order++);
                     Place(visual.Exit, space.ExitBounds!, scene.PixelsPerDip, order++);
                 }
