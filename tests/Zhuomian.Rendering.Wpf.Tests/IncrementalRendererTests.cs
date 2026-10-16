@@ -116,7 +116,21 @@ public sealed class IncrementalRendererTests
     {
         UnifiedHostTests.OnStaThread(-4, () =>
         {
-            var replay = Replay(); var rows = new List<object>();
+            var replay = Replay(); var rows = new List<object>(); var resources = new List<object>();
+            static object ResourceSample(string phase, int repetition)
+            {
+                using var process = Process.GetCurrentProcess(); process.Refresh();
+                return new
+                {
+                    phase,
+                    repetition,
+                    privateBytes = process.PrivateMemorySize64,
+                    workingSet = process.WorkingSet64,
+                    handles = process.HandleCount,
+                    threads = process.Threads.Count
+                };
+            }
+            resources.Add(ResourceSample("before-comparison", -1));
             // Same scene objects, hidden viewport, owner STA, warmup and measurement protocol.
             // Three engineering repetitions; no GPU/display/60FPS inference.
             for (int repetition = 0; repetition < 3; repetition++)
@@ -138,11 +152,27 @@ public sealed class IncrementalRendererTests
                         {
                             Assert.Equal(0, createdDelta); Assert.Equal(125, incremental.Diagnostics.LiveVisuals);
                             Assert.Equal(1, incremental.Diagnostics.FullTreeRebuild);
-                            Assert.True(incremental.MatchesSubmittedGeometry(scene));
+                            Assert.True(incremental.MatchesSubmittedGeometry(scene), $"frame={i} scenario={scenario} {incremental.GeometryMismatch}");
                         }
-                        rows.Add(new { repetition, renderer = baseline ? "UI-I1-rebuild" : "UI-I2-incremental", frame = i, scenario, created = createdDelta, ticks, allocatedBytes = bytes });
+                        rows.Add(new
+                        {
+                            repetition,
+                            renderer = baseline ? "UI-I1-rebuild" : "UI-I2-incremental",
+                            frame = i,
+                            scenario,
+                            created = createdDelta,
+                            ticks,
+                            allocatedBytes = bytes,
+                            retainedVisuals = incremental?.Diagnostics.LiveVisuals ?? createdDelta,
+                            totalVisualReused = incremental?.Diagnostics.VisualReused,
+                            totalVisualRemoved = incremental?.Diagnostics.VisualRemoved,
+                            totalLayoutInvalidated = incremental?.Diagnostics.LayoutInvalidated,
+                            totalFullTreeRebuild = incremental?.Diagnostics.FullTreeRebuild,
+                            totalSceneSubmitted = incremental?.Diagnostics.SceneSubmitted
+                        });
                     }
                     if (incremental is not null) { incremental.Reset(); Assert.Equal(0, incremental.Diagnostics.LiveVisuals); }
+                    renderer.Dispose(); resources.Add(ResourceSample(baseline ? "after-baseline-dispose" : "after-incremental-dispose", repetition));
                 }
             }
             string? directory = Environment.GetEnvironmentVariable("ZHUOMIAN_RENDER_DIAGNOSTICS");

@@ -135,6 +135,7 @@ public static class WpfSmoke
         Require(host.Run() == 0, "wpf_dispatcher_exit");
         host.Dispose();
         Require(!IsWindow(window) && renderer.Handle == 0 && !renderer.HasRootVisual && host.ActiveHookCount == 0 && !host.SessionRegistered, "wpf_cleanup");
+        log($"wpf_renderer_cache created={renderer.Diagnostics.VisualCreated} reused={renderer.Diagnostics.VisualReused} removed={renderer.Diagnostics.VisualRemoved} live={renderer.Diagnostics.LiveVisuals} scenes={renderer.Diagnostics.SceneSubmitted} geometry_updates={renderer.Diagnostics.LayoutInvalidated} full_tree_populations={renderer.Diagnostics.FullTreeRebuild} last_submit_ticks={renderer.Diagnostics.FrameUpdateTicks} last_submit_allocated_bytes={renderer.Diagnostics.ManagedAllocation}");
         log("wpf_smoke hidden=true hwnd_single_owner=true region_hit_submitted_scene=true A_B=true reduced_motion=true idle_timers=0 hostlost=true foreground_unchanged=true source_visual_hook_session_released=true presentation_UNVERIFIED");
         CheckRollback(log);
         CheckFirstDown(log);
@@ -147,7 +148,7 @@ public static class WpfSmoke
         clock.NowMilliseconds = 300; host.RenderHiddenTestFrame(false);
         string id = EngineeringFixture.ClickId.ToString("D");
         host.Dispatcher.DispatchPointer(PointerAction.Down, new(id)); host.Dispatcher.DispatchPointer(PointerAction.Up, new(id));
-        host.RenderHiddenTestFrame(true); clock.NowMilliseconds += 80; host.RenderHiddenTestFrame(true);
+        host.RenderHiddenTestFrame(true); clock.NowMilliseconds += 120; host.RenderHiddenTestFrame(true);
         var scene = host.SubmittedScene!; var item = scene.Spaces.Single(s => s.Id == id).Items.First();
         nint Point(SceneItem target) => ((int)((target.Bounds.Y + 10) * scene.PixelsPerDip) << 16) | ((int)((target.Bounds.X + 10) * scene.PixelsPerDip) & 0xffff);
         int before = host.Dispatcher.FakeLaunchCount;

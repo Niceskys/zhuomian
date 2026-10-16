@@ -125,7 +125,7 @@ public sealed class WpfHostRenderer : IHostRenderer
                     { tile = new(space.Id, item.Id, _theme); visual.Items.Add(item.Id, tile); Add(tile.Tile, 4); }
                     else { Diagnostics.VisualReused += 4; }
                     if (tile.Scene?.Label != item.Label) { tile.Label.Text = item.Label; }
-                    if (previous?.Foreground != space.Foreground || tile.Scene is null) { tile.Label.Foreground = Brush(space.Foreground); }
+                    if (tile.Foreground != space.Foreground) { tile.Label.Foreground = Brush(space.Foreground); tile.Foreground = space.Foreground; }
                     tile.Tile.Visibility = Visibility.Visible;
                     Place(tile.Tile, item.Bounds, scene.PixelsPerDip, order++);
                     tile.Scene = item;
@@ -208,6 +208,7 @@ public sealed class WpfHostRenderer : IHostRenderer
         internal readonly StackPanel Tile;
         internal readonly TextBlock Label;
         internal SceneItem? Scene;
+        internal RgbColor? Foreground;
         internal ItemVisual(string spaceId, string itemId, PresentationTheme theme)
         {
             int identity = Guid.Parse(itemId).ToByteArray()[15];
@@ -254,23 +255,28 @@ public sealed class WpfHostRenderer : IHostRenderer
         TextTrimming = TextTrimming.CharacterEllipsis,
         VerticalAlignment = VerticalAlignment.Center
     };
+    internal string? GeometryMismatch { get; private set; }
     internal bool MatchesSubmittedGeometry(SceneSnapshot scene)
     {
         _dispatcher.VerifyAccess();
+        GeometryMismatch = null;
         var visuals = _root.Children.OfType<FrameworkElement>().Where(element => element.Tag is string && element.Visibility == Visibility.Visible)
             .ToDictionary(element => (string)element.Tag);
         bool Matches(string key, LogicalRect bounds)
         {
-            if (!visuals.Remove(key, out var visual)) { return false; }
+            if (!visuals.Remove(key, out var visual)) { GeometryMismatch = "missing:" + key; return false; }
             double scale = scene.PixelsPerDip;
             var offset = VisualTreeHelper.GetOffset(visual);
-            return visual.IsMeasureValid && visual.IsArrangeValid &&
+            bool matches = visual.IsMeasureValid && visual.IsArrangeValid &&
                 visual.RenderSize.Width == visual.Width && visual.RenderSize.Height == visual.Height &&
                 offset.X == Canvas.GetLeft(visual) && offset.Y == Canvas.GetTop(visual) &&
                 Canvas.GetLeft(visual) == Math.Round(bounds.X * scale) / scale &&
                 Canvas.GetTop(visual) == Math.Round(bounds.Y * scale) / scale &&
                 visual.Width == Math.Round(bounds.Right * scale) / scale - Math.Round(bounds.X * scale) / scale &&
                 visual.Height == Math.Round(bounds.Bottom * scale) / scale - Math.Round(bounds.Y * scale) / scale;
+            if (!matches)
+            { GeometryMismatch = FormattableString.Invariant($"{key}: valid={visual.IsMeasureValid}/{visual.IsArrangeValid} render={visual.RenderSize} declared={visual.Width}/{visual.Height} offset={offset} canvas={Canvas.GetLeft(visual)}/{Canvas.GetTop(visual)} expected={bounds} scale={scale}"); }
+            return matches;
         }
         foreach (var space in scene.Spaces)
         {
@@ -286,6 +292,7 @@ public sealed class WpfHostRenderer : IHostRenderer
                 if (!Matches(key, item.Bounds)) { return false; }
             }
         }
+        if (visuals.Count != 0) { GeometryMismatch = "extra:" + string.Join(",", visuals.Keys); }
         return visuals.Count == 0;
     }
     internal void SaveOffscreen(string path)

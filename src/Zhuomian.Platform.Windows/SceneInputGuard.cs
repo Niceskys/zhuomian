@@ -2,7 +2,7 @@ namespace Zhuomian.Platform.Windows;
 
 /// <summary>Conservative submitted-scene consensus, NOT a PresentedFrame oracle.
 /// The 250ms engineering lag window is unverified on real displays. Overflow fails closed.
-/// Last submission time per geometry is retained; identical geometry does not fill the cache.</summary>
+/// Supersession time bounds candidate retention; identical geometry does not fill the cache.</summary>
 public sealed class SceneInputGuard
 {
     public const int Capacity = 32;
@@ -24,6 +24,9 @@ public sealed class SceneInputGuard
         Prune(now);
         if (_history.Count > 0 && SameGeometry(_history[^1].Scene, scene))
         { _history[^1] = (scene, now); return; }
+        // A long-idle picture could still be on screen when this new scene is submitted.
+        // Start its lag window at supersession, not at its potentially ancient last Submit.
+        if (_history.Count > 0) { _history[^1] = (_history[^1].Scene, now); }
         _history.Add((scene, now));
         if (_history.Count > Capacity)
         { _history.RemoveAt(0); Evicted++; _overflowUntil = now + LagWindowMilliseconds; }
@@ -44,7 +47,7 @@ public sealed class SceneInputGuard
     { _history.Clear(); _overflowUntil = -1; PinnedFrameId = null; }
     private void Prune(long now)
     {
-        // Retire old geometry only after its last submission leaves the engineering lag window.
+        // Retire old geometry only after its supersession leaves the engineering lag window.
         while (_history.Count > 1 && _history[0].Time < now - LagWindowMilliseconds)
         { _history.RemoveAt(0); }
     }

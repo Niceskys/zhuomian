@@ -96,7 +96,7 @@ public sealed class SceneInputGuardTests
         Assert.False(guard.TryPointerDown(50, 90, d.Controller.InputGeneration, 1, out _));
     }
     [Fact]
-    public void StaticSubmissionsDoNotAccumulateAndConflictExpiresAfterLastOldSubmission()
+    public void StaticSubmissionsDoNotAccumulateAndLongIdlePictureSurvivesSupersession()
     {
         var a = Scene(); var guard = new SceneInputGuard();
         for (int i = 1; i <= 500; i++) { guard.Observe(a with { FrameId = i }, i); }
@@ -105,5 +105,9 @@ public sealed class SceneInputGuardTests
         for (int i = 502; i <= 800; i++) { guard.Observe(Swap(a, i), i); }
         Assert.Equal(1, guard.RetainedScenes);
         Assert.True(guard.TryPointerDown(50, 90, a.HostGeneration, 800, out _));
+        // An old static scene remains a candidate for a full lag window after a late change.
+        guard.Observe(a with { FrameId = 801 }, 10000);
+        Assert.False(guard.TryPointerDown(50, 90, a.HostGeneration, 10000, out _));
+        Assert.True(guard.TryPointerDown(50, 90, a.HostGeneration, 10251, out _));
     }
 }
