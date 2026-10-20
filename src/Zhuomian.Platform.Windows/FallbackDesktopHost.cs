@@ -103,6 +103,7 @@ public sealed class FallbackDesktopHost : IDisposable
         if (_allowVisible) { throw new InvalidOperationException("hidden_test_only"); }
         _hiddenFrameFailure = stage;
     }
+    internal bool RejectedPressActive => _rejectedPress; // Owner-thread diagnostic for native sequence cancellation tests.
     internal bool DeadlineTimerArmed { get; private set; }
     internal bool SessionRegistered => _sessionRegistered;
     internal int PendingCompletionCount => _completions.Count;
@@ -283,7 +284,7 @@ public sealed class FallbackDesktopHost : IDisposable
                     if (message == 0x201) { _downPoint = new Point { X = x, Y = y }; }
                     if (message == 0x200 && _downPoint is { } down && (Math.Abs(x - down.X) > 4 || Math.Abs(y - down.Y) > 4))
                     {
-                        Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null;
+                        Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null; InputGuard.EndGesture();
                     }
                     Dispatcher.DispatchPointer(message switch { 0x201 => PointerAction.Down, 0x202 => PointerAction.Up, 0x203 => PointerAction.DoubleClick, _ => PointerAction.Move }, hit,
                         externalButtonHeld: message == 0x200 && held);
@@ -295,12 +296,13 @@ public sealed class FallbackDesktopHost : IDisposable
                     if (!Reconcile()) { return 0; }
                     Dispatcher.DispatchPointer(PointerAction.Leave);
                     Dispatcher.DispatchPointer(PointerAction.Cancel);
-                    _downPoint = null;
+                    _downPoint = null; _rejectedPress = false; InputGuard.EndGesture();
                     UpdateVisual(); return 0;
                 case 0x1F:
                 case 0x215:
                     if (!Reconcile()) { return 0; }
-                    Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null; UpdateVisual(); return 0;
+                    Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null; _rejectedPress = false; InputGuard.EndGesture();
+                    UpdateVisual(); return 0;
                 case 0x2B1:
                     _locked = wParam is 7 or 3 or 4 || (wParam != 8 && _locked);
                     if (Reconcile()) { UpdateVisual(); }
