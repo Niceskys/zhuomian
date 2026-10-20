@@ -154,6 +154,14 @@ public static class WpfSmoke
         int before = host.Dispatcher.FakeLaunchCount;
         SendMessageW(host.Window, 0x201, 1, Point(item)); SendMessageW(host.Window, 0x202, 0, Point(item));
         Require(host.InputGuard.Conflicts > 0 && host.Dispatcher.FakeLaunchCount == before && !host.Dispatcher.HasGesture, "wpf_first_down_conflict");
+        // A rejected Down may leave the process-owned HWND without its matching Up.
+        // MouseLeave must release the rejection latch; a later Up cannot create a launch.
+        SendMessageW(host.Window, 0x201, 1, Point(item));
+        Require(host.RejectedPressActive, "wpf_rejected_press_latched");
+        SendMessageW(host.Window, 0x2A3, 0, 0);
+        Require(!host.RejectedPressActive && host.InputGuard.PinnedFrameId is null && !host.Dispatcher.HasGesture, "wpf_rejected_leave_clears_latch");
+        SendMessageW(host.Window, 0x202, 0, Point(item));
+        Require(host.Dispatcher.FakeLaunchCount == before, "wpf_rejected_leave_no_launch");
         var stable = scene.Spaces.Single(s => s.Id == ModernEngineeringFixture.StudyId.ToString("D")).Items.First();
         SendMessageW(host.Window, 0x201, 1, Point(stable));
         Require(host.Dispatcher.HasGesture && host.InputGuard.PinnedFrameId is not null && !host.AnimationTimerArmed, "wpf_first_down_stable_pin");
@@ -161,6 +169,20 @@ public static class WpfSmoke
         Require(ReferenceEquals(pinned, host.SubmittedScene), "wpf_guarded_pin_freezes_scene");
         SendMessageW(host.Window, 0x202, 0, Point(stable));
         Require(host.Dispatcher.FakeLaunchCount == before + 1, "wpf_guarded_launch_once");
+        // Native cancellation must clear both the E1 gesture and the guard's pinned diagnostic.
+        SendMessageW(host.Window, 0x201, 1, Point(stable));
+        Require(host.Dispatcher.HasGesture && host.InputGuard.PinnedFrameId is not null, "wpf_cancel_start_pinned");
+        SendMessageW(host.Window, 0x1F, 0, 0);
+        Require(!host.Dispatcher.HasGesture && host.InputGuard.PinnedFrameId is null, "wpf_cancel_clears_pin");
+        SendMessageW(host.Window, 0x202, 0, Point(stable));
+        Require(host.Dispatcher.FakeLaunchCount == before + 1, "wpf_cancel_no_launch");
+        SendMessageW(host.Window, 0x201, 1, Point(stable));
+        Require(host.Dispatcher.HasGesture && host.InputGuard.PinnedFrameId is not null, "wpf_drag_start_pinned");
+        var dragPoint = Point(stable) + 6;
+        SendMessageW(host.Window, 0x200, 1, dragPoint);
+        Require(!host.Dispatcher.HasGesture && host.InputGuard.PinnedFrameId is null, "wpf_drag_clears_pin");
+        SendMessageW(host.Window, 0x202, 0, dragPoint);
+        Require(host.Dispatcher.FakeLaunchCount == before + 1, "wpf_drag_no_launch");
         SendMessageW(host.Window, 0x201, 1, Point(stable));
         host.Dispatcher.SetAvailability(DesktopAvailability.ExternalForeground, "changed-after-press");
         SendMessageW(host.Window, 0x202, 0, Point(stable));
@@ -169,7 +191,7 @@ public static class WpfSmoke
         Require(renderer.Diagnostics.LiveVisuals == 0 && renderer.SubmittedScene is null && host.InputGuard.RetainedScenes == 0, "wpf_hostlost_cache_clear");
         host.Dispatcher.HostRestored(); host.RenderHiddenTestFrame(false);
         Require(renderer.Diagnostics.LiveVisuals == 125, "wpf_cache_restore");
-        log($"wpf_first_down hidden=true conflicts={host.InputGuard.Conflicts} accepted={host.InputGuard.Accepted} attempts={host.InputGuard.Attempts} generation_rejected={host.InputGuard.GenerationRejected} coverage_rejected={host.InputGuard.CoverageRejected} pinned=true old_generation_no_launch=true cache_hostlost_restore=true presentation_UNVERIFIED");
+        log($"wpf_first_down hidden=true conflicts={host.InputGuard.Conflicts} accepted={host.InputGuard.Accepted} attempts={host.InputGuard.Attempts} generation_rejected={host.InputGuard.GenerationRejected} coverage_rejected={host.InputGuard.CoverageRejected} pinned=true old_generation_no_launch=true cache_hostlost_restore=true rejected_leave_resets=true native_cancel_and_drag_clear_pin=true presentation_UNVERIFIED");
     }
     private static void CheckRegion(FallbackDesktopHost host, WpfHostRenderer renderer)
     {
