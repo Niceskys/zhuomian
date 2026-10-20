@@ -25,6 +25,8 @@ public sealed class FallbackDesktopHost : IDisposable
     private readonly HostLease _lease;
     private readonly IHostRenderer? _renderer;
     private long _frameId;
+    public SceneInputGuard InputGuard { get; } = new();
+    private bool _rejectedPress;
     public SceneSnapshot? SubmittedScene { get; private set; }
     private readonly IInteractionClock _clock;
     private readonly int _ownerThread = Environment.CurrentManagedThreadId;
@@ -101,6 +103,7 @@ public sealed class FallbackDesktopHost : IDisposable
         if (_allowVisible) { throw new InvalidOperationException("hidden_test_only"); }
         _hiddenFrameFailure = stage;
     }
+    internal bool RejectedPressActive => _rejectedPress; // Owner-thread diagnostic for native sequence cancellation tests.
     internal bool DeadlineTimerArmed { get; private set; }
     internal bool SessionRegistered => _sessionRegistered;
     internal int PendingCompletionCount => _completions.Count;
@@ -261,15 +264,31 @@ public sealed class FallbackDesktopHost : IDisposable
                     var track = new TrackMouse { Size = (uint)Marshal.SizeOf<TrackMouse>(), Flags = 2, Window = window };
                     if (!TrackMouseEvent(ref track)) { Stop("pointer_tracking_failed", 1); return 0; }
                     var hit = HitTest(x, y);
+                    if (message == 0x201 && _renderer is not null)
+                    {
+                        _rejectedPress = !InputGuard.TryPointerDown(x, y, Dispatcher.Controller.InputGeneration, _clock.NowMilliseconds, out hit);
+                        if (_rejectedPress)
+                        {
+                            Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null;
+                            Log($"scene_press_cancelled conflicts={InputGuard.Conflicts} generation={InputGuard.GenerationRejected} coverage={InputGuard.CoverageRejected} attempts={InputGuard.Attempts} presentation_UNVERIFIED");
+                            UpdateVisual(); return 0;
+                        }
+                    }
+                    // Consume the entire rejected sequence; never reinterpret its Up as blank/Item.
+                    if (_rejectedPress)
+                    {
+                        if (message is 0x202 or 0x203) { _rejectedPress = false; }
+                        return 0;
+                    }
                     bool held = (wParam & 0x13) != 0;
                     if (message == 0x201) { _downPoint = new Point { X = x, Y = y }; }
                     if (message == 0x200 && _downPoint is { } down && (Math.Abs(x - down.X) > 4 || Math.Abs(y - down.Y) > 4))
                     {
-                        Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null;
+                        Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null; InputGuard.EndGesture();
                     }
                     Dispatcher.DispatchPointer(message switch { 0x201 => PointerAction.Down, 0x202 => PointerAction.Up, 0x203 => PointerAction.DoubleClick, _ => PointerAction.Move }, hit,
                         externalButtonHeld: message == 0x200 && held);
-                    if (message is 0x202 or 0x203) { _downPoint = null; }
+                    if (message is 0x202 or 0x203) { _downPoint = null; InputGuard.EndGesture(); }
                     UpdateVisual();
                     if (Dispatcher.ExitRequested) { Stop("user_exit", 0); }
                     return 0;
@@ -277,12 +296,13 @@ public sealed class FallbackDesktopHost : IDisposable
                     if (!Reconcile()) { return 0; }
                     Dispatcher.DispatchPointer(PointerAction.Leave);
                     Dispatcher.DispatchPointer(PointerAction.Cancel);
-                    _downPoint = null;
+                    _downPoint = null; _rejectedPress = false; InputGuard.EndGesture();
                     UpdateVisual(); return 0;
                 case 0x1F:
                 case 0x215:
                     if (!Reconcile()) { return 0; }
-                    Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null; UpdateVisual(); return 0;
+                    Dispatcher.DispatchPointer(PointerAction.Cancel); _downPoint = null; _rejectedPress = false; InputGuard.EndGesture();
+                    UpdateVisual(); return 0;
                 case 0x2B1:
                     _locked = wParam is 7 or 3 or 4 || (wParam != 8 && _locked);
                     if (Reconcile()) { UpdateVisual(); }
@@ -368,7 +388,7 @@ public sealed class FallbackDesktopHost : IDisposable
     }
     private void LoseInput()
     {
-        Dispatcher.HostLost(); _completions.Clear(); _downPoint = null; DeadlineTimerArmed = false; AnimationTimerArmed = false;
+        Dispatcher.HostLost(); InputGuard.Clear(); _renderer?.Reset(); SubmittedScene = null; _rejectedPress = false; _completions.Clear(); _downPoint = null; DeadlineTimerArmed = false; AnimationTimerArmed = false;
         if (_window != 0) { KillTimer(_window, 1); KillTimer(_window, 2); }
         if (_window != 0 && GetCapture() == _window) { ReleaseCapture(); }
     }
@@ -387,6 +407,14 @@ public sealed class FallbackDesktopHost : IDisposable
         if (!Dispatcher.Controller.HostAvailable || Dispatcher.Controller.Availability == DesktopAvailability.Suspended) { _completions.Clear(); }
         bool allowMotion = motionOverride ?? _hiddenMotionPolicy ?? EngineeringFixture.Resolve(EngineeringFixture.ClickId, true, _appearanceEnvironment).AllowMotion;
         var completions = Dispatcher.RenderTargets(_monitor, allowMotion);
+        if (_renderer is not null && !Dispatcher.Controller.HostAvailable)
+        {
+            InputGuard.Clear(); _renderer.Reset();
+            SubmittedScene = new(++_frameId, Dispatcher.Controller.InputGeneration, "engineering-primary", _monitor.Density.PixelsPerDip, []);
+            ApplyRegion();
+            KillTimer(_window, 1); KillTimer(_window, 2); AnimationTimerArmed = false; DeadlineTimerArmed = false;
+            return;
+        }
         if (_hiddenFrameFailure == "region") { _hiddenFrameFailure = null; throw new InvalidOperationException("injected_region_failure"); }
         // Preserve the last submitted scene while a gesture pins its target. Safety paths cancel
         // the adapter gesture before this point, including a generation change while held.
@@ -400,7 +428,9 @@ public sealed class FallbackDesktopHost : IDisposable
         if (_hiddenFrameFailure == "paint") { _hiddenFrameFailure = null; throw new InvalidOperationException("injected_paint_failure"); }
         if (_renderer is not null)
         {
+            bool newSubmission = !Dispatcher.HasGesture;
             _renderer.Submit(SubmittedScene!);
+            if (newSubmission) { InputGuard.Observe(SubmittedScene!, _clock.NowMilliseconds); }
         }
         else
         {

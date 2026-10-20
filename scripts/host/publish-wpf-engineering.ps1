@@ -9,7 +9,7 @@ if (Test-Path -LiteralPath $OutputDirectory) { throw 'Engineering output must be
 $sdk = dotnet --version
 if ($LASTEXITCODE -ne 0) { throw 'SDK query failed.' }
 dotnet publish src/Zhuomian.App --configuration Release --runtime win-x64 --self-contained true --output $OutputDirectory `
-    "-p:InformationalVersion=0.0.0-ui-i1+$CommitSha" -p:IncludeSourceRevisionInInformationalVersion=false
+    "-p:InformationalVersion=0.0.0-ui-i2+$CommitSha" -p:IncludeSourceRevisionInInformationalVersion=false
 if ($LASTEXITCODE -ne 0) { throw "Native engineering publish failed (exit $LASTEXITCODE)." }
 if ((git rev-parse HEAD).Trim() -ne $CommitSha) { throw 'Package source SHA must equal checkout HEAD.' }
 $exe = Join-Path $OutputDirectory 'Zhuomian.App.exe'
@@ -17,7 +17,7 @@ foreach ($file in @('Zhuomian.App.exe', 'coreclr.dll', 'hostfxr.dll', 'Presentat
     if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory $file) -PathType Leaf)) { throw "Published dependency missing: $file" }
 }
 Copy-Item src/Zhuomian.App/Start-Engineering.cmd, src/Zhuomian.App/README.md -Destination $OutputDirectory
-Copy-Item docs/UI_I1_WPF_EVIDENCE.md, docs/ADR/0013-wpf-unified-host.md -Destination $OutputDirectory
+Copy-Item docs/UI_I2_RENDER_EVIDENCE.md, docs/ADR/0014-wpf-render-input-stability.md -Destination $OutputDirectory
 Copy-Item docs/ADR/0005-e2-native-engineering-host.md, docs/ADR/0006-e2-native-motion.md, docs/E2_I1_INTEGRATION_EVIDENCE.md, docs/E2_I2_INTEGRATION_EVIDENCE.md -Destination $OutputDirectory
 foreach ($file in @('README.md', '0005-e2-native-engineering-host.md', '0006-e2-native-motion.md')) {
     $path = Join-Path $OutputDirectory $file
@@ -25,6 +25,7 @@ foreach ($file in @('README.md', '0005-e2-native-engineering-host.md', '0006-e2-
     $content = $content.Replace('../../docs/ADR/0005-e2-native-engineering-host.md', '0005-e2-native-engineering-host.md')
     $content = $content.Replace('../../docs/E2_I1_INTEGRATION_EVIDENCE.md', 'E2_I1_INTEGRATION_EVIDENCE.md')
     $content = $content.Replace('../../docs/ADR/0006-e2-native-motion.md', '0006-e2-native-motion.md').Replace('../../docs/E2_I2_INTEGRATION_EVIDENCE.md', 'E2_I2_INTEGRATION_EVIDENCE.md').Replace('../E2_I2_INTEGRATION_EVIDENCE.md', 'E2_I2_INTEGRATION_EVIDENCE.md')
+    $content = $content.Replace('../../docs/UI_I2_RENDER_EVIDENCE.md', 'UI_I2_RENDER_EVIDENCE.md').Replace('../../docs/ADR/0014-wpf-render-input-stability.md', '0014-wpf-render-input-stability.md')
     Set-Content -LiteralPath $path -Value $content -Encoding utf8
 }
 & $exe --native-smoke 2>&1 | Tee-Object -FilePath (Join-Path $OutputDirectory 'ci-native-smoke.log')
@@ -42,7 +43,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Published WPF smoke failed.' }
 } finally { Pop-Location }
 $wpfSmoke = Get-Content -LiteralPath (Join-Path $OutputDirectory 'ci-wpf-smoke.log') -Raw
-foreach ($required in @('wpf_preview hidden=true distinct_items=26', 'wpf_smoke hidden=true', 'idle_timers=0', 'wpf_rollback', 'presentation_UNVERIFIED')) {
+foreach ($required in @('wpf_preview hidden=true distinct_items=26', 'wpf_smoke hidden=true', 'idle_timers=0', 'wpf_rollback', 'wpf_first_down hidden=true', 'cache_hostlost_restore=true', 'presentation_UNVERIFIED')) {
     if (-not $wpfSmoke.Contains($required)) { throw "Incomplete WPF smoke: $required" }
 }
 $checkedOutCommit = & git rev-parse HEAD
@@ -75,13 +76,16 @@ foreach ($trx in Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/test-results" -Fil
 }
 $passedTotal = 0
 foreach ($suite in $testResults) { $passedTotal += $suite['passed'] }
-if ($testResults.Count -ne 6 -or $passedTotal -ne 1032) { throw 'Expected all 1025 existing cases plus 5 scene and 2 WPF cases across 6 suites.' }
+if ($testResults.Count -ne 6 -or $passedTotal -ne 1050) { throw 'Expected all 1032 existing cases plus 11 scene-input and 7 incremental WPF cases across 6 suites.' }
+$diagnostics = Join-Path $env:RUNNER_TEMP 'render-diagnostics'
+if (-not (Test-Path (Join-Path $diagnostics 'render-comparison.json'))) { throw 'Same-protocol renderer diagnostics required.' }
+Copy-Item $diagnostics -Destination (Join-Path $OutputDirectory 'render-diagnostics') -Recurse
 $metadata = [ordered]@{
-    version = '0.0.0-ui-i1'
+    version = '0.0.0-ui-i2'
     commitSha = $CommitSha
     checkedOutCommit = $checkedOutCommit
     baseMain = $baseMain
-    uiBaseMain = '31b9d68d5f31953290cfec82c604e21f03dd5897'
+    uiBaseMain = '74b497da2d3993e58f1c3a788a86faea37453038'
     renderer = 'single HwndSource owned by existing HostLease'
     wpfEvidence = 'ci-wpf-smoke.log and wpf-evidence/*-OFFSCREEN.png; NOT desktop screenshots'
     presentationSynchronization = 'UNVERIFIED'
