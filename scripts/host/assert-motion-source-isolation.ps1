@@ -9,6 +9,12 @@ function Assert-ReviewedMotionSourceIsolation {
             '884f8ab4fec7a51bed5e12c36180dec3bd2a7a2d', 'db24f30c901b4c830fbfd23a330436b651c08139')
         'tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs' = @(
             '44c2f22191e530ca7d901da78611130890e13ca8', '02384777ce2295e9590470b4e1b490cb78c66c77')
+        # Independent E3 resource identity fix, restricted to two exact reviewed blobs.
+        # Baseline identities remain pinned, and fixture mutations of these files must fail.
+        'src/Zhuomian.Core/WorkspaceModel/ResourceIdentity.cs' = @(
+            'e72e0e3e0bcb2a3ebcf9fca26fb34936b54be6ee', '5a52b831f1122994157d19f7174980da2d910645')
+        'tests/Zhuomian.Core.Tests/WorkspaceModel/ResourceIdentityTests.cs' = @(
+            '17f0eae93785095659410cd4c2bc85c7d330281c', '85460b036bf288aa7dea3a72059bb425d9dac0c8')
     }
     $original = @(git -C $Repository ls-tree -r --name-only $baseline -- src tests)
     if ($LASTEXITCODE -ne 0 -or $original.Count -eq 0) { throw 'Original source inventory unavailable.' }

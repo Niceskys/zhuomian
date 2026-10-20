@@ -55,9 +55,11 @@ git diff --exit-code $baseMain -- src/Zhuomian.Core src/Zhuomian.Launching.Windo
     ':(exclude)scripts/persistence/collect-persistence-evidence.ps1' `
     ':(exclude)scripts/persistence/test-baseline-history-performance.ps1' `
     ':(exclude)src/Zhuomian.Core/Interaction/SpaceInteractionController.cs' `
-    ':(exclude)tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs'
+    ':(exclude)tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs' `
+    ':(exclude)src/Zhuomian.Core/WorkspaceModel/ResourceIdentity.cs' `
+    ':(exclude)tests/Zhuomian.Core.Tests/WorkspaceModel/ResourceIdentityTests.cs'
 if ($LASTEXITCODE -ne 0) { throw 'Existing Core/E3/Spike/test/tooling source must remain unchanged.' }
-"All inspected Core/E3/Spike/test and persistence/performance tooling paths except the documented minimal Returning change, additive Core cases and exact-blob history/typed additive-Core evidence integration matches $baseMain byte-for-byte." | Set-Content -LiteralPath (Join-Path $OutputDirectory 'ISOLATION.txt')
+"All inspected Core/E3/Spike/test and persistence/performance tooling paths except the documented minimal Returning change and the exact-reviewed ResourceIdentity safety change match $baseMain byte-for-byte. Both exceptions are separately checked against pinned historical and reviewed new blob SHA values by Assert-ReviewedMotionSourceIsolation." | Set-Content -LiteralPath (Join-Path $OutputDirectory 'ISOLATION.txt')
 . (Join-Path $PSScriptRoot 'assert-motion-source-isolation.ps1')
 Assert-ReviewedMotionSourceIsolation -Repository (git rev-parse --show-toplevel)
 $coreCases = & git diff --numstat $baseMain -- tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs
@@ -75,7 +77,12 @@ foreach ($trx in Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/test-results" -Fil
 }
 $passedTotal = 0
 foreach ($suite in $testResults) { $passedTotal += $suite['passed'] }
-if ($testResults.Count -ne 6 -or $passedTotal -ne 1032) { throw 'Expected all 1025 existing cases plus 5 scene and 2 WPF cases across 6 suites.' }
+$expectedSuiteCounts = @(2, 37, 76, 171, 286, 476)
+$actualSuiteCounts = @($testResults | ForEach-Object { [int]$_['passed'] } | Sort-Object)
+if ($testResults.Count -ne 6 -or $passedTotal -ne 1048 -or
+    @(Compare-Object -ReferenceObject $expectedSuiteCounts -DifferenceObject $actualSuiteCounts).Count -ne 0) {
+    throw 'Expected all 1032 existing passes plus 16 reviewed WindowsPath cases, exact six-suite distribution.'
+}
 $metadata = [ordered]@{
     version = '0.0.0-ui-i1'
     commitSha = $CommitSha
