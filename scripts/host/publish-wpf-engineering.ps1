@@ -57,9 +57,10 @@ git diff --exit-code $baseMain -- src/Zhuomian.Core src/Zhuomian.Launching.Windo
     ':(exclude)src/Zhuomian.Core/Interaction/SpaceInteractionController.cs' `
     ':(exclude)tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs' `
     ':(exclude)src/Zhuomian.Core/WorkspaceModel/ResourceIdentity.cs' `
-    ':(exclude)tests/Zhuomian.Core.Tests/WorkspaceModel/ResourceIdentityTests.cs'
+    ':(exclude)tests/Zhuomian.Core.Tests/WorkspaceModel/ResourceIdentityTests.cs' `
+    ':(exclude)src/Zhuomian.Core/WorkspaceModel/README.md'
 if ($LASTEXITCODE -ne 0) { throw 'Existing Core/E3/Spike/test/tooling source must remain unchanged.' }
-"All inspected Core/E3/Spike/test and persistence/performance tooling paths except the documented minimal Returning change and the exact-reviewed ResourceIdentity safety change match $baseMain byte-for-byte. Both exceptions are separately checked against pinned historical and reviewed new blob SHA values by Assert-ReviewedMotionSourceIsolation." | Set-Content -LiteralPath (Join-Path $OutputDirectory 'ISOLATION.txt')
+"All inspected Core/E3/Spike/test and persistence/performance tooling paths except the documented minimal Returning change and the exact-reviewed ResourceIdentity safety change plus scoped README match $baseMain byte-for-byte. Both exceptions are separately checked against pinned historical and reviewed new blob SHA values by Assert-ReviewedMotionSourceIsolation." | Set-Content -LiteralPath (Join-Path $OutputDirectory 'ISOLATION.txt')
 . (Join-Path $PSScriptRoot 'assert-motion-source-isolation.ps1')
 Assert-ReviewedMotionSourceIsolation -Repository (git rev-parse --show-toplevel)
 $coreCases = & git diff --numstat $baseMain -- tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs

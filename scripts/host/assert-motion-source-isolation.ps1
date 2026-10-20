@@ -15,6 +15,8 @@ function Assert-ReviewedMotionSourceIsolation {
             'e72e0e3e0bcb2a3ebcf9fca26fb34936b54be6ee', '5a52b831f1122994157d19f7174980da2d910645')
         'tests/Zhuomian.Core.Tests/WorkspaceModel/ResourceIdentityTests.cs' = @(
             '17f0eae93785095659410cd4c2bc85c7d330281c', '85460b036bf288aa7dea3a72059bb425d9dac0c8')
+        'src/Zhuomian.Core/WorkspaceModel/README.md' = @(
+            '7a00f1b7fafa39674ddda0983b8c23804fa8e132', '104f5bdc4b70360d24893d24464cf48141124d5d')
     }
     $original = @(git -C $Repository ls-tree -r --name-only $baseline -- src tests)
     if ($LASTEXITCODE -ne 0 -or $original.Count -eq 0) { throw 'Original source inventory unavailable.' }
