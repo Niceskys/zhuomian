@@ -23,8 +23,9 @@ public sealed record WindowsPath
         {
             string[] parts = path[2..].Split('\\');
             if (parts.Length < 2) { throw new ArgumentException("UNC path requires a server and share.", nameof(value)); }
-            ValidateSegment(parts[0]);
-            ValidateSegment(parts[1]);
+            // UNC server/share are namespace roots, not file/directory components.
+            ValidateSegment(parts[0], uncRootPart: true);
+            ValidateSegment(parts[1], uncRootPart: true);
             root = "\\\\" + parts[0] + "\\" + parts[1] + "\\";
             remainder = string.Join('\\', parts.Skip(2));
         }
@@ -47,13 +48,30 @@ public sealed record WindowsPath
         CanonicalKey = Value.ToUpperInvariant();
     }
 
-    private static void ValidateSegment(string segment)
+    private static void ValidateSegment(string segment, bool uncRootPart = false)
     {
         if (string.IsNullOrWhiteSpace(segment) || segment is "." or ".." || segment.Contains(':', StringComparison.Ordinal) ||
-            segment.EndsWith(' ') || segment.EndsWith('.'))
+            segment.EndsWith(' ') || segment.EndsWith('.') ||
+            (!uncRootPart && IsReservedDosDeviceName(segment)))
         {
             throw new ArgumentException("Ambiguous path segment.", nameof(segment));
         }
+    }
+
+    // Win32 treats these names as devices even with extensions (for example NUL.txt).
+    // Superscript ISO-8859-1 digits 1/2/3 are reserved for COM/LPT as well.
+    private static bool IsReservedDosDeviceName(string segment)
+    {
+        int dot = segment.IndexOf('.');
+        string stem = dot < 0 ? segment : segment[..dot];
+        if (stem.Equals("CON", StringComparison.OrdinalIgnoreCase) ||
+            stem.Equals("PRN", StringComparison.OrdinalIgnoreCase) ||
+            stem.Equals("AUX", StringComparison.OrdinalIgnoreCase) ||
+            stem.Equals("NUL", StringComparison.OrdinalIgnoreCase)) { return true; }
+        if (stem.Length != 4 ||
+            (!stem.StartsWith("COM", StringComparison.OrdinalIgnoreCase) &&
+             !stem.StartsWith("LPT", StringComparison.OrdinalIgnoreCase))) { return false; }
+        return stem[3] is >= '1' and <= '9' or '¹' or '²' or '³';
     }
 
     public string Value { get; }

@@ -12,6 +12,10 @@ try {
     foreach ($path in @(
         'src/Zhuomian.Core/Interaction/SpaceInteractionController.cs',
         'tests/Zhuomian.Core.Tests/Interaction/SpaceInteractionControllerTests.cs',
+        'src/Zhuomian.Core/WorkspaceModel/ResourceIdentity.cs',
+        'tests/Zhuomian.Core.Tests/WorkspaceModel/ResourceIdentityTests.cs',
+        'src/Zhuomian.Core/WorkspaceModel/README.md',
+        'tests/Zhuomian.Core.Tests/Launching/LaunchPolicyTests.cs',
         'src/Zhuomian.Core/Layout/SpaceLayoutEngine.cs',
         'src/Zhuomian.Persistence/WorkspaceFileStore.cs',
         'tests/Zhuomian.Persistence.Tests/CodecTests.cs'
@@ -36,7 +40,7 @@ try {
     # Revalidate the restored fixture: success must end in a real successful Git check,
     # not leave the deliberately rejected hash-object exit code as the script result.
     Assert-ReviewedMotionSourceIsolation -Repository $owned
-    Write-Output 'motion_source_isolation accepted_exact_blobs=true rejected_mutations=5 rejected_test_deletion=true immutable_E3_baseline_unchanged=true'
+    Write-Output 'motion_source_isolation accepted_exact_blobs=true rejected_mutations=9 rejected_test_deletion=true immutable_E3_baseline_unchanged=true'
 }
 finally {
     if (Test-Path -LiteralPath $owned) { Remove-Item -LiteralPath $owned -Recurse -Force }

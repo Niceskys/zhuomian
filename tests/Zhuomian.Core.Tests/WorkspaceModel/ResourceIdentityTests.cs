@@ -36,6 +36,30 @@ public sealed class ResourceIdentityTests
         Assert.Throws<ArgumentException>(() => new WindowsPath(value));
 
     [Theory]
+    [InlineData(@"C:\NUL")]
+    [InlineData(@"C:\tools\con.TXT")]
+    [InlineData(@"D:\PRN.log")]
+    [InlineData(@"C:\AUX\file.txt")]
+    [InlineData(@"C:\tools\COM1")]
+    [InlineData(@"C:\tools\lpt9.tar.gz")]
+    [InlineData(@"C:\tools\COM¹.txt")]
+    [InlineData(@"C:\tools\LPT²")]
+    [InlineData(@"C:\tools\COM³")]
+    [InlineData(@"\\server\share\Nul.txt")]
+    [InlineData(@"C:\NUL\..\ordinary.txt")]
+    public void ReservedDosDeviceNamesCannotEnterFileOrDirectoryPaths(string value) =>
+        Assert.Throws<ArgumentException>(() => new WindowsPath(value));
+
+    [Theory]
+    [InlineData(@"C:\tools\COM10.txt")]
+    [InlineData(@"C:\tools\LPT0.txt")]
+    [InlineData(@"C:\tools\AUXILIARY.txt")]
+    [InlineData(@"C:\tools\file.CON")]
+    [InlineData(@"\\con\nul\ordinary.txt")]
+    public void DeviceNameLookalikesAndUncRootNamesAreNotRejected(string value) =>
+        Assert.Equal(value, new WindowsPath(value).Value);
+
+    [Theory]
     [InlineData("HTTPS://EXAMPLE.TEST:443/a", "https://example.test/a")]
     [InlineData("http://example.test:80", "http://example.test/")]
     [InlineData("https://example.test/a?x=1#part", "https://example.test/a?x=1#part")]

@@ -23,7 +23,7 @@
 | FolderItem | 绝对 WindowsPath + 可选 opaque stableFileIdentity | 与 FileItem 同样保持失效可恢复，不检查文件系统 |
 | UrlItem | 规范 HTTP(S) AbsoluteUri | 拒绝其他 scheme、credentials 和控制字符；保留 path/query/fragment 的实际目的地 |
 
-WindowsPath 不使用宿主平台路径函数：统一斜杠、drive letter、`.`/`..` 和 UNC，拒绝相对路径、越过根、device namespace、ADS、明显非法字符和尾部点/空白。CanonicalKey 为 ordinal 大小写折叠后的路径；这只是默认 Windows 词法去重，不证明存在/可打开，也不能识别 case-sensitive volume、reparse、硬链接或替换攻击。路径、网络/可移动目标和 provider token 始终是不可信数据；真实 Launcher 仍须独立验证身份、文件/关联、来源、链接、权限和 URL allowlist。Application identity 不等于 provider 信任或执行能力；具体 provider/启动描述由后续 ADR 与安全适配器确定，不能把 opaque ID 当命令执行。
+WindowsPath 不使用宿主平台路径函数：统一斜杠、drive letter、`.`/`..` 和 UNC，拒绝相对路径、越过根、device namespace、ADS、明显非法字符、尾部点/空白，以及路径中文件或目录分量的 Win32 保留设备名（CON/PRN/AUX/NUL、COM1–9、LPT1–9、¹²³ 上标数字及其扩展名）；UNC 服务器名和共享名属于命名空间根，不当作文件分量过滤。CanonicalKey 为 ordinal 大小写折叠后的路径；这只是默认 Windows 词法去重，不证明存在/可打开，也不能识别 case-sensitive volume、reparse、硬链接或替换攻击。路径、网络/可移动目标和 provider token 始终是不可信数据；真实 Launcher 仍须独立验证身份、文件/关联、来源、链接、权限和 URL allowlist。Application identity 不等于 provider 信任或执行能力；具体 provider/启动描述由后续 ADR 与安全适配器确定，不能把 opaque ID 当命令执行。
 
 `ItemMetadata` 包含显示名称和可选 icon 资源引用。`ExternalResourceReference` 保留外部路径；`ManagedAssetReference` 保留自有资产 ID，二者无删除/解码能力。`GetRetainedManagedAssetIds` 包含活动、未引用及全局移除 Item 的资产保留集合；它不是可回收清单。`GetReferenceCount` 仅为当前活动 Space 中原始出现次数，不含旧快照/删除 Space/备份，不可单独用于 GC。未来回收必须再核对所有权、备份和恢复快照；当前没有任何资源回收。
 
