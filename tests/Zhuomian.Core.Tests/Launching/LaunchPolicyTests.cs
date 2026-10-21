@@ -61,10 +61,6 @@ public sealed class LaunchPolicyTests
 
     [Theory]
     [InlineData(@"\\server\share\data.txt")]
-    [InlineData(@"C:\CON.txt")]
-    [InlineData(@"C:\aux\data.txt")]
-    [InlineData(@"C:\COM1.txt")]
-    [InlineData(@"C:\LPT9.txt")]
     [InlineData("C:\\data\\hidden\u202efile.txt")]
     public void LexicallyValidButSuspiciousPathDoesNotReachResolver(string path)
     {
@@ -73,6 +69,10 @@ public sealed class LaunchPolicyTests
     }
 
     [Theory]
+    [InlineData(@"C:\CON.txt")]
+    [InlineData(@"C:\aux\data.txt")]
+    [InlineData(@"C:\COM1.txt")]
+    [InlineData(@"C:\LPT9.txt")]
     [InlineData("relative.txt")]
     [InlineData(@"C:relative.txt")]
     [InlineData(@"\relative.txt")]
